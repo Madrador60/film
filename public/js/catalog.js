@@ -272,17 +272,45 @@ function applyFilters(items) {
   const quality = normalizeKey($('catalogQuality').value);
   const year = $('catalogYear').value;
 
-  return items.filter((item) => {
+  const typedItems = items.filter((item) => catalogType === 'all' || item.type === catalogType);
+  const strictItems = typedItems.filter((item) => {
     const hay = normalizeKey(`${item.title} ${item.originalTitle || ''}`);
     const version = normalizeKey(item.version || '');
     const itemQuality = normalizeKey(item.quality || '');
-    if (catalogType !== 'all' && item.type !== catalogType) return false;
     if (genre && !hay.includes(genre)) return false;
     if (lang && !version.includes(lang)) return false;
     if (quality && !itemQuality.includes(quality)) return false;
     if (year && String(item.year || '').trim() !== year && !hay.includes(year)) return false;
     return true;
   });
+
+  const needsBroadFallback = (genre || lang) && !quality && !year && strictItems.length < 18;
+  if (!needsBroadFallback) return strictItems;
+
+  const seed = normalizeKey(`${genre} ${lang}`) || 'catalogue';
+  const spread = typedItems
+    .map((item, index) => ({
+      item,
+      score: getStableFilterScore(item, seed, index)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item);
+
+  return dedupeMediaItems([...strictItems, ...spread]).slice(0, Math.max(ITEMS_PER_PAGE * 4, 96));
+}
+
+function getStableFilterScore(item, seed, index) {
+  const hay = normalizeKey(`${item.title || ''} ${item.originalTitle || ''} ${item.version || ''} ${item.quality || ''}`);
+  const words = seed.split(/\s+/).filter(Boolean);
+  const wordScore = words.reduce((total, word) => total + (hay.includes(word) ? 25 : 0), 0);
+  const typeScore = item.type === 'series' ? 4 : 8;
+  const qualityScore = String(item.quality || '').toLowerCase().includes('hd') ? 5 : 0;
+  const spreadScore = Math.abs(hashString(`${seed}:${item.id || item.title}`)) % 17;
+  return wordScore + typeScore + qualityScore + spreadScore - (index % 7);
+}
+
+function hashString(value) {
+  return String(value || '').split('').reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
 }
 
 function sortItems(items) {

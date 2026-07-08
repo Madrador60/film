@@ -1102,9 +1102,8 @@ function setTab(tab) {
 
 function quickSearch(query, navButton) {
   setActiveNav(navButton);
-  $('search').value = query;
   $('sidebar').classList.remove('open');
-  search();
+  openFilteredCatalog(query, 'genreFilters');
 }
 
 function setActiveNav(activeButton) {
