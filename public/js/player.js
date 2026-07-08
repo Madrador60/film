@@ -42,6 +42,7 @@ function bindPlayerUI() {
   $('nextSource').addEventListener('click', () => playRelativeSource(1));
   $('copySource').addEventListener('click', copyCurrentSource);
   $('nextEpisode').addEventListener('click', playNextEpisode);
+  $('episodeNowNext')?.addEventListener('click', playNextEpisode);
   $('player').addEventListener('load', handlePlayerLoad);
   $('closeTrailer').addEventListener('click', closeTrailer);
   $('trailerModal').addEventListener('click', (event) => {
@@ -336,11 +337,12 @@ function renderEpisodeList() {
       <span class="episode-thumb">
         ${episode.poster ? `<img src="${escapeHtml(fixUrl(episode.poster))}" alt="">` : ''}
         <span class="episode-number">${String(episode.number).padStart(2, '0')}</span>
+        ${getEpisodeBadgeMarkup(season, episode, index, watched, nextIndex)}
       </span>
       <span class="episode-copy">
-        <span>${escapeHtml(episode.title)}</span>
+        <span>${escapeHtml(getEpisodeShortTitle(episode))}</span>
         <small>${escapeHtml(episode.description || 'Sources disponibles pour cet épisode.')}</small>
-        <em>${escapeHtml(SERIES_VERSION_LABELS[selectedSeriesVersion] || selectedSeriesVersion.toUpperCase())}${watched.has(getEpisodeWatchKey(season, episode)) ? ' • Vu' : index === selectedEpisodeIndex ? ' • En cours' : index === nextIndex ? ' • Suivant' : ''}</em>
+        <em>${escapeHtml(getEpisodeMetaLabel(season, episode, index, watched, nextIndex))}</em>
       </span>
     </button>
   `).join('');
@@ -349,6 +351,28 @@ function renderEpisodeList() {
   $('episodeList').querySelectorAll('[data-episode]').forEach((button) => {
     button.addEventListener('click', () => selectEpisode(Number(button.dataset.episode), true));
   });
+  updateEpisodeNowPanel();
+}
+
+function getEpisodeBadgeMarkup(season, episode, index, watched, nextIndex) {
+  const key = getEpisodeWatchKey(season, episode);
+  if (index === selectedEpisodeIndex) return '<span class="episode-state state-current">En cours</span>';
+  if (watched.has(key)) return '<span class="episode-state state-watched">Vu</span>';
+  if (index === nextIndex) return '<span class="episode-state state-next">Suivant</span>';
+  return '';
+}
+
+function getEpisodeMetaLabel(season, episode, index, watched, nextIndex) {
+  const labels = [SERIES_VERSION_LABELS[selectedSeriesVersion] || selectedSeriesVersion.toUpperCase()];
+  if (watched.has(getEpisodeWatchKey(season, episode))) labels.push('Vu');
+  else if (index === selectedEpisodeIndex) labels.push('En cours');
+  else if (index === nextIndex) labels.push('Suivant');
+  if (episode.sources?.length) labels.push(`${episode.sources.length} source${episode.sources.length > 1 ? 's' : ''}`);
+  return labels.join(' • ');
+}
+
+function getEpisodeShortTitle(episode) {
+  return episode.title || `Épisode ${episode.number}`;
 }
 
 function renderSeriesProgress(season, episodes, watched) {
@@ -408,6 +432,52 @@ function renderEpisodeInfo(season, episode) {
     <em>${escapeHtml(SERIES_VERSION_LABELS[selectedSeriesVersion] || selectedSeriesVersion.toUpperCase())} • ${escapeHtml(episode.title)}</em>
     <p>${escapeHtml(episode.description || 'Sélectionne une source pour lancer cet épisode.')}</p>
   `;
+  updateEpisodeNowPanel(season, episode);
+}
+
+function updateEpisodeNowPanel(season = seasons[selectedSeasonIndex], episode = season?.episodes?.[selectedEpisodeIndex]) {
+  const next = getNextEpisodeTarget();
+  const versionLabel = SERIES_VERSION_LABELS[selectedSeriesVersion] || selectedSeriesVersion.toUpperCase();
+
+  if (!episode) {
+    $('episodeNowTitle').textContent = 'Aucun épisode sélectionné';
+    $('episodeNowMeta').textContent = 'Choisis une saison et une version.';
+  } else {
+    $('episodeNowTitle').textContent = `${season?.title || `Saison ${season?.number || 1}`} • Épisode ${episode.number} - ${getEpisodeShortTitle(episode)}`;
+    $('episodeNowMeta').textContent = `${versionLabel} • ${streams.length || episode.sources?.length || 0} source${(streams.length || episode.sources?.length || 0) > 1 ? 's' : ''} disponible${(streams.length || episode.sources?.length || 0) > 1 ? 's' : ''}`;
+  }
+
+  const disabled = !next;
+  $('episodeNowNext').disabled = disabled;
+  $('nextEpisode').disabled = disabled;
+  const label = next
+    ? `Épisode ${next.episode.number}`
+    : 'Épisode suivant';
+  $('episodeNowNext').innerHTML = `<i class="fa-solid fa-forward"></i><span>${escapeHtml(label)}</span>`;
+  $('nextEpisode').innerHTML = `<i class="fa-solid fa-forward"></i><span>${escapeHtml(label)}</span>`;
+}
+
+function getNextEpisodeTarget() {
+  if (contentType !== 'series') return null;
+  const season = seasons[selectedSeasonIndex];
+  if (!season?.episodes?.length) return null;
+  if (selectedEpisodeIndex + 1 < season.episodes.length) {
+    return {
+      seasonIndex: selectedSeasonIndex,
+      episodeIndex: selectedEpisodeIndex + 1,
+      episode: season.episodes[selectedEpisodeIndex + 1]
+    };
+  }
+  const nextSeason = seasons[selectedSeasonIndex + 1];
+  if (nextSeason) {
+    const episode = nextSeason.episodes?.[0] || { number: 1, title: `Saison ${nextSeason.number}` };
+    return {
+      seasonIndex: selectedSeasonIndex + 1,
+      episodeIndex: 0,
+      episode
+    };
+  }
+  return null;
 }
 
 function getNextEpisodeIndex(season, watched) {
@@ -879,6 +949,7 @@ async function playNextEpisode() {
   }
   if (selectedSeasonIndex + 1 < seasons.length) {
     await selectSeason(selectedSeasonIndex + 1);
+    await selectEpisode(0, true);
   }
 }
 
@@ -888,7 +959,7 @@ function updateSourceToolState() {
   $('nextSource').disabled = !hasSources || streams.length < 2;
   $('copySource').disabled = !hasSources || selectedIndex < 0;
   $('openSource').disabled = !hasSources;
-  $('nextEpisode').disabled = !hasNextEpisode();
+  updateEpisodeNowPanel();
 }
 
 function hasNextEpisode() {

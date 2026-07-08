@@ -2317,6 +2317,51 @@ a {
   line-height: 1.45;
 }
 
+.episode-now {
+  min-height: 76px;
+  margin: 0 0 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(96,165,250,.20);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34,211,238,.14), transparent 34%),
+    linear-gradient(135deg, rgba(59,130,246,.14), rgba(139,92,246,.11)),
+    rgba(255,255,255,.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.episode-now span {
+  display: block;
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.episode-now strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.episode-now small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.episode-now .btn {
+  flex: 0 0 auto;
+  min-width: 170px;
+}
+
 .episode-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -2368,6 +2413,39 @@ a {
   color: white;
   font-size: 11px;
   font-weight: 900;
+}
+
+.episode-state {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-height: 22px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(15,23,42,.78);
+  color: #e0f2fe;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+  box-shadow: 0 8px 20px rgba(0,0,0,.26);
+  backdrop-filter: blur(12px);
+}
+
+.episode-state.state-current {
+  background: linear-gradient(135deg, rgba(59,130,246,.94), rgba(139,92,246,.90));
+  color: white;
+}
+
+.episode-state.state-watched {
+  background: rgba(34,197,94,.84);
+  color: white;
+}
+
+.episode-state.state-next {
+  background: rgba(34,211,238,.84);
+  color: #04111d;
 }
 
 .episode-btn:hover,
@@ -5851,6 +5929,23 @@ body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+  }
+
+  .episode-now {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .episode-now strong {
+    font-size: 15px;
+  }
+
+  .episode-now .btn {
+    width: 100%;
+    min-width: 0;
   }
 
   .episode-list::-webkit-scrollbar {
