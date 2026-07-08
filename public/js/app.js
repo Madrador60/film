@@ -185,7 +185,7 @@ async function loadHome() {
   showLoading(true);
 
   try {
-    const { moviesData, seriesData } = await fetchHomeCatalog('all');
+    const { moviesData, seriesData } = await fetchHomeCatalog(4);
 
     movieItems = normalizeItems(moviesData.items || [], 'movies')
       .filter((item) => item.type === 'movies');
@@ -198,6 +198,7 @@ async function loadHome() {
     renderHomeRows();
     updatePager();
     startHeroCarousel();
+    hydrateHomeWithFullCatalog();
   } catch (err) {
     console.error(err);
     renderRows([]);
@@ -209,6 +210,35 @@ async function loadHome() {
     );
   } finally {
     showLoading(false);
+  }
+}
+
+async function hydrateHomeWithFullCatalog() {
+  try {
+    const [moviesData, seriesData] = await Promise.all([
+      fetchCatalogAll('movies', 80),
+      fetchCatalogAll('series', 80)
+    ]);
+
+    const nextMovies = normalizeItems(moviesData.items || [], 'movies')
+      .filter((item) => item.type === 'movies');
+    const nextSeries = groupSeriesItems(
+      normalizeItems(seriesData.items || [], 'series')
+        .filter((item) => item.type === 'series')
+    );
+
+    if (nextMovies.length > movieItems.length || nextSeries.length > seriesItems.length) {
+      movieItems = nextMovies;
+      seriesItems = nextSeries;
+      lastItems = getActiveItems().slice(0, ITEMS_PER_PAGE);
+      if (!isSearching && currentTab === 'home') {
+        renderHomeRows();
+        updatePager();
+        startHeroCarousel();
+      }
+    }
+  } catch (error) {
+    console.warn('Catalogue complet en arrière-plan indisponible.', error);
   }
 }
 

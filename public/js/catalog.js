@@ -1,5 +1,6 @@
 const ITEMS_PER_PAGE = 24;
-const CATALOG_ALL_LIMIT = 'all';
+const CATALOG_FAST_LIMIT = 4;
+const CATALOG_ALL_LIMIT = 80;
 const params = new URLSearchParams(location.search);
 
 let catalogType = params.get('type') || 'all';
@@ -8,7 +9,7 @@ let catalogPage = 1;
 let catalogItems = [];
 let visibleCatalogItems = [];
 let renderedCount = ITEMS_PER_PAGE;
-let allCatalogCache = { movies: null, series: null };
+let allCatalogCache = {};
 let isCatalogLoading = false;
 let searchTimer = null;
 let suggestTimer = null;
@@ -152,6 +153,7 @@ async function loadCatalog() {
     visibleCatalogItems = dedupeMediaItems(catalogItems);
     renderedCount = ITEMS_PER_PAGE;
     renderCatalog();
+    hydrateCatalogInBackground(q);
   } catch (err) {
     console.error(err);
     catalogItems = [];
@@ -168,11 +170,30 @@ async function loadCatalog() {
   }
 }
 
+async function hydrateCatalogInBackground(query) {
+  if (query || isLocalView()) return;
+
+  try {
+    const before = visibleCatalogItems.length;
+    let items = await fetchCatalogPages(CATALOG_ALL_LIMIT, true);
+    items = applyFilters(items);
+    items = sortItems(items);
+    const nextVisible = dedupeMediaItems(items);
+    if (nextVisible.length > before) {
+      catalogItems = items;
+      visibleCatalogItems = nextVisible;
+      renderCatalog();
+    }
+  } catch (error) {
+    console.warn('Catalogue large indisponible en arrière-plan.', error);
+  }
+}
+
 async function getCatalogItems(query) {
   if (catalogView === 'favorites') return filterLocalItems(MadradorStorage.favorites(), query);
   if (catalogView === 'history') return filterLocalItems(MadradorStorage.history(), query);
   if (query) return searchCatalog(query);
-  const items = await fetchCatalogPages();
+  const items = await fetchCatalogPages(CATALOG_FAST_LIMIT);
   if (catalogView === 'popular') return getPopularItems(items);
   if (catalogView === 'new') return items;
   return items;
@@ -184,13 +205,13 @@ function filterLocalItems(items, query) {
   return items.filter((item) => normalizeKey(`${item.title || ''} ${item.originalTitle || ''}`).includes(q));
 }
 
-async function fetchCatalogPages() {
+async function fetchCatalogPages(limit = CATALOG_FAST_LIMIT, forceRefresh = false) {
   const jobs = [];
   if (catalogType === 'movies' || catalogType === 'all') {
-    jobs.push(fetchCatalogAll('movies'));
+    jobs.push(fetchCatalogAll('movies', limit, forceRefresh));
   }
   if (catalogType === 'series' || catalogType === 'all') {
-    jobs.push(fetchCatalogAll('series'));
+    jobs.push(fetchCatalogAll('series', limit, forceRefresh));
   }
   const results = await Promise.all(jobs);
   const raw = results.flatMap((data) => data.items || []);
@@ -201,7 +222,7 @@ async function fetchCatalogPages() {
 
 async function searchCatalog(query) {
   const q = normalizeKey(query);
-  const localItems = await fetchCatalogPages();
+  const localItems = await fetchCatalogPages(CATALOG_ALL_LIMIT);
   const localMatches = localItems.filter((item) => normalizeKey(`${item.title || ''} ${item.originalTitle || ''} ${item.year || ''} ${item.version || ''} ${item.quality || ''}`).includes(q));
   if (localMatches.length) return localMatches;
 
@@ -691,32 +712,33 @@ function isLocalView() {
   return catalogView === 'favorites' || catalogView === 'history';
 }
 
-async function fetchCatalogAll(kind) {
-  if (allCatalogCache[kind]) return allCatalogCache[kind];
+async function fetchCatalogAll(kind, limit = CATALOG_FAST_LIMIT, forceRefresh = false) {
+  const cacheKey = `${kind}:${limit}`;
+  if (!forceRefresh && allCatalogCache[cacheKey]) return allCatalogCache[cacheKey];
 
-  const allEndpoint = `/api/${kind}/all?limit=${CATALOG_ALL_LIMIT}`;
+  const allEndpoint = `/api/${kind}/all?limit=${limit}`;
   const cleanEndpoint = kind === 'movies'
-    ? `/api/film/all?limit=${CATALOG_ALL_LIMIT}`
-    : `/api/serie/all?limit=${CATALOG_ALL_LIMIT}`;
+    ? `/api/film/all?limit=${limit}`
+    : `/api/serie/all?limit=${limit}`;
   try {
     const data = await fetchJson(cleanEndpoint, 1000 * 60 * 30);
-    allCatalogCache[kind] = data;
+    allCatalogCache[cacheKey] = data;
     return data;
   } catch (error) {
     console.warn(`[CATALOG] ${cleanEndpoint} indisponible, fallback legacy.`, error);
     const legacyData = await fetchJson(allEndpoint, 1000 * 60 * 30).catch(() => null);
     if (legacyData?.items) {
-      allCatalogCache[kind] = legacyData;
+      allCatalogCache[cacheKey] = legacyData;
       return legacyData;
     }
-    const fallback = await fetchJson(kind === 'movies' ? '/api/film/page/1' : '/api/serie/page/1');
-    allCatalogCache[kind] = {
+    const fallback = await fetchJson(kind === 'movies' ? '/api/movies?page=1' : '/api/series?page=1');
+    allCatalogCache[cacheKey] = {
       type: kind === 'series' ? 'series' : 'movie',
       total: (fallback.items || []).length,
       items: fallback.items || [],
       fallback: true
     };
-    return allCatalogCache[kind];
+    return allCatalogCache[cacheKey];
   }
 }
 
