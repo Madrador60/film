@@ -6829,3 +6829,513 @@ body {
     grid-column: 2;
   }
 }
+
+/* Cross-device experience layer */
+:root {
+  --app-safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+  --app-safe-top: max(env(safe-area-inset-top, 0px), 0px);
+  --device-touch-target: 44px;
+}
+
+html[data-pointer="coarse"] {
+  --device-touch-target: 50px;
+}
+
+html[data-device="tv"] {
+  --device-touch-target: 64px;
+}
+
+html[data-device="4k"] body,
+html[data-device="tv"] body {
+  font-size: 18px;
+}
+
+html[data-device="4k"] .main,
+html[data-device="4k"] .catalog-main {
+  max-width: 2160px;
+  margin-left: 288px;
+  padding: 34px 44px 70px;
+}
+
+html[data-device="4k"] .sidebar {
+  width: 288px;
+  padding: 28px 22px;
+}
+
+html[data-device="4k"] .hero {
+  min-height: 520px;
+}
+
+html[data-device="4k"] .poster-track {
+  grid-auto-columns: minmax(180px, 230px);
+}
+
+html[data-device="4k"] .land-track {
+  grid-auto-columns: minmax(380px, 520px);
+}
+
+html[data-device="4k"] .catalog-page-grid,
+html[data-device="4k"] .catalog-grid {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+html[data-device="tv"] .sidebar {
+  width: 310px;
+  padding: 30px 24px;
+}
+
+html[data-device="tv"] .main,
+html[data-device="tv"] .catalog-main {
+  margin-left: 310px;
+  padding: 34px 48px 72px;
+}
+
+html[data-device="tv"] .btn,
+html[data-device="tv"] .nav,
+html[data-device="tv"] .icon-btn,
+html[data-device="tv"] .media-action,
+html[data-device="tv"] .source-btn,
+html[data-device="tv"] .episode-card,
+html[data-device="tv"] .detail-action-card,
+html[data-device="tv"] .search-type-tabs button,
+html[data-device="tv"] .smart-tabs a {
+  min-height: var(--device-touch-target);
+}
+
+html[data-device="tv"] .mobile-bottom-nav,
+html[data-device="tv"] .mobile-menu {
+  display: none !important;
+}
+
+html[data-device="tv"] .hero {
+  min-height: min(58vh, 640px);
+}
+
+html[data-device="tv"] .catalog-page-grid,
+html[data-device="tv"] .catalog-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+html[data-device="tv"] .poster-track {
+  grid-auto-columns: minmax(190px, 240px);
+}
+
+html[data-device="tv"] .land-track {
+  grid-auto-columns: minmax(420px, 560px);
+}
+
+html[data-device="tv"] .media-card:focus,
+html[data-device="tv"] .btn:focus,
+html[data-device="tv"] .nav:focus,
+html[data-device="tv"] .source-btn:focus,
+html[data-device="tv"] .episode-card:focus,
+html[data-input-mode="keyboard"] .media-card:focus,
+html[data-input-mode="keyboard"] .btn:focus,
+html[data-input-mode="keyboard"] .nav:focus,
+html[data-input-mode="keyboard"] .source-btn:focus,
+html[data-input-mode="keyboard"] .episode-card:focus,
+html[data-input-mode="keyboard"] .detail-action-card:focus {
+  outline: 3px solid rgba(34,211,238,.92);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px rgba(34,211,238,.12), 0 22px 60px rgba(59,130,246,.28);
+}
+
+html[data-device="tablet"] .main,
+html[data-device="tablet-landscape"] .main,
+html[data-device="tablet"] .catalog-main,
+html[data-device="tablet-landscape"] .catalog-main {
+  padding: 20px 18px 92px;
+}
+
+html[data-device="tablet"] .sidebar,
+html[data-device="tablet-landscape"] .sidebar {
+  width: 82px;
+  padding: 18px 10px;
+}
+
+html[data-device="tablet"] .sidebar .brand b,
+html[data-device="tablet-landscape"] .sidebar .brand b,
+html[data-device="tablet"] .side-nav span,
+html[data-device="tablet-landscape"] .side-nav span,
+html[data-device="tablet"] .sidebar-categories,
+html[data-device="tablet-landscape"] .sidebar-categories {
+  display: none;
+}
+
+html[data-device="tablet"] .main,
+html[data-device="tablet-landscape"] .main {
+  margin-left: 82px;
+}
+
+html[data-device="tablet"] .nav,
+html[data-device="tablet-landscape"] .nav {
+  justify-content: center;
+  padding: 0;
+}
+
+html[data-device="tablet"] .hero,
+html[data-device="tablet-landscape"] .hero {
+  min-height: 360px;
+}
+
+html[data-device="phone"] .main,
+html[data-device="phone"] .catalog-main {
+  margin-left: 0;
+  padding: calc(12px + var(--app-safe-top)) 10px calc(92px + var(--app-safe-bottom));
+}
+
+html[data-device="phone"] .sidebar {
+  width: min(86vw, 318px);
+  border-radius: 0 22px 22px 0;
+}
+
+html[data-device="phone"] .mobile-bottom-nav {
+  padding-bottom: var(--app-safe-bottom);
+}
+
+html[data-device="phone"] .hero {
+  min-height: 315px;
+  border-radius: 18px;
+}
+
+html[data-device="phone"] .hero-content {
+  padding: 18px;
+}
+
+html[data-device="phone"] .hero h1,
+html[data-device="phone"] .catalog-hero-head h1,
+html[data-device="phone"] .settings-hero h1,
+html[data-device="phone"] .details-copy h1 {
+  font-size: clamp(28px, 10vw, 40px);
+  line-height: 1.02;
+}
+
+html[data-device="phone"] .row-track {
+  padding-right: 10px;
+}
+
+html[data-device="phone"] .row-arrow {
+  display: none;
+}
+
+html[data-device="phone"] .poster-track {
+  grid-auto-columns: minmax(132px, 42vw);
+}
+
+html[data-device="phone"] .land-track {
+  grid-auto-columns: minmax(250px, 84vw);
+}
+
+html[data-device="phone"] .catalog-page-grid,
+html[data-device="phone"] .catalog-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+html[data-device="phone"] .media-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+html[data-device="phone"] .media-action {
+  width: 38px;
+  height: 38px;
+}
+
+html[data-device="phone"] .smart-tabs,
+html[data-device="phone"] .search-type-tabs,
+html[data-device="phone"] .library-tabs {
+  overflow-x: auto;
+  display: flex;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+html[data-device="phone"] .smart-tabs::-webkit-scrollbar,
+html[data-device="phone"] .search-type-tabs::-webkit-scrollbar,
+html[data-device="phone"] .library-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-device="phone"] .smart-tabs a,
+html[data-device="phone"] .search-type-tabs button,
+html[data-device="phone"] .library-tabs button {
+  flex: 0 0 auto;
+  min-width: 132px;
+  scroll-snap-align: start;
+}
+
+html[data-device="phone"] .quick-card,
+html[data-device="phone"] .trailer-card {
+  width: calc(100vw - 18px);
+  max-height: calc(100vh - 22px);
+  border-radius: 20px;
+}
+
+html[data-device="phone"] .toast {
+  left: 12px;
+  right: 12px;
+  bottom: calc(82px + var(--app-safe-bottom));
+  width: auto;
+  text-align: center;
+}
+
+html[data-device="phone"] .mini-player {
+  right: 10px;
+  left: 10px;
+  bottom: calc(76px + var(--app-safe-bottom));
+  width: auto;
+}
+
+html[data-device="phone"] .player-top,
+html[data-device="tablet"] .player-top {
+  padding: calc(10px + var(--app-safe-top)) 12px 8px;
+}
+
+html[data-device="phone"] .player-shell,
+html[data-device="tablet"] .player-shell {
+  padding: 12px 10px calc(92px + var(--app-safe-bottom));
+}
+
+html[data-device="phone"] body.player-body,
+html[data-device="phone"] .player-body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+html[data-device="phone"] .media-hero,
+html[data-device="tablet"] .media-hero {
+  grid-template-columns: 1fr;
+}
+
+html[data-device="phone"] .poster-frame {
+  width: min(168px, 52vw);
+}
+
+html[data-device="phone"] .watch-zone,
+html[data-device="tablet"] .watch-zone {
+  grid-template-columns: 1fr;
+}
+
+html[data-device="phone"] .screen {
+  min-height: 214px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+}
+
+html[data-device="phone"] .sources-panel {
+  position: static;
+  max-height: none;
+}
+
+html[data-device="phone"] .sources-list,
+html[data-device="phone"] .episode-list,
+html[data-device="phone"] .season-buttons,
+html[data-device="phone"] .version-buttons {
+  max-width: 100%;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  contain: layout paint;
+}
+
+html[data-device="phone"] .sources-list::-webkit-scrollbar,
+html[data-device="phone"] .episode-list::-webkit-scrollbar,
+html[data-device="phone"] .season-buttons::-webkit-scrollbar,
+html[data-device="phone"] .version-buttons::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-device="phone"] .source-btn,
+html[data-device="phone"] .episode-card,
+html[data-device="phone"] .season-buttons button,
+html[data-device="phone"] .version-buttons button {
+  flex: 0 0 min(280px, 82vw);
+  scroll-snap-align: start;
+}
+
+html[data-device="phone"] .backdrop,
+html[data-device="phone"] .player-body .backdrop {
+  inset: 0;
+  transform: none;
+}
+
+html[data-device="phone"] .player-top,
+html[data-device="phone"] .player-shell {
+  width: 100%;
+  max-width: 100vw;
+  margin-left: 0;
+  margin-right: 0;
+  left: auto;
+  right: auto;
+}
+
+html[data-device="phone"] .player-shell,
+html[data-device="phone"] .watch-zone,
+html[data-device="phone"] .series-panel,
+html[data-device="phone"] .sources-panel,
+html[data-device="phone"] .screen {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+html[data-device="phone"] .season-buttons,
+html[data-device="phone"] .version-buttons,
+html[data-device="phone"] .episode-list,
+html[data-device="phone"] .sources-list {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+html[data-device="phone"] .details-shell {
+  padding: calc(72px + var(--app-safe-top)) 10px calc(92px + var(--app-safe-bottom));
+}
+
+html[data-device="phone"] .details-grid,
+html[data-device="phone"] .settings-grid,
+html[data-device="phone"] .admin-grid {
+  grid-template-columns: 1fr;
+}
+
+html[data-device="phone"] .settings-card,
+html[data-device="phone"] .details-panel,
+html[data-device="phone"] .catalog-hero-head,
+html[data-device="phone"] .advanced-search-panel,
+html[data-device="phone"] .library-controls {
+  border-radius: 18px;
+}
+
+@media (min-width: 1800px) {
+  .hero,
+  .home-hero {
+    min-height: 480px;
+  }
+
+  .catalog-page-grid,
+  .catalog-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* Single search topbar and brighter stretched hero */
+.home-body .topbar {
+  grid-template-columns: minmax(420px, 920px);
+  justify-content: center;
+  padding: 12px 18px;
+}
+
+.home-body .topbar #backBtn,
+.home-body .topbar #searchBtn,
+.home-body .topbar #reloadBtn,
+.home-body .topbar #notifyBtn,
+.home-body .topbar #topSettingsBtn,
+.home-body .search-modes {
+  display: none !important;
+}
+
+.home-body .search-area {
+  width: min(920px, 100%);
+  min-height: 58px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.045)),
+    rgba(10, 17, 36, .78);
+  border-color: rgba(147,197,253,.28);
+  box-shadow: 0 20px 60px rgba(0,0,0,.24), 0 0 0 1px rgba(255,255,255,.05) inset;
+}
+
+.home-body .searchbox {
+  height: 50px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.home-body .searchbox input {
+  font-size: 16px;
+}
+
+.home-body .hero,
+.home-body .home-hero {
+  min-height: clamp(455px, 43vw, 690px);
+  background-position: center center !important;
+  background-size: cover, cover, cover !important;
+  border-color: rgba(147,197,253,.30);
+  box-shadow: 0 28px 90px rgba(59,130,246,.18), 0 12px 70px rgba(139,92,246,.18);
+}
+
+.home-body .hero::before {
+  background:
+    radial-gradient(circle at 70% 18%, rgba(34,211,238,.16), transparent 36%),
+    linear-gradient(90deg, rgba(255,255,255,.055), transparent 44%);
+}
+
+.home-body .hero::after {
+  background:
+    linear-gradient(90deg, rgba(5,7,17,.62) 0%, rgba(5,7,17,.35) 45%, rgba(5,7,17,.04) 100%),
+    linear-gradient(0deg, rgba(5,7,17,.62), rgba(5,7,17,.02) 62%);
+}
+
+.home-body .hero-shade {
+  background:
+    linear-gradient(110deg, rgba(59,130,246,.12), rgba(139,92,246,.08) 46%, transparent 72%);
+}
+
+.home-body .hero-content {
+  width: min(760px, 100%);
+  padding: clamp(36px, 5vw, 70px);
+}
+
+.home-body .hero p {
+  color: #f3f7ff;
+  text-shadow: 0 4px 22px rgba(0,0,0,.42);
+}
+
+@media (max-width: 920px) {
+  .home-body .topbar {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 68px;
+  }
+}
+
+@media (max-width: 620px) {
+  .home-body .topbar {
+    margin: -12px -10px 14px;
+    padding: calc(12px + var(--app-safe-top)) 10px 12px 64px;
+  }
+
+  .home-body .search-area {
+    min-height: 52px;
+  }
+
+  .home-body .searchbox {
+    height: 44px;
+  }
+
+  .home-body .hero,
+  .home-body .home-hero {
+    min-height: 360px;
+    border-radius: 20px;
+  }
+
+  .home-body .hero-content {
+    padding: 22px 18px 28px;
+  }
+}

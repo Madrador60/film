@@ -1352,8 +1352,8 @@ function updateHero(item, query = '') {
 
 function getHeroBackground(image) {
   return [
-    'linear-gradient(90deg, rgba(5,7,17,.92), rgba(5,7,17,.58) 58%, rgba(5,7,17,.28))',
-    'linear-gradient(0deg, rgba(5,7,17,.92), rgba(5,7,17,.08) 48%, rgba(5,7,17,.2))',
+    'linear-gradient(90deg, rgba(5,7,17,.68), rgba(5,7,17,.36) 52%, rgba(5,7,17,.10))',
+    'linear-gradient(0deg, rgba(5,7,17,.70), rgba(5,7,17,.05) 52%, rgba(5,7,17,.08))',
     `url("${cssUrl(image)}")`
   ].join(', ');
 }
@@ -1369,7 +1369,7 @@ function setHeroImageMode(hero, image, isPosterFallback) {
   const preview = new Image();
   preview.onload = () => {
     const ratio = preview.naturalWidth / Math.max(preview.naturalHeight, 1);
-    if (preview.naturalWidth < 1000 || ratio < 1.45) {
+    if (preview.naturalWidth < 720 || ratio < .72) {
       hero.classList.add('hero-fit');
     }
   };
