@@ -47,6 +47,38 @@
         </div>
       </article>
 
+      <article class="settings-card settings-wide">
+        <h2>Catalogue serveur</h2>
+        <div class="catalog-health" id="catalogHealth">
+          <div class="catalog-health-head">
+            <span id="catalogHealthState"><i class="fa-solid fa-circle-notch fa-spin"></i> Chargement du statut...</span>
+            <small id="catalogHealthSource">Source : ...</small>
+          </div>
+          <div class="catalog-health-grid">
+            <div class="catalog-health-item">
+              <div>
+                <strong>Films</strong>
+                <small id="catalogFilmText">...</small>
+              </div>
+              <div class="catalog-progress"><span id="catalogFilmProgress"></span></div>
+            </div>
+            <div class="catalog-health-item">
+              <div>
+                <strong>Séries</strong>
+                <small id="catalogSeriesText">...</small>
+              </div>
+              <div class="catalog-progress"><span id="catalogSeriesProgress"></span></div>
+            </div>
+          </div>
+          <p id="catalogHealthMessage">Madrador prépare le catalogue complet en arrière-plan pour accélérer l'app.</p>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary" id="warmCatalog" type="button"><i class="fa-solid fa-fire-flame-curved"></i><span>Préparer le catalogue</span></button>
+          <button class="btn glass" id="refreshCatalogStatus" type="button"><i class="fa-solid fa-rotate-right"></i><span>Actualiser</span></button>
+          <a class="btn glass" href="/api/catalog/status?limit=all" target="_blank" rel="noreferrer"><i class="fa-solid fa-up-right-from-square"></i><span>Voir API</span></a>
+        </div>
+      </article>
+
       <article class="settings-card">
         <h2>Apparence</h2>
         <div class="theme-grid" id="themeGrid">

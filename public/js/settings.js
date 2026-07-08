@@ -4,6 +4,7 @@ window.addEventListener('DOMContentLoaded', () => {
   hydrateSettings();
   bindSettings();
   renderServerStats();
+  renderCatalogStatus();
 });
 
 function hydrateSettings() {
@@ -44,6 +45,8 @@ function bindSettings() {
   $('resetAppearance').addEventListener('click', resetAppearance);
   $('exportData').addEventListener('click', exportLocalData);
   $('importData').addEventListener('change', importLocalData);
+  $('refreshCatalogStatus')?.addEventListener('click', renderCatalogStatus);
+  $('warmCatalog')?.addEventListener('click', warmCatalogCache);
 }
 
 function saveSettings() {
@@ -215,6 +218,109 @@ async function renderServerStats() {
   } catch (err) {
     box.innerHTML = '<span>Domaine actif : indisponible</span><span>Le serveur local ne répond pas aux statistiques.</span>';
   }
+}
+
+async function renderCatalogStatus() {
+  setCatalogHealthLoading(true);
+  try {
+    const res = await fetch('/api/catalog/status?limit=all', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    paintCatalogHealth(data);
+  } catch (err) {
+    paintCatalogHealthError('Statut catalogue indisponible.');
+  } finally {
+    setCatalogHealthLoading(false);
+  }
+}
+
+async function warmCatalogCache() {
+  const button = $('warmCatalog');
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Préparation...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/cache/warm?limit=all', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    paintCatalogHealth({
+      source: data.source,
+      film: data.status?.film,
+      series: data.status?.series,
+      ready: data.ready,
+      updatedAt: data.timestamp
+    });
+    showToast('Préparation du catalogue lancée');
+  } catch (err) {
+    showToast('Préparation indisponible');
+    paintCatalogHealthError('Impossible de lancer la préparation du catalogue.');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i><span>Préparer le catalogue</span>';
+    }
+  }
+}
+
+function paintCatalogHealth(data) {
+  const film = data?.film || {};
+  const series = data?.series || {};
+  const ready = data?.ready || (film.state === 'ready' && series.state === 'ready');
+  const building = [film.state, series.state].some((state) => ['building', 'queued'].includes(state));
+
+  $('catalogHealthState').innerHTML = ready
+    ? '<i class="fa-solid fa-circle-check"></i> Catalogue complet prêt'
+    : building
+      ? '<i class="fa-solid fa-circle-notch fa-spin"></i> Catalogue en préparation'
+      : '<i class="fa-solid fa-circle-info"></i> Catalogue à préparer';
+
+  $('catalogHealthSource').textContent = `Source : ${data?.source || 'serveur Madrador'}`;
+  paintCatalogProgress('catalogFilm', film, 'films');
+  paintCatalogProgress('catalogSeries', series, 'séries');
+
+  const message = ready
+    ? 'Le catalogue complet est disponible depuis le cache serveur.'
+    : building
+      ? 'Le scan continue en arrière-plan. UptimeRobot peut rappeler /api/cache/warm pour reprendre si Render redémarre.'
+      : 'Clique sur Préparer le catalogue pour lancer ou reprendre le scan complet.';
+  $('catalogHealthMessage').textContent = message;
+}
+
+function paintCatalogProgress(prefix, state, label) {
+  const page = Number(state?.page || 0);
+  const limit = Number(state?.limit || 0);
+  const total = Number(state?.total || 0);
+  const percent = limit ? Math.max(0, Math.min(100, Math.round((page / limit) * 100))) : 0;
+  const statusLabel = getCatalogStateLabel(state?.state);
+
+  $(`${prefix}Text`).textContent = `${statusLabel} • page ${page}/${limit || '?'} • ${total} ${label}`;
+  $(`${prefix}Progress`).style.width = `${percent}%`;
+}
+
+function getCatalogStateLabel(state) {
+  return {
+    ready: 'Prêt',
+    building: 'En cours',
+    queued: 'En attente',
+    idle: 'En attente',
+    error: 'Erreur'
+  }[state] || 'Inconnu';
+}
+
+function paintCatalogHealthError(message) {
+  $('catalogHealthState').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Catalogue indisponible';
+  $('catalogHealthSource').textContent = 'Source : inconnue';
+  $('catalogFilmText').textContent = 'Films : indisponible';
+  $('catalogSeriesText').textContent = 'Séries : indisponible';
+  $('catalogFilmProgress').style.width = '0%';
+  $('catalogSeriesProgress').style.width = '0%';
+  $('catalogHealthMessage').textContent = message;
+}
+
+function setCatalogHealthLoading(loading) {
+  $('refreshCatalogStatus')?.toggleAttribute('disabled', loading);
 }
 
 function escapeHtml(str) {
