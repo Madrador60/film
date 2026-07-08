@@ -24,6 +24,11 @@ const rows = $('rows');
 const loading = $('loading');
 const empty = $('empty');
 
+function formatVisibleCount(count) {
+  const total = Number(count) || 0;
+  return `${total} titre${total > 1 ? 's' : ''} affiché${total > 1 ? 's' : ''}`;
+}
+
 const FILTER_GROUPS = {
   genreFilters: ['Action', 'Aventure', 'Animation', 'Arts martiaux', 'Comédie', 'Crime', 'Documentaire', 'Drame', 'Fantastique', 'Horreur', 'Romance', 'Science-Fiction', 'Thriller'],
   languageFilters: ['TrueFrench', 'French', 'VF', 'VF+VOSTFR', 'VOSTFR'],
@@ -315,7 +320,7 @@ async function search() {
     const results = mode === 'series' ? series : mode === 'movies' ? movies : [...movies, ...series].slice(0, ITEMS_PER_PAGE);
     lastItems = results;
     renderRows(getSearchRows(q, movies, series));
-    $('pageNum').textContent = `${results.length}/24`;
+    $('pageNum').textContent = formatVisibleCount(results.length);
     startHeroCarousel(q);
   } catch (err) {
     console.error(err);
@@ -602,7 +607,7 @@ function renderFullCollection(title, items, layout = 'poster') {
     renderHomeRows();
     startHeroCarousel();
   });
-  $('pageNum').textContent = `${cleanItems.length}/24`;
+  $('pageNum').textContent = formatVisibleCount(cleanItems.length);
   $('prevBtn').disabled = true;
   $('nextBtn').disabled = true;
   rows.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1163,7 +1168,7 @@ function renderLocalCollection(title, items, activeButton) {
           <h2>Rien ici</h2>
           <p>Aucun contenu ne correspond à ce filtre.</p>
         </div>`;
-      $('pageNum').textContent = '0/24';
+      $('pageNum').textContent = formatVisibleCount(0);
       return;
     }
 
@@ -1184,7 +1189,7 @@ function renderLocalCollection(title, items, activeButton) {
     wrap.appendChild(remove);
     grid.appendChild(wrap);
   });
-    $('pageNum').textContent = `${lastItems.length}/24`;
+    $('pageNum').textContent = formatVisibleCount(lastItems.length);
   };
   paintItems(cleanItems);
   $('localBack').addEventListener('click', () => {
@@ -1245,7 +1250,7 @@ async function renderNewReleases() {
     .slice(0, ITEMS_PER_PAGE);
   lastItems = mixed;
   renderRows([{ title: 'Nouveautés', items: mixed, layout: 'poster' }]);
-  $('pageNum').textContent = `${mixed.length}/24`;
+  $('pageNum').textContent = formatVisibleCount(mixed.length);
   $('prevBtn').disabled = true;
   $('nextBtn').disabled = true;
   $('sidebar').classList.remove('open');
@@ -1263,7 +1268,7 @@ async function renderPopular() {
   const popular = pickEvery(dedupeMediaItems([...movieItems, ...seriesItems]), 3, ITEMS_PER_PAGE);
   lastItems = popular;
   renderRows([{ title: 'Populaires', items: popular, layout: 'poster' }]);
-  $('pageNum').textContent = `${popular.length}/24`;
+  $('pageNum').textContent = formatVisibleCount(popular.length);
   $('prevBtn').disabled = true;
   $('nextBtn').disabled = true;
   $('sidebar').classList.remove('open');
@@ -1280,7 +1285,7 @@ function changePage(dir) {
 function updatePager() {
   $('prevBtn').disabled = currentPage <= 1 || isSearching;
   $('nextBtn').disabled = isSearching || lastItems.length < 1;
-  $('pageNum').textContent = `Page ${currentPage} • ${lastItems.length}/24`;
+  $('pageNum').textContent = formatVisibleCount(lastItems.length);
 }
 
 function getCardImage(item, layout = 'land') {
