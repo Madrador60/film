@@ -22,6 +22,7 @@ function bindDetailsUI() {
   $('detailFavorite').addEventListener('click', toggleFavorite);
   $('detailShare').addEventListener('click', copyDetailLink);
   $('detailTrailer').addEventListener('click', openTrailer);
+  $('detailActionStrip')?.addEventListener('click', handleDetailAction);
   $('detailCloseTrailer').addEventListener('click', closeTrailer);
   $('detailTrailerModal').addEventListener('click', (event) => {
     if (event.target === $('detailTrailerModal')) closeTrailer();
@@ -113,8 +114,88 @@ function renderDetails(details) {
   trailerEmbed = trailer.embed;
   trailerWatch = trailer.watch;
   $('detailTrailer').classList.toggle('hidden', !trailerEmbed);
+  renderDetailActionStrip();
 
   MadradorStorage.addHistory(currentItem);
+}
+
+function handleDetailAction(event) {
+  const button = event.target.closest('[data-detail-action]');
+  if (!button || button.disabled || !currentItem) return;
+
+  const action = button.dataset.detailAction;
+  if (action === 'watch') openPlayer(currentItem);
+  if (action === 'favorite') toggleFavorite();
+  if (action === 'trailer') openTrailer();
+  if (action === 'explore') openRelatedCatalog();
+}
+
+function renderDetailActionStrip() {
+  if (!currentItem) return;
+  const progress = getResumeProgress();
+  const favorite = MadradorStorage.isFavorite(currentItem.id);
+  const genre = currentGenres[0] || '';
+  const source = MadradorStorage.getPrefs().preferredSource || 'vidzy';
+  const version = currentItem.version || MadradorStorage.getPrefs().preferredVersion || 'VF';
+  const actions = {
+    watch: $('detailActionStrip')?.querySelector('[data-detail-action="watch"]'),
+    favorite: $('detailActionStrip')?.querySelector('[data-detail-action="favorite"]'),
+    explore: $('detailActionStrip')?.querySelector('[data-detail-action="explore"]'),
+    trailer: $('detailActionStrip')?.querySelector('[data-detail-action="trailer"]')
+  };
+
+  if (actions.watch) {
+    actions.watch.innerHTML = `
+      <i class="fa-solid ${progress ? 'fa-clock-rotate-left' : 'fa-play'}"></i>
+      <span>
+        <b>${escapeHtml(progress ? 'Reprendre' : 'Regarder')}</b>
+        <small>${escapeHtml(progress?.episode ? `S${progress.season || 1} • E${progress.episode}` : `${version} • ${source}`)}</small>
+      </span>`;
+  }
+
+  if (actions.favorite) {
+    actions.favorite.classList.toggle('active', favorite);
+    actions.favorite.innerHTML = `
+      <i class="${favorite ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+      <span>
+        <b>${favorite ? 'Dans ma liste' : 'Ma liste'}</b>
+        <small>${favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</small>
+      </span>`;
+  }
+
+  if (actions.explore) {
+    actions.explore.disabled = !genre;
+    actions.explore.innerHTML = `
+      <i class="fa-solid fa-compass"></i>
+      <span>
+        <b>${genre ? `Explorer ${escapeHtml(genre)}` : 'Explorer'}</b>
+        <small>${genre ? 'Ouvrir le catalogue filtré' : 'Aucun genre disponible'}</small>
+      </span>`;
+  }
+
+  if (actions.trailer) {
+    actions.trailer.disabled = !trailerEmbed;
+    actions.trailer.innerHTML = `
+      <i class="fa-solid fa-clapperboard"></i>
+      <span>
+        <b>Bande-annonce</b>
+        <small>${trailerEmbed ? 'Lire sans quitter la fiche' : 'Indisponible'}</small>
+      </span>`;
+  }
+
+  $('detailWatch').innerHTML = progress
+    ? '<i class="fa-solid fa-clock-rotate-left"></i><span>Reprendre</span>'
+    : '<i class="fa-solid fa-play"></i><span>Regarder</span>';
+}
+
+function openRelatedCatalog() {
+  const genre = currentGenres[0] || '';
+  if (!genre) return;
+  const query = new URLSearchParams({
+    type: 'all',
+    genre
+  });
+  location.href = `./catalog.html?${query.toString()}`;
 }
 
 async function renderSeriesSeasons(details) {
@@ -194,6 +275,7 @@ function renderResume() {
     <p>${escapeHtml(episode)}<br>${escapeHtml(source)}</p>
   `;
   $('resumeCard').onclick = () => openPlayer(currentItem);
+  renderDetailActionStrip();
 }
 
 async function renderSuggestions() {
@@ -318,6 +400,7 @@ function toggleFavorite() {
     showToast('Ajouté à Ma liste');
   }
   renderFavorite();
+  renderDetailActionStrip();
   if (currentItem) renderDetailInfo(currentDetailsData, currentGenres);
 }
 

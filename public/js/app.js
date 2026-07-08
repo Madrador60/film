@@ -312,8 +312,12 @@ async function search() {
   showLoading(true);
 
   try {
+    const localResults = searchLocalCatalog(q, getEffectiveSearchMode());
     const data = await fetchJson(`/api/search?q=${encodeURIComponent(q)}`);
-    const normalizedResults = normalizeItems(data.items || [], 'movies');
+    const normalizedResults = dedupeMediaItems([
+      ...localResults,
+      ...normalizeItems(data.items || [], 'movies')
+    ]);
     const movies = normalizedResults.filter((item) => item.type === 'movies').slice(0, ITEMS_PER_PAGE);
     const series = groupSeriesItems(normalizedResults.filter((item) => item.type === 'series')).slice(0, ITEMS_PER_PAGE);
     const mode = getEffectiveSearchMode();
@@ -334,6 +338,35 @@ async function search() {
   } finally {
     showLoading(false);
   }
+}
+
+function searchLocalCatalog(query, mode = 'all') {
+  const needle = normalizeTitleKey(query);
+  if (!needle) return [];
+  const words = needle.split(/\s+/).filter(Boolean);
+  const pool = mode === 'movies'
+    ? movieItems
+    : mode === 'series'
+      ? seriesItems
+      : [...movieItems, ...seriesItems];
+
+  return dedupeMediaItems(pool)
+    .map((item) => {
+      const haystack = normalizeTitleKey([
+        item.title,
+        item.originalTitle,
+        item.seriesTitle,
+        item.year,
+        item.quality,
+        item.version
+      ].filter(Boolean).join(' '));
+      const exact = haystack.includes(needle) ? 30 : 0;
+      const score = words.reduce((total, word) => total + (haystack.includes(word) ? 8 : 0), exact);
+      return { item, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item);
 }
 
 async function fetchJson(url) {
@@ -500,7 +533,7 @@ function renderHomeRows() {
   const series = seriesItems.slice(0, ITEMS_PER_PAGE);
   const continueItems = dedupeMediaItems(MadradorStorage.continueWatching()).slice(0, 8);
   const favoriteItems = dedupeMediaItems(MadradorStorage.favorites()).slice(0, 12);
-  const historyItems = dedupeMediaItems(MadradorStorage.history()).slice(0, 12);
+  const historyItems = dedupeMediaItems(MadradorStorage.history()).slice(0, 6);
 
   const homeRows = [
     { title: 'Continuer à regarder', items: continueItems, layout: 'land', variant: 'continue' },
