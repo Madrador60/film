@@ -6,6 +6,8 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
+loadEnvFile();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const FSTREAM_INFO = 'https://fstream.info/';
@@ -58,6 +60,37 @@ const MAX_ALL_PAGE_LIMIT = Math.max(FULL_CATALOG_PAGE_LIMITS.movie, FULL_CATALOG
 const CATALOG_BATCH_SIZE = Math.max(1, Math.min(Number(process.env.CATALOG_BATCH_SIZE) || 2, 4));
 const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
+const TMDB_API_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_TOKEN || '';
+const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
+
+function loadEnvFile() {
+    try {
+        const envPath = path.join(__dirname, '.env');
+        if (!fs.existsSync(envPath)) return;
+
+        fs.readFileSync(envPath, 'utf8')
+            .split(/\r?\n/)
+            .forEach((line) => {
+                const clean = line.trim();
+                if (!clean || clean.startsWith('#')) return;
+                const index = clean.indexOf('=');
+                if (index === -1) return;
+
+                const key = clean.slice(0, index).trim();
+                let value = clean.slice(index + 1).trim();
+                if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.slice(1, -1);
+                }
+                if (key && process.env[key] === undefined) {
+                    process.env[key] = value;
+                }
+            });
+    } catch (error) {
+        console.log(`[ENV] Lecture .env impossible : ${error.message}`);
+    }
+}
 
 function ensurePersistentCacheDir() {
     if (!fs.existsSync(PERSISTENT_CACHE_DIR)) {
@@ -237,6 +270,159 @@ function cleanDuplicatedTitle(value) {
         if (left && normalizeTitleKey(left) === normalizeTitleKey(right)) return left;
     }
     return title.replace(/(.+?\bSaison\s*\d+)\s*\1$/i, '$1').trim();
+}
+
+function isTmdbConfigured() {
+    return Boolean(TMDB_BEARER_TOKEN || TMDB_API_KEY);
+}
+
+function getTmdbAuthConfig(params = {}) {
+    const config = {
+        timeout: 10000,
+        params: {
+            language: 'fr-FR',
+            ...params
+        }
+    };
+
+    if (TMDB_BEARER_TOKEN) {
+        config.headers = {
+            Authorization: `Bearer ${TMDB_BEARER_TOKEN}`,
+            Accept: 'application/json'
+        };
+    } else if (TMDB_API_KEY) {
+        config.params.api_key = TMDB_API_KEY;
+    }
+
+    return config;
+}
+
+function getTmdbImage(pathname, size = 'w780') {
+    if (!pathname) return '';
+    if (String(pathname).startsWith('http')) return pathname;
+    return `${TMDB_IMAGE_BASE}/${size}${pathname}`;
+}
+
+function getTmdbYear(item = {}) {
+    const date = item.release_date || item.first_air_date || '';
+    return date ? String(date).slice(0, 4) : '';
+}
+
+function getTmdbScore(result = {}, titleKey = '', year = '') {
+    const resultTitle = normalizeTitleKey(result.title || result.name || result.original_title || result.original_name || '');
+    let score = 0;
+    if (resultTitle === titleKey) score += 80;
+    else if (resultTitle.includes(titleKey) || titleKey.includes(resultTitle)) score += 45;
+    if (year && getTmdbYear(result) === String(year)) score += 18;
+    score += Math.min(Number(result.popularity || 0), 100) / 10;
+    if (result.poster_path) score += 5;
+    if (result.backdrop_path) score += 8;
+    return score;
+}
+
+function pickTmdbResult(results = [], title = '', year = '') {
+    const titleKey = normalizeTitleKey(title);
+    if (!titleKey || !Array.isArray(results) || !results.length) return null;
+
+    return results
+        .filter((item) => item && (item.poster_path || item.backdrop_path || item.overview))
+        .map((item) => ({ item, score: getTmdbScore(item, titleKey, year) }))
+        .sort((a, b) => b.score - a.score)[0]?.item || null;
+}
+
+function getTmdbVideoUrl(videos = {}) {
+    const results = Array.isArray(videos.results) ? videos.results : [];
+    const video = results.find((item) => item.site === 'YouTube' && item.type === 'Trailer')
+        || results.find((item) => item.site === 'YouTube');
+    return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : '';
+}
+
+async function fetchTmdbDetails({ title, year, type = 'movie' }) {
+    if (!isTmdbConfigured()) return null;
+
+    const clean = cleanDuplicatedTitle(parseSeasonTitle(title).baseTitle || title);
+    const mediaType = type === 'series' ? 'tv' : 'movie';
+    const cacheKey = `tmdb_${mediaType}_${normalizeTitleKey(clean)}_${year || 'any'}`;
+    const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
+    if (cached) return cached;
+
+    try {
+        const searchParams = {
+            query: clean,
+            include_adult: false
+        };
+        if (year && mediaType === 'movie') searchParams.year = year;
+        if (year && mediaType === 'tv') searchParams.first_air_date_year = year;
+
+        const search = await axios.get(`${TMDB_API_BASE}/search/${mediaType}`, getTmdbAuthConfig(searchParams));
+        const result = pickTmdbResult(search.data?.results, clean, year);
+        if (!result?.id) {
+            setCachedFor(cacheKey, null);
+            return null;
+        }
+
+        const detail = await axios.get(`${TMDB_API_BASE}/${mediaType}/${result.id}`, getTmdbAuthConfig({
+            append_to_response: 'videos',
+            include_image_language: 'fr,en,null'
+        }));
+        const data = detail.data || {};
+        const tmdb = {
+            tmdbId: data.id,
+            tmdbType: mediaType,
+            tmdbUrl: `https://www.themoviedb.org/${mediaType}/${data.id}`,
+            title: data.title || data.name || result.title || result.name || clean,
+            description: data.overview || result.overview || '',
+            poster: getTmdbImage(data.poster_path || result.poster_path, 'w500'),
+            backdrop: getTmdbImage(data.backdrop_path || result.backdrop_path, 'w1280'),
+            year: getTmdbYear(data) || getTmdbYear(result) || '',
+            genres: Array.isArray(data.genres) ? data.genres.map((genre) => genre.name).filter(Boolean) : [],
+            trailer: getTmdbVideoUrl(data.videos),
+            voteAverage: data.vote_average || result.vote_average || null
+        };
+
+        setCachedFor(cacheKey, tmdb);
+        return tmdb;
+    } catch (error) {
+        console.log(`[TMDB] Enrichissement impossible (${clean}) : ${error.message}`);
+        setCachedFor(cacheKey, null);
+        return null;
+    }
+}
+
+function shouldReplaceImage(currentUrl = '') {
+    const url = String(currentUrl || '');
+    if (!url) return true;
+    if (url.includes('image.tmdb.org')) return false;
+    return /\/uploads\/|\/poster_|\/thumb|\/resize|\/cache/i.test(url);
+}
+
+async function enrichDetailsWithTmdb(details = {}, type = 'movie') {
+    if (!details?.title || !isTmdbConfigured()) return details;
+
+    const parsed = parseSeasonTitle(details.title);
+    const tmdb = await fetchTmdbDetails({
+        title: type === 'series' ? (parsed.baseTitle || details.title) : details.title,
+        year: details.year,
+        type
+    });
+    if (!tmdb) return details;
+
+    return {
+        ...details,
+        description: details.description && details.description.length > 40 ? details.description : (tmdb.description || details.description || ''),
+        synopsis: details.synopsis && details.synopsis.length > 40 ? details.synopsis : (tmdb.description || details.synopsis || ''),
+        poster: shouldReplaceImage(details.poster) ? (tmdb.poster || details.poster || '') : details.poster,
+        backdrop: shouldReplaceImage(details.backdrop) ? (tmdb.backdrop || details.backdrop || details.poster || '') : details.backdrop,
+        trailer: details.trailer || tmdb.trailer || '',
+        year: details.year || tmdb.year || '',
+        genres: Array.isArray(details.genres) && details.genres.length ? details.genres : (tmdb.genres || []),
+        tmdb: {
+            id: tmdb.tmdbId,
+            type: tmdb.tmdbType,
+            url: tmdb.tmdbUrl,
+            voteAverage: tmdb.voteAverage
+        }
+    };
 }
 
 function getLocalNetworkUrls(port) {
@@ -746,9 +932,9 @@ async function getFilmDetails(id, includeSources = false) {
     const apiId = getApiId(id);
     const cacheKey = `film_details_${apiId}`;
     const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
-    if (cached && (!includeSources || cached.sources)) return cached;
+    if (cached && (!isTmdbConfigured() || cached.tmdb) && (!includeSources || cached.sources)) return cached;
 
-    const details = await scrapeDetails(apiId);
+    const details = await enrichDetailsWithTmdb(await scrapeDetails(apiId), 'movie');
     const film = {
         ...details,
         id: apiId,
@@ -929,9 +1115,9 @@ async function getSerieDetails(id, includeEpisodes = false) {
     const apiId = getApiId(id);
     const cacheKey = `serie_details_${apiId}`;
     const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
-    if (cached && (!includeEpisodes || cached.episodes)) return cached;
+    if (cached && (!isTmdbConfigured() || cached.tmdb) && (!includeEpisodes || cached.episodes)) return cached;
 
-    const details = await scrapeDetails(apiId);
+    const details = await enrichDetailsWithTmdb(await scrapeDetails(apiId), 'series');
     const parsed = parseSeasonTitle(details.title);
     const serie = {
         ...details,

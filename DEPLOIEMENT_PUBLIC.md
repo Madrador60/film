@@ -31,6 +31,17 @@ Start Command: npm start
 Plan: Free
 ```
 
+## Option TMDB
+
+Pour avoir de meilleures affiches, backdrops, synopsis, genres et bandes-annonces, ajoute ces variables dans Render :
+
+```txt
+TMDB_BEARER_TOKEN=...
+TMDB_API_KEY=...
+```
+
+Ne mets jamais ces valeurs directement dans le code GitHub. En local, tu peux utiliser un fichier `.env`.
+
 Important : le plan gratuit peut dormir apres inactivite. Au premier clic, il peut mettre un peu de temps a se reveiller.
 
 ## Autres solutions

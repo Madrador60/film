@@ -8,6 +8,7 @@ madrador-server.err.log
 
 .env
 .env.*
+!.env.example
 
 tmp-*.html
 *.tmp

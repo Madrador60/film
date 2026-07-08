@@ -11,6 +11,7 @@ let heroIndex = 0;
 let heroTimer = null;
 let heroItems = [];
 let currentHeroItem = null;
+let heroDetailsToken = 0;
 let quickItem = null;
 let toastTimer = null;
 let searchMode = 'all';
@@ -1329,6 +1330,7 @@ function updateHero(item, query = '') {
   const hero = $('hero');
   const title = $('heroTitle');
   const text = $('heroText');
+  const token = ++heroDetailsToken;
   currentHeroItem = item || null;
 
   if (!item) {
@@ -1348,14 +1350,72 @@ function updateHero(item, query = '') {
   setHeroImageMode(hero, image, !item.backdrop);
   renderHeroDots();
   window.setTimeout(() => hero.classList.add('hero-ready'), 30);
+
+  if (!prefs.dataSaver && shouldUpgradeHeroImage(item, image)) {
+    enrichHeroSlide(item, query, token);
+  }
+}
+
+function shouldUpgradeHeroImage(item, image) {
+  if (!item || item.heroEnriched) return false;
+  if (!image) return true;
+  if (String(image).includes('image.tmdb.org')) {
+    return !item.backdrop || /\/t\/p\/(?:w92|w154|w185|w300|w342|w500)\//i.test(String(image));
+  }
+  return !item.backdrop || /\/uploads\/|\/thumb|\/resize|\/cache|\/poster_/i.test(String(image));
+}
+
+async function enrichHeroSlide(item, query, token) {
+  item.heroEnriched = true;
+  try {
+    const details = await fetchJson(getItemDetailsEndpoint(item));
+    const nextBackdrop = fixUrl(details.backdrop || '');
+    const nextPoster = fixUrl(details.poster || '');
+    const nextImage = nextBackdrop || nextPoster;
+
+    if (!nextImage || token !== heroDetailsToken || currentHeroItem?.id !== item.id) return;
+
+    const enriched = {
+      ...item,
+      title: item.type === 'series' ? (item.seriesTitle || parseSeasonTitle(details.title || item.title).baseTitle || item.title) : (details.title || item.title),
+      poster: nextPoster || item.poster,
+      backdrop: nextBackdrop || item.backdrop,
+      description: details.description || item.description,
+      year: details.year || item.year,
+      quality: details.quality || item.quality,
+      version: details.version || item.version,
+      heroEnriched: true
+    };
+
+    const index = heroItems.findIndex((entry) => String(entry.id) === String(item.id));
+    if (index !== -1) heroItems[index] = enriched;
+    currentHeroItem = enriched;
+
+    const hero = $('hero');
+    hero.classList.remove('hero-ready', 'hero-fit');
+    hero.style.backgroundImage = getHeroBackground(nextImage);
+    $('heroTitle').textContent = enriched.title;
+    $('heroText').textContent = `${enriched.type === 'series' ? 'Série' : 'Film'} • ${enriched.quality || 'HD'}${enriched.version ? ` • ${enriched.version}` : ''}${enriched.year ? ` • ${enriched.year}` : ''}`;
+    setHeroImageMode(hero, nextImage, !nextBackdrop);
+    window.setTimeout(() => hero.classList.add('hero-ready'), 30);
+  } catch (error) {
+    console.warn('Image TMDB hero indisponible.', error);
+  }
 }
 
 function getHeroBackground(image) {
+  const heroImage = getHighResHeroImage(image);
   return [
     'linear-gradient(90deg, rgba(5,7,17,.68), rgba(5,7,17,.36) 52%, rgba(5,7,17,.10))',
     'linear-gradient(0deg, rgba(5,7,17,.70), rgba(5,7,17,.05) 52%, rgba(5,7,17,.08))',
-    `url("${cssUrl(image)}")`
+    `url("${cssUrl(heroImage)}")`
   ].join(', ');
+}
+
+function getHighResHeroImage(image) {
+  const url = String(image || '');
+  if (!url.includes('image.tmdb.org')) return url;
+  return url.replace(/\/t\/p\/[^/]+\//, '/t/p/original/');
 }
 
 function setHeroImageMode(hero, image, isPosterFallback) {
