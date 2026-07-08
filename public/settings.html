@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
+  <title>Paramètres - Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="./css/pro-ui.css">
+</head>
+<body class="settings-body">
+  <header class="player-top">
+    <a href="./index.html" class="btn glass"><i class="fa-solid fa-arrow-left"></i><span>Retour</span></a>
+    <a href="./index.html" class="brand mini">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+  </header>
+
+  <main class="settings-shell">
+    <section class="settings-hero">
+      <div class="eyebrow"><i class="fa-solid fa-gear"></i> Préférences locales</div>
+      <h1>Paramètres</h1>
+      <p>Tout est sauvegardé dans ce navigateur, sans compte et sans backend.</p>
+    </section>
+
+    <section class="settings-grid">
+      <article class="settings-card settings-wide">
+        <h2>Tableau de bord local</h2>
+        <div class="local-stats" id="localStats">
+          <span><b>0</b><small>Favoris</small></span>
+          <span><b>0</b><small>Historique</small></span>
+          <span><b>0</b><small>À reprendre</small></span>
+          <span><b>0</b><small>Cache</small></span>
+        </div>
+        <div class="settings-actions">
+          <a class="btn glass" href="./catalog.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+          <a class="btn glass" href="./catalog.html?view=history"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></a>
+          <a class="btn glass" href="./catalog.html?type=all"><i class="fa-solid fa-layer-group"></i><span>Catalogue</span></a>
+        </div>
+      </article>
+
+      <article class="settings-card">
+        <h2>Apparence</h2>
+        <div class="theme-grid" id="themeGrid">
+          <label class="theme-option theme-dark"><input type="radio" name="theme" value="dark"><span>Nuit bleue</span></label>
+          <label class="theme-option theme-oled"><input type="radio" name="theme" value="oled"><span>OLED</span></label>
+          <label class="theme-option theme-nebula"><input type="radio" name="theme" value="nebula"><span>Nébuleuse</span></label>
+          <label class="theme-option theme-cinema"><input type="radio" name="theme" value="cinema"><span>Cinéma</span></label>
+        </div>
+        <label class="setting-row stack">
+          <span>Couleur d'accent</span>
+          <select id="accent">
+            <option value="violet">Violet</option>
+            <option value="blue">Bleu</option>
+            <option value="cyan">Cyan</option>
+            <option value="pink">Rose</option>
+            <option value="green">Vert</option>
+            <option value="red">Rouge</option>
+          </select>
+        </label>
+        <label class="setting-row stack">
+          <span>Densité de l'interface</span>
+          <select id="density">
+            <option value="comfortable">Confortable</option>
+            <option value="compact">Compacte</option>
+          </select>
+        </label>
+        <label class="setting-row stack">
+          <span>Style des cartes</span>
+          <select id="cardStyle">
+            <option value="cinema">Cinéma</option>
+            <option value="flat">Plat</option>
+          </select>
+        </label>
+        <label class="setting-row"><span>Réduire les animations</span><input type="checkbox" id="reduceMotion"></label>
+      </article>
+
+      <article class="settings-card">
+        <h2>Lecture</h2>
+        <label class="setting-row stack">
+          <span>Source préférée</span>
+          <select id="preferredSource">
+            <option value="vidzy">vidzy</option>
+            <option value="premium">premium</option>
+            <option value="uqload">uqload</option>
+            <option value="voe">voe</option>
+            <option value="netu">netu</option>
+          </select>
+        </label>
+        <label class="setting-row"><span>Lecture automatique</span><input type="checkbox" id="autoplay"></label>
+        <label class="setting-row"><span>Reprendre la lecture</span><input type="checkbox" id="resumePlayback"></label>
+        <label class="setting-row"><span>Mémoriser la dernière source</span><input type="checkbox" id="rememberLastSource"></label>
+        <label class="setting-row"><span>Mini lecteur flottant</span><input type="checkbox" id="miniPlayerEnabled"></label>
+        <label class="setting-row"><span>Anti-popup / anti-pub</span><input type="checkbox" id="antiPopupEnabled"></label>
+      </article>
+
+      <article class="settings-card">
+        <h2>Langue et version</h2>
+        <label class="setting-row stack">
+          <span>Version préférée</span>
+          <select id="preferredVersion">
+            <option value="VF">VF</option>
+            <option value="VOSTFR">VOSTFR</option>
+            <option value="VF+VOSTFR">VF+VOSTFR</option>
+          </select>
+        </label>
+      </article>
+
+      <article class="settings-card">
+        <h2>Performance</h2>
+        <label class="setting-row"><span>Précharger les affiches</span><input type="checkbox" id="preloadPosters"></label>
+        <label class="setting-row"><span>Mode économie de données</span><input type="checkbox" id="dataSaver"></label>
+        <button class="btn glass full-width" data-clear="cache"><i class="fa-solid fa-broom"></i> Vider le cache local</button>
+      </article>
+
+      <article class="settings-card">
+        <h2>Bibliothèque locale</h2>
+        <button class="btn glass full-width" data-clear="history"><i class="fa-solid fa-clock-rotate-left"></i> Effacer l'historique</button>
+        <button class="btn glass full-width" data-clear="favorites"><i class="fa-solid fa-heart-crack"></i> Effacer les favoris</button>
+        <button class="btn glass full-width" data-clear="continue"><i class="fa-solid fa-list-check"></i> Effacer continuer à regarder</button>
+        <button class="btn glass full-width" data-clear="mini"><i class="fa-solid fa-window-minimize"></i> Effacer le mini lecteur</button>
+        <button class="btn glass full-width" id="exportData" type="button"><i class="fa-solid fa-file-export"></i> Exporter les données locales</button>
+        <label class="btn glass full-width import-label">
+          <i class="fa-solid fa-file-import"></i> Importer les données locales
+          <input id="importData" type="file" accept="application/json">
+        </label>
+      </article>
+
+      <article class="settings-card">
+        <h2>Aperçu rapide</h2>
+        <div class="settings-preview">
+          <div class="media-card media-card-poster">
+            <div class="media-thumb">
+              <div class="no-poster"><i class="fa-solid fa-film"></i></div>
+              <div class="media-fade"></div>
+              <div class="media-badges"><span id="previewType">Film</span><span id="previewQuality">HD</span></div>
+              <h3 id="previewTitle">Madrador Preview</h3>
+            </div>
+          </div>
+          <div class="preview-copy">
+            <strong id="previewTheme">Nuit bleue • Violet</strong>
+            <p id="previewText">Cartes cinéma, interface confortable, Vidzy par défaut.</p>
+            <div class="preview-pills" id="previewPills"></div>
+            <button class="btn primary" id="resetAppearance" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Réinitialiser l'apparence</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="settings-card">
+        <h2>À propos</h2>
+        <div class="about-list">
+          <span>Madrador TV</span>
+          <span>Version 1.0.0</span>
+          <span>Serveur local : http://localhost:3000</span>
+        </div>
+      </article>
+
+      <article class="settings-card">
+        <h2>Serveur local</h2>
+        <div class="about-list" id="serverStats">
+          <span>Domaine actif : chargement...</span>
+          <span>Cache serveur : ...</span>
+          <span>Uptime : ...</span>
+        </div>
+        <div class="settings-actions">
+          <a class="btn glass full-width" href="./admin.html"><i class="fa-solid fa-chart-simple"></i><span>Ouvrir admin</span></a>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast hidden" id="toast">Sauvegardé</div>
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+  <script src="./js/storage.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/settings.js"></script>
+  <script src="./js/pro-storage.js"></script>
+  <script src="./js/pro-settings.js"></script>
+</body>
+</html>

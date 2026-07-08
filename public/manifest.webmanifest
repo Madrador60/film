@@ -1,0 +1,27 @@
+{
+  "name": "Madrador TV",
+  "short_name": "Madrador",
+  "description": "Plateforme locale de streaming Madrador TV",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050713",
+  "theme_color": "#3b82f6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./assets/madrador-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/madrador-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["entertainment", "video"],
+  "lang": "fr"
+}

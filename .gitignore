@@ -1,0 +1,16 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+madrador-server.log
+madrador-server.err.log
+
+.env
+.env.*
+
+tmp-*.html
+*.tmp
+*.log
+
+photo/

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
+  <title>Lecteur - Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="./css/pro-ui.css">
+</head>
+<body class="player-body">
+  <div class="backdrop" id="backdrop"></div>
+  <div class="backdrop-overlay"></div>
+
+  <header class="player-top">
+    <a href="./index.html" class="btn glass"><i class="fa-solid fa-arrow-left"></i><span>Retour</span></a>
+    <a href="./index.html" class="brand mini">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+  </header>
+
+  <main class="player-shell">
+    <section class="media-hero">
+      <div class="poster-frame">
+        <img id="poster" src="" alt="Affiche" />
+        <div class="poster-fallback" id="posterFallback"><i class="fa-solid fa-film"></i></div>
+      </div>
+
+      <article class="media-info">
+        <div class="eyebrow"><i class="fa-solid fa-circle-play"></i> Lecture</div>
+        <h1 id="title">Chargement...</h1>
+
+        <div class="media-meta">
+          <span id="year">-</span>
+          <span id="quality">HD</span>
+          <span id="version">VF</span>
+        </div>
+
+        <div class="genre-list" id="genres"></div>
+
+        <p id="desc" class="synopsis">Merci de patienter.</p>
+
+        <div class="player-actions">
+          <button class="btn primary big" id="playFirst"><i class="fa-solid fa-play"></i><span>Lire maintenant</span></button>
+          <button class="btn glass big hidden" id="trailerBtn"><i class="fa-solid fa-clapperboard"></i><span>Bande-annonce</span></button>
+          <button class="btn glass big" id="favoriteBtn"><i class="fa-regular fa-heart"></i><span>Favori</span></button>
+          <button class="btn glass big" id="cinemaMode"><i class="fa-solid fa-expand"></i><span>Mode cinéma</span></button>
+        </div>
+      </article>
+    </section>
+
+    <section class="series-panel hidden" id="seriesPanel">
+      <div class="section-head compact">
+        <div>
+          <span>Série</span>
+          <h2>Saisons et épisodes</h2>
+        </div>
+        <div class="series-head-pills">
+          <div class="page-pill" id="episodeCount">0 épisode</div>
+          <div class="page-pill" id="seriesProgress">0 vu</div>
+        </div>
+      </div>
+
+      <div class="series-controls">
+        <div class="season-picker">
+          <span>Saisons</span>
+          <div class="season-buttons" id="seasonButtons"></div>
+        </div>
+        <div class="version-picker">
+          <span>Version</span>
+          <div class="version-buttons" id="versionButtons"></div>
+        </div>
+        <div class="episode-info" id="episodeInfo">
+          <strong>Sélectionne un épisode</strong>
+          <p>Les sources de l’épisode choisi apparaîtront dans le panneau Lecteurs.</p>
+        </div>
+      </div>
+
+      <div class="episode-list" id="episodeList"></div>
+    </section>
+
+    <section class="watch-zone">
+      <div class="screen" id="screen">
+        <div class="screen-toolbar">
+          <button class="icon-btn" id="focusPlayer" type="button" aria-label="Centrer le lecteur"><i class="fa-solid fa-crosshairs"></i></button>
+          <button class="icon-btn" id="fullscreenBtn" type="button" aria-label="Plein écran"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+        </div>
+        <div class="screen-placeholder" id="placeholder">
+          <div class="play-orb"><i class="fa-solid fa-play"></i></div>
+          <h2>Sélectionne une source</h2>
+          <p>Les lecteurs disponibles apparaissent juste en dessous.</p>
+        </div>
+        <iframe
+          id="player"
+          src=""
+          allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          referrerpolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation">
+        </iframe>
+      </div>
+
+      <aside class="sources-panel">
+        <div class="section-head compact">
+          <div>
+            <span>Sources</span>
+            <h2>Lecteurs</h2>
+          </div>
+          <div class="page-pill" id="sourceCount">0</div>
+        </div>
+        <div id="sources" class="sources-list"><div class="source-empty">Chargement...</div></div>
+        <div class="source-status" id="sourceStatus">
+          <i class="fa-solid fa-shield-halved"></i>
+          <div>
+            <strong>Priorité automatique</strong>
+            <p>Les lecteurs sont triés selon tes préférences, avec fallback automatique si une source bloque.</p>
+          </div>
+        </div>
+        <div class="source-tools">
+          <div class="source-tool-grid">
+            <button class="btn glass" id="prevSource" type="button" disabled>
+              <i class="fa-solid fa-backward-step"></i><span>Source précédente</span>
+            </button>
+            <button class="btn glass" id="nextSource" type="button" disabled>
+              <i class="fa-solid fa-forward-step"></i><span>Source suivante</span>
+            </button>
+            <button class="btn glass" id="copySource" type="button" disabled>
+              <i class="fa-solid fa-copy"></i><span>Copier</span>
+            </button>
+            <button class="btn glass" id="nextEpisode" type="button" disabled>
+              <i class="fa-solid fa-forward"></i><span>Épisode suivant</span>
+            </button>
+          </div>
+          <button class="btn glass full-width" id="openSource" type="button" disabled>
+            <i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir la source</span>
+          </button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="trailer-modal hidden" id="trailerModal" role="dialog" aria-modal="true" aria-label="Bande-annonce">
+    <div class="trailer-card">
+      <button class="icon-btn close-modal" id="closeTrailer" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <a class="btn glass trailer-external" id="trailerExternal" href="#" target="_blank" rel="noopener noreferrer" data-allow-popup="true">
+        <i class="fa-brands fa-youtube"></i><span>Ouvrir sur YouTube</span>
+      </a>
+      <iframe
+        id="trailerFrame"
+        src=""
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation">
+      </iframe>
+    </div>
+  </div>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <script src="./js/storage.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/player.js"></script>
+  <script src="./js/pro-storage.js"></script>
+  <script src="./js/pro-player.js"></script>
+</body>
+</html>

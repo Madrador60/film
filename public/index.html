@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
+  <title>Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="home-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+
+    <nav class="side-nav">
+      <button class="nav active" id="homeBtn"><i class="fa-solid fa-house"></i><span>Accueil</span></button>
+      <button class="nav" id="advancedSearchBtn"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Recherche</span></button>
+      <button class="nav" data-tab="movies"><i class="fa-solid fa-film"></i><span>Films</span></button>
+      <button class="nav" data-tab="series"><i class="fa-solid fa-tv"></i><span>Séries</span></button>
+      <button class="nav" id="newBtn"><i class="fa-solid fa-plus"></i><span>Nouveautés</span></button>
+      <button class="nav" id="popularBtn"><i class="fa-solid fa-fire"></i><span>Populaires</span></button>
+      <button class="nav" id="favoritesBtn"><i class="fa-solid fa-heart"></i><span>Ma liste</span></button>
+      <button class="nav" id="historyBtn"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></button>
+      <button class="nav" id="settingsBtn"><i class="fa-solid fa-gear"></i><span>Paramètres</span></button>
+    </nav>
+
+    <div class="sidebar-categories" aria-label="Catégories">
+      <span>Catégories</span>
+      <button type="button" data-side-filter="Action">Action</button>
+      <button type="button" data-side-filter="Aventure">Aventure</button>
+      <button type="button" data-side-filter="Comédie">Comédie</button>
+      <button type="button" data-side-filter="Drame">Drame</button>
+      <button type="button" data-side-filter="Horreur">Horreur</button>
+      <button type="button" data-side-filter="Science-Fiction">Science-Fiction</button>
+      <button type="button" data-side-filter="Thriller">Thriller</button>
+      <button type="button" data-side-filter="Animation">Animés</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="btn ghost square" id="backBtn" title="Retour" aria-label="Retour"><i class="fa-solid fa-arrow-left"></i></button>
+      <div class="search-area" id="searchArea">
+        <div class="searchbox">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="search" type="text" placeholder="Rechercher un film ou une série..." autocomplete="off" aria-expanded="false" aria-controls="searchSuggest" />
+          <span class="search-loader hidden" id="topSearchLoader" aria-hidden="true"></span>
+          <button id="clearSearch" class="icon-btn" title="Effacer" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="search-modes" aria-label="Type de recherche">
+          <button class="active" type="button" data-search-mode="all">Tout</button>
+          <button type="button" data-search-mode="movies">Films</button>
+          <button type="button" data-search-mode="series">Séries</button>
+        </div>
+        <div class="search-suggest hidden" id="searchSuggest"></div>
+      </div>
+      <button class="btn primary" id="searchBtn"><i class="fa-solid fa-arrow-right"></i><span>Chercher</span></button>
+      <button class="btn ghost square" id="reloadBtn" title="Actualiser" aria-label="Actualiser"><i class="fa-solid fa-rotate-right"></i></button>
+      <button class="btn ghost square notify-btn" id="notifyBtn" title="Notifications" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span></span></button>
+      <button class="btn ghost square" id="topSettingsBtn" title="Paramètres" aria-label="Paramètres"><i class="fa-solid fa-sliders"></i></button>
+    </header>
+
+    <section class="hero home-hero" id="hero">
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <div class="eyebrow"><i class="fa-solid fa-bolt"></i> À la une</div>
+        <h1 id="heroTitle">Madrador TV</h1>
+        <p id="heroText">Films et séries dans une interface plus immersive, rapide et pensée pour PC, tablette et mobile.</p>
+        <div class="hero-actions">
+          <button class="btn primary big" id="heroWatch"><i class="fa-solid fa-play"></i><span>Regarder</span></button>
+          <button class="btn glass big" id="heroInfo"><i class="fa-solid fa-circle-info"></i><span>En savoir plus</span></button>
+        </div>
+      </div>
+      <button class="hero-nav hero-prev" id="heroPrev" type="button" aria-label="Précédent"><i class="fa-solid fa-chevron-left"></i></button>
+      <button class="hero-nav hero-next" id="heroNext" type="button" aria-label="Suivant"><i class="fa-solid fa-chevron-right"></i></button>
+      <div class="hero-dots" id="heroDots" aria-label="Slides"></div>
+    </section>
+
+    <div id="loading" class="skeleton-grid hidden" aria-live="polite"></div>
+
+    <section class="api-status hidden" id="apiStatus" role="status" aria-live="polite">
+      <i class="fa-solid fa-wifi"></i>
+      <div>
+        <strong id="apiStatusTitle">Connexion au catalogue</strong>
+        <p id="apiStatusText">Le catalogue ne répond pas pour le moment.</p>
+      </div>
+      <button class="btn glass" id="apiRetry" type="button"><i class="fa-solid fa-rotate-right"></i><span>Réessayer</span></button>
+    </section>
+
+    <div id="empty" class="empty hidden">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <h3>Aucun résultat</h3>
+      <p>Essaie une autre recherche ou actualise la page.</p>
+    </div>
+
+    <section id="rows" class="rows"></section>
+
+    <footer class="pager">
+      <button class="btn glass" id="prevBtn"><i class="fa-solid fa-chevron-left"></i><span>Précédent</span></button>
+      <div class="page-pill" id="pageNum">Page 1</div>
+      <button class="btn primary" id="nextBtn"><span>Suivant</span><i class="fa-solid fa-chevron-right"></i></button>
+    </footer>
+
+    <section class="browse-panels" id="browsePanels">
+      <article>
+        <h3><i class="fa-solid fa-layer-group"></i> Par genre</h3>
+        <div class="filter-list" id="genreFilters"></div>
+      </article>
+      <article>
+        <h3><i class="fa-solid fa-language"></i> Par langue</h3>
+        <div class="filter-list" id="languageFilters"></div>
+      </article>
+      <article>
+        <h3><i class="fa-solid fa-trophy"></i> Par thème</h3>
+        <div class="filter-list" id="themeFilters"></div>
+      </article>
+      <article>
+        <h3><i class="fa-solid fa-calendar-days"></i> Collections</h3>
+        <div class="filter-list" id="collectionFilters"></div>
+      </article>
+    </section>
+  </main>
+
+  <div class="quick-modal hidden" id="quickModal" role="dialog" aria-modal="true" aria-label="Détails du contenu">
+    <div class="quick-card">
+      <button class="icon-btn quick-close" id="quickClose" type="button" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="quick-backdrop" id="quickBackdrop"></div>
+      <div class="quick-content">
+        <div class="quick-poster" id="quickPoster"><i class="fa-solid fa-film"></i></div>
+        <article class="quick-info">
+          <span class="eyebrow" id="quickType"><i class="fa-solid fa-circle-play"></i> Détail</span>
+          <h2 id="quickTitle">Chargement...</h2>
+          <div class="quick-meta" id="quickMeta"></div>
+          <p id="quickDesc">Merci de patienter.</p>
+          <div class="quick-genres" id="quickGenres"></div>
+          <div class="quick-actions">
+            <button class="btn primary big" id="quickWatch" type="button"><i class="fa-solid fa-play"></i><span>Regarder</span></button>
+            <button class="btn glass big" id="quickFullDetails" type="button"><i class="fa-solid fa-up-right-from-square"></i><span>Fiche complète</span></button>
+            <button class="btn glass big" id="quickFavorite" type="button"><i class="fa-regular fa-heart"></i><span>Ma liste</span></button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <script src="./js/storage.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

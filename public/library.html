@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Bibliothèque - Madrador TV</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/pro-ui.css">
+</head>
+<body class="pro-ready">
+  <main class="pro-shell">
+    <a class="pro-btn" href="./index.html">← Accueil</a>
+    <h1>Bibliothèque locale</h1>
+    <section class="pro-section">
+      <div class="pro-section-head"><h2>Favoris</h2><button class="pro-btn" id="clearFav">Effacer</button></div>
+      <div id="fav" class="pro-grid"></div>
+    </section>
+    <section class="pro-section">
+      <div class="pro-section-head"><h2>Historique</h2><button class="pro-btn" id="clearHist">Effacer</button></div>
+      <div id="hist" class="pro-grid"></div>
+    </section>
+    <section class="pro-section">
+      <div class="pro-section-head"><h2>Reprendre la lecture</h2><button class="pro-btn" id="clearContinue">Effacer</button></div>
+      <div id="cont" class="pro-grid"></div>
+    </section>
+  </main>
+  <script src="./js/storage.js"></script>
+  <script>
+    const Store = window.MadradorStorage;
+    function list(name){
+      if (name === 'favorites') return Store.favorites();
+      if (name === 'history') return Store.history();
+      if (name === 'continue') return Store.continueWatching();
+      return [];
+    }
+    function esc(value){
+      return String(value || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function card(item){
+      const type = item.type === 'series' ? 'series' : 'movie';
+      return `<article class="pro-card" data-id="${esc(item.id)}" data-type="${type}" data-series-title="${esc(item.seriesTitle || item.title || '')}">
+        <div class="pro-poster">${item.poster ? `<img src="${esc(item.poster)}" loading="lazy" alt="">` : ''}<div class="pro-card-play"><i>▶</i></div></div>
+        <div class="pro-card-info"><h3>${esc(item.title||'Sans titre')}</h3><p>${type==='series'?'Série':'Film'}</p></div>
+      </article>`;
+    }
+    function bind(box, items){
+      box.innerHTML = items.length ? items.map(card).join('') : '<p class="muted">Vide</p>';
+      box.onclick = e => {
+        const c = e.target.closest('.pro-card');
+        if(c) {
+          const q = new URLSearchParams({ id: c.dataset.id, type: c.dataset.type });
+          if (c.dataset.type === 'series') q.set('seriesTitle', c.dataset.seriesTitle);
+          location.href = `./player.html?${q.toString()}`;
+        }
+      };
+    }
+    function load(){
+      bind(document.querySelector('#fav'), list('favorites'));
+      bind(document.querySelector('#hist'), list('history'));
+      bind(document.querySelector('#cont'), list('continue'));
+    }
+    document.querySelector('#clearFav').onclick = () => { Store.clearFavorites(); load(); };
+    document.querySelector('#clearHist').onclick = () => { Store.clearHistory(); load(); };
+    document.querySelector('#clearContinue').onclick = () => { Store.clearContinue(); load(); };
+    load();
+  </script>
+</body>
+</html>

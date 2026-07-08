@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
+  <title>Catalogue - Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="home-body catalog-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav" id="catalogMoviesNav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" id="catalogSeriesNav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav" id="catalogNewNav" href="./catalog.html?view=new"><i class="fa-solid fa-plus"></i><span>Nouveautés</span></a>
+      <a class="nav" id="catalogPopularNav" href="./catalog.html?view=popular"><i class="fa-solid fa-fire"></i><span>Populaires</span></a>
+      <a class="nav" id="catalogFavoritesNav" href="./catalog.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+      <a class="nav" id="catalogHistoryNav" href="./catalog.html?view=history"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></a>
+      <a class="nav" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+    </nav>
+  </aside>
+
+  <main class="main catalog-main">
+    <header class="catalog-hero-head">
+      <div>
+        <span>Catalogue complet</span>
+        <h1 id="catalogTitle">Catalogue</h1>
+        <p id="catalogSubtitle">Recherche, filtre et trie les films et séries sans mélanger les catalogues.</p>
+      </div>
+      <a class="btn glass" href="./index.html"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
+    </header>
+
+    <section class="smart-tabs" aria-label="Collections rapides">
+      <a href="./catalog.html?type=all" id="quickAll"><i class="fa-solid fa-layer-group"></i><span>Tout</span></a>
+      <a href="./catalog.html?type=movies" id="quickMovies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a href="./catalog.html?type=series" id="quickSeries"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a href="./catalog.html?view=new" id="quickNew"><i class="fa-solid fa-plus"></i><span>Nouveautés</span></a>
+      <a href="./catalog.html?view=popular" id="quickPopular"><i class="fa-solid fa-fire"></i><span>Populaires</span></a>
+      <a href="./catalog.html?view=favorites" id="quickFavorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+      <a href="./catalog.html?view=history" id="quickHistory"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></a>
+    </section>
+
+    <button class="btn glass filter-drawer-toggle" id="filterToggle" type="button">
+      <i class="fa-solid fa-sliders"></i><span>Filtres</span>
+    </button>
+
+    <section class="catalog-filters">
+      <button class="icon-btn filter-close" id="filterClose" type="button" aria-label="Fermer les filtres"><i class="fa-solid fa-xmark"></i></button>
+      <div class="catalog-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="catalogSearch" type="text" placeholder="Rechercher un film ou une série..." autocomplete="off" aria-expanded="false" aria-controls="catalogSuggest" />
+        <span class="search-loader hidden" id="catalogSearchLoader" aria-hidden="true"></span>
+        <button class="icon-btn" id="catalogClear" type="button" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
+        <div class="search-suggest catalog-suggest hidden" id="catalogSuggest"></div>
+      </div>
+      <select id="catalogType">
+        <option value="all">Films + Séries</option>
+        <option value="movies">Films</option>
+        <option value="series">Séries</option>
+      </select>
+      <select id="catalogGenre">
+        <option value="">Tous les genres</option>
+        <option>Action</option>
+        <option>Aventure</option>
+        <option>Animation</option>
+        <option>Comédie</option>
+        <option>Drame</option>
+        <option>Horreur</option>
+        <option>Science-Fiction</option>
+        <option>Thriller</option>
+      </select>
+      <select id="catalogLang">
+        <option value="">Toutes versions</option>
+        <option>VF</option>
+        <option>VOSTFR</option>
+        <option>VF+VOSTFR</option>
+        <option>TrueFrench</option>
+      </select>
+      <select id="catalogQuality">
+        <option value="">Toutes qualités</option>
+        <option>HD</option>
+        <option>HDRIP</option>
+        <option>WEB-DL</option>
+        <option>BLURAY</option>
+      </select>
+      <select id="catalogYear">
+        <option value="">Toutes années</option>
+        <option>2026</option>
+        <option>2025</option>
+        <option>2024</option>
+        <option>2023</option>
+        <option>2022</option>
+      </select>
+      <select id="catalogSort">
+        <option value="new">Nouveautés</option>
+        <option value="az">A-Z</option>
+        <option value="za">Z-A</option>
+        <option value="quality">Qualité</option>
+      </select>
+    </section>
+
+    <section class="active-filters hidden" id="activeFilters" aria-label="Filtres actifs"></section>
+
+    <section class="catalog-toolbar">
+      <div class="page-pill" id="catalogCount">0 titre</div>
+      <button class="btn glass" id="catalogViewToggle" type="button"><i class="fa-solid fa-list"></i><span>Vue liste</span></button>
+      <button class="btn glass" id="catalogReset" type="button"><i class="fa-solid fa-filter-circle-xmark"></i><span>Réinitialiser</span></button>
+      <button class="btn glass danger-btn hidden" id="catalogClearLocal" type="button"><i class="fa-solid fa-trash"></i><span>Vider</span></button>
+    </section>
+
+    <div id="catalogLoading" class="skeleton-grid hidden"></div>
+    <section class="api-status hidden" id="catalogApiStatus" role="status" aria-live="polite">
+      <i class="fa-solid fa-wifi"></i>
+      <div>
+        <strong id="catalogApiTitle">Catalogue indisponible</strong>
+        <p id="catalogApiText">Impossible de charger le catalogue pour le moment.</p>
+      </div>
+      <button class="btn glass" id="catalogRetry" type="button"><i class="fa-solid fa-rotate-right"></i><span>Réessayer</span></button>
+    </section>
+    <section class="catalog-grid catalog-page-grid" id="catalogGrid"></section>
+
+    <footer class="pager">
+      <button class="btn glass" id="catalogPrev"><i class="fa-solid fa-chevron-left"></i><span>Précédent</span></button>
+      <div class="page-pill" id="catalogPage">Page 1</div>
+      <button class="btn primary" id="catalogNext"><span>Suivant</span><i class="fa-solid fa-chevron-right"></i></button>
+    </footer>
+    <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Remonter en haut"><i class="fa-solid fa-arrow-up"></i></button>
+  </main>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+    <a href="./catalog.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Liste</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <script src="./js/storage.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/catalog.js"></script>
+</body>
+</html>
