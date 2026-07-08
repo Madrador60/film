@@ -9,7 +9,31 @@ Le projet est maintenant compatible hebergement cloud :
 - les fichiers inutiles sont ignores par Docker ;
 - le backend Express reste compatible avec les routes existantes.
 
-## Solution recommandee
+## Solution gratuite recommandee : Render
+
+Render permet de creer un Web Service Node.js gratuit avec une URL publique en `onrender.com`.
+
+Bouton direct :
+
+```txt
+https://render.com/deploy?repo=https://github.com/Madrador60/film
+```
+
+Ou depuis le README GitHub, clique sur le bouton `Deploy to Render`.
+
+Parametres :
+
+```txt
+Name: madrador-tv
+Runtime: Node
+Build Command: npm ci
+Start Command: npm start
+Plan: Free
+```
+
+Important : le plan gratuit peut dormir apres inactivite. Au premier clic, il peut mettre un peu de temps a se reveiller.
+
+## Autres solutions
 
 Utilise un hebergeur Node.js qui peut lancer :
 
@@ -55,4 +79,3 @@ https://madrador-tv.example.app
 ```
 
 C'est cette URL que tu pourras ouvrir sur telephone, tablette, PC, 4G/5G, ou n'importe quel autre reseau.
-
