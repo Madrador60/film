@@ -13,7 +13,6 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="./css/pro-ui.css">
 </head>
 <body class="settings-body">
   <header class="player-top">
@@ -41,7 +40,7 @@
           <span><b>0</b><small>Cache</small></span>
         </div>
         <div class="settings-actions">
-          <a class="btn glass" href="./catalog.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+          <a class="btn glass" href="./library.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Bibliothèque</span></a>
           <a class="btn glass" href="./catalog.html?view=history"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></a>
           <a class="btn glass" href="./catalog.html?type=all"><i class="fa-solid fa-layer-group"></i><span>Catalogue</span></a>
         </div>
@@ -76,6 +75,7 @@
           <button class="btn primary" id="warmCatalog" type="button"><i class="fa-solid fa-fire-flame-curved"></i><span>Préparer le catalogue</span></button>
           <button class="btn glass" id="refreshCatalogStatus" type="button"><i class="fa-solid fa-rotate-right"></i><span>Actualiser</span></button>
           <a class="btn glass" href="/api/catalog/status?limit=all" target="_blank" rel="noreferrer"><i class="fa-solid fa-up-right-from-square"></i><span>Voir API</span></a>
+          <a class="btn glass" href="/api/cache/warm?limit=all" target="_blank" rel="noreferrer"><i class="fa-solid fa-bolt"></i><span>Warm API</span></a>
         </div>
       </article>
 
@@ -203,6 +203,7 @@
           <span>Uptime : ...</span>
         </div>
         <div class="settings-actions">
+          <button class="btn glass full-width" id="pingKeepalive" type="button"><i class="fa-solid fa-signal"></i><span>Tester keepalive</span></button>
           <a class="btn glass full-width" href="./admin.html"><i class="fa-solid fa-chart-simple"></i><span>Ouvrir admin</span></a>
         </div>
       </article>
@@ -222,7 +223,5 @@
   <script src="./js/mini-player.js"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/settings.js"></script>
-  <script src="./js/pro-storage.js"></script>
-  <script src="./js/pro-settings.js"></script>
 </body>
 </html>

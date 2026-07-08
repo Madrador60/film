@@ -47,6 +47,7 @@ function bindSettings() {
   $('importData').addEventListener('change', importLocalData);
   $('refreshCatalogStatus')?.addEventListener('click', renderCatalogStatus);
   $('warmCatalog')?.addEventListener('click', warmCatalogCache);
+  $('pingKeepalive')?.addEventListener('click', pingKeepalive);
 }
 
 function saveSettings() {
@@ -142,7 +143,7 @@ function renderSettingsPreview(prefs = MadradorStorage.getPrefs()) {
 function exportLocalData() {
   const data = {};
   Object.keys(localStorage)
-    .filter((key) => key.startsWith('madrador:'))
+    .filter((key) => key.startsWith('madrador:') || key.startsWith('madrador_'))
     .forEach((key) => {
       data[key] = localStorage.getItem(key);
     });
@@ -164,7 +165,7 @@ async function importLocalData(event) {
     const text = await file.text();
     const data = JSON.parse(text);
     Object.entries(data).forEach(([key, value]) => {
-      if (key.startsWith('madrador:') && typeof value === 'string') {
+      if ((key.startsWith('madrador:') || key.startsWith('madrador_')) && typeof value === 'string') {
         localStorage.setItem(key, value);
       }
     });
@@ -210,13 +211,39 @@ async function renderServerStats() {
     const res = await fetch('/api/status');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    const memory = data.memory?.rss ? `${Math.round(data.memory.rss / 1024 / 1024)} Mo RAM` : `${Math.round(Number(data.memory || 0) / 1024 / 1024) || 0} Mo RAM`;
     box.innerHTML = [
       ['Domaine actif', data.source || data.domain || 'Inconnu'],
       ['Cache serveur', String(data.cacheSize ?? data.cacheItems ?? 0)],
-      ['Uptime', `${Math.round(data.uptime || 0)}s`]
+      ['Uptime', formatUptime(data.uptime || 0)],
+      ['Mémoire', memory],
+      ['Keepalive', '/api/keepalive prêt']
     ].map(([label, value]) => `<span>${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('');
   } catch (err) {
     box.innerHTML = '<span>Domaine actif : indisponible</span><span>Le serveur local ne répond pas aux statistiques.</span>';
+  }
+}
+
+async function pingKeepalive() {
+  const button = $('pingKeepalive');
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Test...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/keepalive', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    showToast(`Keepalive OK • uptime ${formatUptime(data.uptime || 0)}`);
+    renderServerStats();
+  } catch (err) {
+    showToast('Keepalive indisponible');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '<i class="fa-solid fa-signal"></i><span>Tester keepalive</span>';
+    }
   }
 }
 
@@ -307,6 +334,15 @@ function getCatalogStateLabel(state) {
     idle: 'En attente',
     error: 'Erreur'
   }[state] || 'Inconnu';
+}
+
+function formatUptime(seconds) {
+  const total = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (hours) return `${hours}h ${minutes}min`;
+  if (minutes) return `${minutes}min`;
+  return `${Math.round(total)}s`;
 }
 
 function paintCatalogHealthError(message) {
