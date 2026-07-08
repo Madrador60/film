@@ -236,12 +236,7 @@ function inferType(item) {
 }
 
 function openDetails(item) {
-  const query = new URLSearchParams({
-    id: item.id,
-    type: item.type === 'series' ? 'series' : 'movie'
-  });
-  if (item.type === 'series') query.set('seriesTitle', item.seriesTitle || item.title);
-  location.href = `./details.html?${query.toString()}`;
+  openPlayer(item);
 }
 
 function openPlayer(item) {

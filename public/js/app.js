@@ -969,16 +969,7 @@ function openPlayer(item) {
 }
 
 function openDetailsPage(item) {
-  const query = new URLSearchParams({
-    id: item.id,
-    type: item.type === 'series' ? 'series' : 'movie'
-  });
-
-  if (item.type === 'series') {
-    query.set('seriesTitle', getCleanSeriesTitle(item));
-  }
-
-  location.href = `./details.html?${query.toString()}`;
+  openPlayer(item);
 }
 
 function getCleanSeriesTitle(item) {
@@ -1335,6 +1326,7 @@ function updateHero(item, query = '') {
   if (!item) {
     hero.classList.remove('hero-ready', 'hero-fit');
     hero.style.backgroundImage = '';
+    $('heroEyebrow').innerHTML = '<i class="fa-solid fa-bolt"></i> À la une';
     title.textContent = query ? `Recherche : ${query}` : 'Madrador TV';
     text.textContent = 'Une interface cinéma rapide, responsive et compatible avec ton backend actuel.';
     return;
@@ -1344,6 +1336,7 @@ function updateHero(item, query = '') {
   const image = prefs.dataSaver ? '' : (item.backdrop || item.poster);
   hero.classList.remove('hero-ready', 'hero-fit');
   hero.style.backgroundImage = image ? getHeroBackground(image) : '';
+  $('heroEyebrow').innerHTML = `<i class="fa-solid fa-bolt"></i> À la une${String(image || '').includes('image.tmdb.org') ? ' • TMDB HD' : ''}`;
   title.textContent = item.title;
   text.textContent = `${item.type === 'series' ? 'Série' : 'Film'} • ${item.quality || 'HD'}${item.version ? ` • ${item.version}` : ''}${item.year ? ` • ${item.year}` : ''}`;
   setHeroImageMode(hero, image, !item.backdrop);
@@ -1393,6 +1386,7 @@ async function enrichHeroSlide(item, query, token) {
     const hero = $('hero');
     hero.classList.remove('hero-ready', 'hero-fit');
     hero.style.backgroundImage = getHeroBackground(nextImage);
+    $('heroEyebrow').innerHTML = '<i class="fa-solid fa-bolt"></i> À la une • TMDB HD';
     $('heroTitle').textContent = enriched.title;
     $('heroText').textContent = `${enriched.type === 'series' ? 'Série' : 'Film'} • ${enriched.quality || 'HD'}${enriched.version ? ` • ${enriched.version}` : ''}${enriched.year ? ` • ${enriched.year}` : ''}`;
     setHeroImageMode(hero, nextImage, !nextBackdrop);

@@ -20,7 +20,7 @@
       active = (targetType && targetType === type) || (targetView && targetView === view);
     }
 
-    if ((currentPath === 'player.html' || currentPath === 'details.html') && targetPath === 'catalog.html') {
+    if (currentPath === 'player.html' && targetPath === 'catalog.html') {
       active = contentSection && contentSection === targetSection;
     }
 
