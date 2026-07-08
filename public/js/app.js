@@ -198,6 +198,7 @@ async function loadHome() {
     renderHomeRows();
     updatePager();
     startHeroCarousel();
+    startCatalogCacheBuild();
     hydrateHomeWithFullCatalog();
   } catch (err) {
     console.error(err);
@@ -210,6 +211,35 @@ async function loadHome() {
     );
   } finally {
     showLoading(false);
+  }
+}
+
+async function startCatalogCacheBuild() {
+  try {
+    await fetch('/api/cache/build?limit=all', { method: 'POST' });
+    pollCatalogStatus();
+  } catch (error) {
+    console.warn('Construction cache catalogue indisponible.', error);
+  }
+}
+
+async function pollCatalogStatus() {
+  try {
+    const status = await fetchJson('/api/catalog/status?limit=all');
+    const film = status.film || {};
+    const series = status.series || {};
+    const building = [film.state, series.state].includes('building');
+    if (building) {
+      showApiStatus(
+        'Catalogue complet en préparation',
+        `Films ${film.total || 0} • Séries ${series.total || 0}. L'accueil reste utilisable pendant le chargement.`
+      );
+      window.setTimeout(pollCatalogStatus, 8000);
+      return;
+    }
+    hideApiStatus();
+  } catch (error) {
+    console.warn('Statut catalogue indisponible.', error);
   }
 }
 

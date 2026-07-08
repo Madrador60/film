@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const cors = require('cors');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,12 +43,75 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Cache simple
 const cache = new Map();
 const inFlightCache = new Map();
+const catalogBuilds = new Map();
 const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
 const DETAILS_CACHE_DURATION = 10 * 60 * 1000;
 const SOURCES_CACHE_DURATION = 5 * 60 * 1000;
 const DEFAULT_ALL_PAGE_LIMIT = 500;
 const MAX_ALL_PAGE_LIMIT = 500;
+const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
+const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
+
+function ensurePersistentCacheDir() {
+    if (!fs.existsSync(PERSISTENT_CACHE_DIR)) {
+        fs.mkdirSync(PERSISTENT_CACHE_DIR, { recursive: true });
+    }
+}
+
+function getPersistentCatalogPath(kind, limit) {
+    return path.join(PERSISTENT_CACHE_DIR, `${kind}-catalog-${limit}.json`);
+}
+
+function readPersistentCatalog(kind, limit) {
+    try {
+        const file = getPersistentCatalogPath(kind, limit);
+        if (!fs.existsSync(file)) return null;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (!parsed?.savedAt || Date.now() - parsed.savedAt > PERSISTENT_CATALOG_DURATION) return null;
+        return parsed.data || null;
+    } catch (error) {
+        console.log(`[CACHE] Lecture cache persistant impossible (${kind}) : ${error.message}`);
+        return null;
+    }
+}
+
+function writePersistentCatalog(kind, limit, data) {
+    try {
+        ensurePersistentCacheDir();
+        fs.writeFileSync(
+            getPersistentCatalogPath(kind, limit),
+            JSON.stringify({ savedAt: Date.now(), data }, null, 2),
+            'utf8'
+        );
+    } catch (error) {
+        console.log(`[CACHE] Ecriture cache persistant impossible (${kind}) : ${error.message}`);
+    }
+}
+
+function getCatalogBuildState(kind, limit) {
+    const key = `${kind}:${limit}`;
+    if (!catalogBuilds.has(key)) {
+        catalogBuilds.set(key, {
+            kind,
+            limit,
+            state: 'idle',
+            page: 0,
+            total: 0,
+            error: null,
+            startedAt: null,
+            updatedAt: null,
+            doneAt: null
+        });
+    }
+    return catalogBuilds.get(key);
+}
+
+function updateCatalogBuildState(kind, limit, patch) {
+    const current = getCatalogBuildState(kind, limit);
+    Object.assign(current, patch, { updatedAt: new Date().toISOString() });
+    return current;
+}
 
 function getCached(key) {
     const item = cache.get(key);
@@ -220,6 +284,20 @@ async function fetchAllCatalogItems(kind, limit) {
     const cacheKey = `${kind}_all_${currentBaseUrl}_${limit}`;
     const cached = getCachedFor(cacheKey, ALL_CACHE_DURATION);
     if (cached) return cached;
+
+    const persistent = readPersistentCatalog(kind, limit);
+    if (persistent) {
+        setCached(cacheKey, persistent);
+        updateCatalogBuildState(kind, limit, {
+            state: 'ready',
+            total: persistent.total || persistent.items?.length || 0,
+            page: persistent.pagesScraped || 0,
+            doneAt: new Date().toISOString(),
+            error: null
+        });
+        return persistent;
+    }
+
     if (inFlightCache.has(cacheKey)) return inFlightCache.get(cacheKey);
 
     const task = (async () => {
@@ -227,6 +305,16 @@ async function fetchAllCatalogItems(kind, limit) {
         const seen = new Set();
         const batchSize = 6;
         let stopped = false;
+        let lastPage = 0;
+
+        updateCatalogBuildState(kind, limit, {
+            state: 'building',
+            page: 0,
+            total: 0,
+            startedAt: new Date().toISOString(),
+            doneAt: null,
+            error: null
+        });
 
         for (let startPage = 1; startPage <= limit && !stopped; startPage += batchSize) {
             const endPage = Math.min(limit, startPage + batchSize - 1);
@@ -246,6 +334,7 @@ async function fetchAllCatalogItems(kind, limit) {
 
             let newItemsInBatch = 0;
             for (const result of pages) {
+                lastPage = Math.max(lastPage, result.page);
                 const pageItems = result.items || [];
                 if (!pageItems.length) {
                     stopped = true;
@@ -261,6 +350,12 @@ async function fetchAllCatalogItems(kind, limit) {
                     newItemsInPage++;
                     newItemsInBatch++;
                 }
+
+                updateCatalogBuildState(kind, limit, {
+                    state: 'building',
+                    page: result.page,
+                    total: allItems.length
+                });
 
                 if (newItemsInPage === 0) {
                     console.log(`🛑 Arrêt ${kind}: page ${result.page} sans nouveau contenu.`);
@@ -279,12 +374,30 @@ async function fetchAllCatalogItems(kind, limit) {
         const result = {
             type: kind === 'series' ? 'series' : 'movie',
             total: items.length,
+            pagesScraped: lastPage,
+            limit,
+            generatedAt: new Date().toISOString(),
             items
         };
 
         setCached(cacheKey, result);
+        writePersistentCatalog(kind, limit, result);
+        updateCatalogBuildState(kind, limit, {
+            state: 'ready',
+            page: lastPage,
+            total: items.length,
+            doneAt: new Date().toISOString(),
+            error: null
+        });
         return result;
-    })().finally(() => {
+    })().catch((error) => {
+        updateCatalogBuildState(kind, limit, {
+            state: 'error',
+            error: error.message,
+            doneAt: new Date().toISOString()
+        });
+        throw error;
+    }).finally(() => {
         inFlightCache.delete(cacheKey);
     });
 
@@ -883,6 +996,23 @@ app.get('/api/film/all', async (req, res) => {
     }
 });
 
+app.get('/api/film/all/progress', async (req, res) => {
+    try {
+        const limit = getAllPageLimit(req.query.limit || 'all');
+        const state = getCatalogBuildState('movie', limit);
+        if (state.state === 'idle' || state.state === 'error') {
+            getAllFilms(limit).catch((error) => console.error('[BUILD FILM]', error.message));
+        }
+        res.json({
+            ok: true,
+            kind: 'movie',
+            status: getCatalogBuildState('movie', limit)
+        });
+    } catch (error) {
+        res.status(500).json({ ok: false, kind: 'movie', error: error.message });
+    }
+});
+
 app.get('/api/film/page/:page', async (req, res) => {
     try {
         res.json(await getFilmPage(req.params.page));
@@ -928,6 +1058,23 @@ app.get('/api/serie/all', async (req, res) => {
     } catch (error) {
         console.error('[ERROR API SERIE ALL]', error.message);
         res.status(500).json({ type: 'series', total: 0, error: error.message, items: [] });
+    }
+});
+
+app.get('/api/serie/all/progress', async (req, res) => {
+    try {
+        const limit = getAllPageLimit(req.query.limit || 'all');
+        const state = getCatalogBuildState('series', limit);
+        if (state.state === 'idle' || state.state === 'error') {
+            getAllSeries(limit).catch((error) => console.error('[BUILD SERIE]', error.message));
+        }
+        res.json({
+            ok: true,
+            kind: 'series',
+            status: getCatalogBuildState('series', limit)
+        });
+    } catch (error) {
+        res.status(500).json({ ok: false, kind: 'series', error: error.message });
     }
 });
 
@@ -1187,6 +1334,56 @@ app.get('/api/stream/:id', async (req, res) => {
     }
 });
 
+app.get('/api/catalog/status', (req, res) => {
+    const filmLimit = getAllPageLimit(req.query.limit || 'all');
+    const serieLimit = getAllPageLimit(req.query.limit || 'all');
+    const filmState = getCatalogBuildState('movie', filmLimit);
+    const serieState = getCatalogBuildState('series', serieLimit);
+
+    res.json({
+        ok: true,
+        source: currentBaseUrl,
+        cacheItems: cache.size,
+        inFlight: Array.from(inFlightCache.keys()),
+        persistentCacheDir: PERSISTENT_CACHE_DIR,
+        film: filmState,
+        series: serieState,
+        ready: filmState.state === 'ready' && serieState.state === 'ready',
+        updatedAt: new Date().toISOString()
+    });
+});
+
+app.post('/api/cache/build', async (req, res) => {
+    const limit = getAllPageLimit(req.query.limit || 'all');
+    const target = String(req.query.target || 'all').toLowerCase();
+    const tasks = [];
+
+    if (target === 'all' || target === 'film' || target === 'movie' || target === 'movies') {
+        const state = getCatalogBuildState('movie', limit);
+        if (state.state !== 'building') {
+            tasks.push('movie');
+            getAllFilms(limit).catch((error) => console.error('[CACHE BUILD MOVIE]', error.message));
+        }
+    }
+
+    if (target === 'all' || target === 'serie' || target === 'series') {
+        const state = getCatalogBuildState('series', limit);
+        if (state.state !== 'building') {
+            tasks.push('series');
+            getAllSeries(limit).catch((error) => console.error('[CACHE BUILD SERIES]', error.message));
+        }
+    }
+
+    res.json({
+        ok: true,
+        message: tasks.length ? 'Construction du cache lancee.' : 'Cache deja en cours de construction.',
+        tasks,
+        status: {
+            film: getCatalogBuildState('movie', limit),
+            series: getCatalogBuildState('series', limit)
+        }
+    });
+});
 
 // 🩺 Etat de l'API et du domaine actif
 app.get('/api/status', (req, res) => {
@@ -1200,14 +1397,20 @@ app.get('/api/status', (req, res) => {
         cacheSize: cache.size,
         uptime: process.uptime(),
         memory,
+        catalog: {
+            film: getCatalogBuildState('movie', DEFAULT_ALL_PAGE_LIMIT),
+            series: getCatalogBuildState('series', DEFAULT_ALL_PAGE_LIMIT)
+        },
         endpoints: [
             '/api/film',
             '/api/film/all?limit=all',
+            '/api/film/all/progress',
             '/api/film/page/:page',
             '/api/film/:id',
             '/api/film/:id/sources',
             '/api/serie',
             '/api/serie/all?limit=all',
+            '/api/serie/all/progress',
             '/api/serie/page/:page',
             '/api/serie/:id',
             '/api/serie/:id/episodes',
@@ -1217,6 +1420,8 @@ app.get('/api/status', (req, res) => {
             '/api/movies?page=1',
             '/api/movies/all?limit=10',
             '/api/catalog/bootstrap?limit=4',
+            '/api/catalog/status',
+            '/api/cache/build',
             '/api/library/stats',
             '/api/series?page=1',
             '/api/series/all?limit=10',

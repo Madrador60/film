@@ -10,6 +10,7 @@ madrador-server.err.log
 .env.*
 
 photo
+.cache
 tmp-*.html
 *.tmp
 *.log
