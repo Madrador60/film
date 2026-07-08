@@ -35,6 +35,7 @@
 
   function getContentSection(path, typeValue, viewValue) {
     if (viewValue === 'favorites') return 'favorites';
+    if (path === 'library.html') return 'favorites';
     if (path === 'search.html') return 'search';
     if (path === 'settings.html') return 'settings';
     if (path === 'index.html' || path === '') return 'home';

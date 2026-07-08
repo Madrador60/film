@@ -1,68 +1,114 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
   <title>Bibliothèque - Madrador TV</title>
-  <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/pro-ui.css">
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body class="pro-ready">
-  <main class="pro-shell">
-    <a class="pro-btn" href="./index.html">← Accueil</a>
-    <h1>Bibliothèque locale</h1>
-    <section class="pro-section">
-      <div class="pro-section-head"><h2>Favoris</h2><button class="pro-btn" id="clearFav">Effacer</button></div>
-      <div id="fav" class="pro-grid"></div>
+<body class="home-body library-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav" href="./search.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Recherche</span></a>
+      <a class="nav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav active" href="./library.html"><i class="fa-solid fa-bookmark"></i><span>Bibliothèque</span></a>
+      <a class="nav" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+    </nav>
+  </aside>
+
+  <main class="main catalog-main library-main">
+    <header class="catalog-hero-head library-hero">
+      <div>
+        <span>Bibliothèque locale</span>
+        <h1>Ton espace Madrador</h1>
+        <p>Favoris, historique et reprise de lecture restent stockés sur cet appareil, sans compte utilisateur.</p>
+      </div>
+      <div class="library-hero-actions">
+        <a class="btn glass" href="./index.html"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
+        <button class="btn danger-btn" id="clearAllLibrary" type="button"><i class="fa-solid fa-trash"></i><span>Tout vider</span></button>
+      </div>
+    </header>
+
+    <section class="library-stats" aria-label="Résumé bibliothèque">
+      <article>
+        <i class="fa-solid fa-play"></i>
+        <span>À reprendre</span>
+        <strong id="statContinue">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-heart"></i>
+        <span>Ma liste</span>
+        <strong id="statFavorites">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>Historique</span>
+        <strong id="statHistory">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-layer-group"></i>
+        <span>Total local</span>
+        <strong id="statTotal">0</strong>
+      </article>
     </section>
-    <section class="pro-section">
-      <div class="pro-section-head"><h2>Historique</h2><button class="pro-btn" id="clearHist">Effacer</button></div>
-      <div id="hist" class="pro-grid"></div>
+
+    <section class="library-controls">
+      <div class="catalog-search library-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="librarySearch" type="text" placeholder="Rechercher dans ta bibliothèque..." autocomplete="off" />
+        <button class="icon-btn" id="libraryClear" type="button" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="search-type-tabs library-tabs" id="libraryTabs" aria-label="Vue bibliothèque">
+        <button class="active" type="button" data-library-view="all"><i class="fa-solid fa-layer-group"></i><span>Tout</span></button>
+        <button type="button" data-library-view="continue"><i class="fa-solid fa-play"></i><span>Reprendre</span></button>
+        <button type="button" data-library-view="favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></button>
+        <button type="button" data-library-view="history"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></button>
+      </div>
+      <select id="libraryType">
+        <option value="all">Films + Séries</option>
+        <option value="movies">Films</option>
+        <option value="series">Séries</option>
+      </select>
     </section>
-    <section class="pro-section">
-      <div class="pro-section-head"><h2>Reprendre la lecture</h2><button class="pro-btn" id="clearContinue">Effacer</button></div>
-      <div id="cont" class="pro-grid"></div>
+
+    <section class="catalog-toolbar">
+      <div class="page-pill" id="libraryCount">0 titre</div>
+      <button class="btn glass" id="libraryReset" type="button"><i class="fa-solid fa-filter-circle-xmark"></i><span>Réinitialiser</span></button>
     </section>
+
+    <section class="catalog-grid catalog-page-grid library-grid" id="libraryGrid"></section>
   </main>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./catalog.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Liste</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
   <script src="./js/storage.js"></script>
-  <script>
-    const Store = window.MadradorStorage;
-    function list(name){
-      if (name === 'favorites') return Store.favorites();
-      if (name === 'history') return Store.history();
-      if (name === 'continue') return Store.continueWatching();
-      return [];
-    }
-    function esc(value){
-      return String(value || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-    function card(item){
-      const type = item.type === 'series' ? 'series' : 'movie';
-      return `<article class="pro-card" data-id="${esc(item.id)}" data-type="${type}" data-series-title="${esc(item.seriesTitle || item.title || '')}">
-        <div class="pro-poster">${item.poster ? `<img src="${esc(item.poster)}" loading="lazy" alt="">` : ''}<div class="pro-card-play"><i>▶</i></div></div>
-        <div class="pro-card-info"><h3>${esc(item.title||'Sans titre')}</h3><p>${type==='series'?'Série':'Film'}</p></div>
-      </article>`;
-    }
-    function bind(box, items){
-      box.innerHTML = items.length ? items.map(card).join('') : '<p class="muted">Vide</p>';
-      box.onclick = e => {
-        const c = e.target.closest('.pro-card');
-        if(c) {
-          const q = new URLSearchParams({ id: c.dataset.id, type: c.dataset.type });
-          if (c.dataset.type === 'series') q.set('seriesTitle', c.dataset.seriesTitle);
-          location.href = `./player.html?${q.toString()}`;
-        }
-      };
-    }
-    function load(){
-      bind(document.querySelector('#fav'), list('favorites'));
-      bind(document.querySelector('#hist'), list('history'));
-      bind(document.querySelector('#cont'), list('continue'));
-    }
-    document.querySelector('#clearFav').onclick = () => { Store.clearFavorites(); load(); };
-    document.querySelector('#clearHist').onclick = () => { Store.clearHistory(); load(); };
-    document.querySelector('#clearContinue').onclick = () => { Store.clearContinue(); load(); };
-    load();
-  </script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/library.js"></script>
 </body>
 </html>
