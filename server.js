@@ -44,6 +44,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const cache = new Map();
 const inFlightCache = new Map();
 const catalogBuilds = new Map();
+let fullCatalogBuildRunning = false;
 const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
 const DETAILS_CACHE_DURATION = 10 * 60 * 1000;
@@ -54,6 +55,7 @@ const FULL_CATALOG_PAGE_LIMITS = {
 };
 const DEFAULT_ALL_PAGE_LIMIT = FULL_CATALOG_PAGE_LIMITS.movie;
 const MAX_ALL_PAGE_LIMIT = Math.max(FULL_CATALOG_PAGE_LIMITS.movie, FULL_CATALOG_PAGE_LIMITS.series);
+const CATALOG_BATCH_SIZE = Math.max(1, Math.min(Number(process.env.CATALOG_BATCH_SIZE) || 2, 4));
 const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
 
@@ -348,7 +350,7 @@ async function fetchAllCatalogItems(kind, limit) {
     const task = (async () => {
         const allItems = [];
         const seen = new Set();
-        const batchSize = 6;
+        const batchSize = CATALOG_BATCH_SIZE;
         let stopped = false;
         let lastPage = 0;
 
@@ -774,6 +776,27 @@ async function getAllSeries(limit = 50) {
 
     setCachedFor(cacheKey, cleanResult);
     return cleanResult;
+}
+
+async function buildFullCatalogCacheSequential(filmLimit, serieLimit) {
+    if (fullCatalogBuildRunning) return;
+    fullCatalogBuildRunning = true;
+
+    try {
+        const filmState = getCatalogBuildState('movie', filmLimit);
+        if (filmState.state !== 'ready' && filmState.state !== 'building') {
+            await getAllFilms(filmLimit);
+        }
+
+        const serieState = getCatalogBuildState('series', serieLimit);
+        if (serieState.state !== 'ready' && serieState.state !== 'building') {
+            await getAllSeries(serieLimit);
+        }
+    } catch (error) {
+        console.error('[CACHE BUILD FULL]', error.message);
+    } finally {
+        fullCatalogBuildRunning = false;
+    }
 }
 
 async function getSerieDetails(id, includeEpisodes = false) {
@@ -1419,6 +1442,46 @@ app.post('/api/cache/build', async (req, res) => {
     const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const target = String(req.query.target || 'all').toLowerCase();
     const tasks = [];
+
+    if (target === 'all') {
+        const filmState = getCatalogBuildState('movie', filmLimit);
+        const serieState = getCatalogBuildState('series', serieLimit);
+
+        if (!fullCatalogBuildRunning && (filmState.state !== 'ready' || serieState.state !== 'ready')) {
+            tasks.push('movie', 'series');
+            if (filmState.state !== 'building') {
+                updateCatalogBuildState('movie', filmLimit, {
+                    state: 'queued',
+                    startedAt: filmState.startedAt || new Date().toISOString(),
+                    error: null
+                });
+            }
+            if (serieState.state !== 'building') {
+                updateCatalogBuildState('series', serieLimit, {
+                    state: 'queued',
+                    startedAt: serieState.startedAt || new Date().toISOString(),
+                    error: null
+                });
+            }
+            buildFullCatalogCacheSequential(filmLimit, serieLimit);
+        }
+
+        return res.json({
+            ok: true,
+            message: tasks.length ? 'Construction progressive du cache lancee.' : 'Cache deja pret ou en cours de construction.',
+            mode: 'sequential',
+            batchSize: CATALOG_BATCH_SIZE,
+            tasks,
+            limits: {
+                film: filmLimit,
+                series: serieLimit
+            },
+            status: {
+                film: getCatalogBuildState('movie', filmLimit),
+                series: getCatalogBuildState('series', serieLimit)
+            }
+        });
+    }
 
     if (target === 'all' || target === 'film' || target === 'movie' || target === 'movies') {
         const state = getCatalogBuildState('movie', filmLimit);
