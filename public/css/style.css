@@ -1643,6 +1643,172 @@ a {
   grid-column: 1 / -1;
 }
 
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-status-strip article {
+  min-width: 0;
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  gap: 3px 12px;
+  padding: 14px;
+  border: 1px solid rgba(147,197,253,.14);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(34,211,238,.12), transparent 36%),
+    linear-gradient(135deg, rgba(15,23,42,.74), rgba(17,24,39,.50));
+  box-shadow: 0 20px 52px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter: blur(18px);
+}
+
+.admin-status-strip article.is-warn {
+  border-color: rgba(248,113,113,.35);
+}
+
+.admin-status-strip i {
+  grid-row: 1 / 3;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(59,130,246,.26), rgba(139,92,246,.20));
+  color: var(--cyan);
+}
+
+.admin-status-strip .is-warn i {
+  color: #fecaca;
+  background: linear-gradient(135deg, rgba(239,68,68,.28), rgba(139,92,246,.12));
+}
+
+.admin-status-strip span,
+.admin-endpoint small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-status-strip strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 24px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-list {
+  margin-bottom: 14px;
+}
+
+.admin-endpoints {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-endpoint {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(147,197,253,.14);
+  border-radius: 14px;
+  background: rgba(7,10,22,.58);
+  color: white;
+  text-decoration: none;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.admin-endpoint:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34,211,238,.42);
+  background: rgba(59,130,246,.13);
+}
+
+.admin-endpoint.is-warn {
+  border-color: rgba(248,113,113,.32);
+}
+
+.admin-endpoint > i {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(34,211,238,.12);
+  color: var(--cyan);
+}
+
+.admin-endpoint.is-warn > i {
+  color: #fecaca;
+  background: rgba(239,68,68,.14);
+}
+
+.admin-endpoint span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-endpoint b,
+.admin-endpoint strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-endpoint strong {
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+.admin-raw {
+  max-height: 420px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid rgba(147,197,253,.12);
+  border-radius: 14px;
+  background: rgba(3,7,18,.74);
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .catalog-page-grid {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
@@ -6553,6 +6719,12 @@ body {
   .library-controls {
     grid-template-columns: 1fr;
   }
+
+  .admin-status-strip,
+  .admin-grid,
+  .admin-endpoints {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -6616,5 +6788,44 @@ body {
 
   .library-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-actions {
+    justify-content: stretch;
+  }
+
+  .admin-actions .btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .admin-status-strip {
+    gap: 8px;
+  }
+
+  .admin-status-strip article {
+    min-height: 68px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .admin-status-strip i {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .admin-status-strip strong {
+    font-size: 17px;
+  }
+
+  .admin-endpoint {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .admin-endpoint strong {
+    grid-column: 2;
   }
 }

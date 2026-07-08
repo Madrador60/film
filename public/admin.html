@@ -1,49 +1,147 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
   <title>Admin - Madrador TV</title>
-  <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/pro-ui.css">
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body class="pro-ready">
-  <main class="pro-shell">
-    <a class="pro-btn" href="./index.html">← Accueil</a>
-    <h1>Dashboard Admin</h1>
-    <div class="pro-actions">
-      <button class="pro-btn" id="refresh">Actualiser</button>
-      <button class="pro-btn" id="refreshDomain">Rafraîchir domaine</button>
-    </div>
-    <section id="stats" class="pro-admin-grid"></section>
-    <pre id="raw" class="pro-glass" style="padding:18px;border-radius:18px;overflow:auto;margin-top:20px"></pre>
+<body class="home-body admin-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav" href="./library.html"><i class="fa-solid fa-bookmark"></i><span>Bibliothèque</span></a>
+      <a class="nav" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+      <a class="nav active" href="./admin.html"><i class="fa-solid fa-chart-simple"></i><span>Admin</span></a>
+    </nav>
+  </aside>
+
+  <main class="main catalog-main admin-main">
+    <header class="catalog-hero-head admin-hero">
+      <div>
+        <span>Supervision Madrador</span>
+        <h1>Dashboard Admin</h1>
+        <p>Domaine actif, cache, catalogue complet et état Render au même endroit.</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn primary" id="adminRefresh" type="button"><i class="fa-solid fa-rotate-right"></i><span>Actualiser</span></button>
+        <a class="btn glass" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+      </div>
+    </header>
+
+    <section class="admin-status-strip" id="adminStatusStrip" aria-label="État serveur">
+      <article><i class="fa-solid fa-circle-notch fa-spin"></i><span>Serveur</span><strong>Chargement</strong></article>
+      <article><i class="fa-solid fa-database"></i><span>Cache</span><strong>...</strong></article>
+      <article><i class="fa-solid fa-film"></i><span>Films</span><strong>...</strong></article>
+      <article><i class="fa-solid fa-tv"></i><span>Séries</span><strong>...</strong></article>
+    </section>
+
+    <section class="admin-grid">
+      <article class="settings-card admin-panel">
+        <div class="section-head compact">
+          <div>
+            <span>Serveur</span>
+            <h2>État Express</h2>
+          </div>
+        </div>
+        <div class="about-list admin-list" id="adminServerList">
+          <span>Chargement du serveur...</span>
+        </div>
+        <div class="settings-actions">
+          <button class="btn glass full-width" id="adminKeepalive" type="button"><i class="fa-solid fa-signal"></i><span>Tester keepalive</span></button>
+          <button class="btn glass full-width" id="adminRefreshDomain" type="button"><i class="fa-solid fa-globe"></i><span>Rafraîchir domaine</span></button>
+        </div>
+      </article>
+
+      <article class="settings-card admin-panel">
+        <div class="section-head compact">
+          <div>
+            <span>Catalogue</span>
+            <h2>Cache complet</h2>
+          </div>
+        </div>
+        <div class="catalog-health admin-health" id="adminCatalogHealth">
+          <div class="catalog-health-head">
+            <span id="adminCatalogState"><i class="fa-solid fa-circle-notch fa-spin"></i> Chargement...</span>
+            <small id="adminCatalogSource">Source : ...</small>
+          </div>
+          <div class="catalog-health-grid">
+            <div class="catalog-health-item">
+              <div>
+                <strong>Films</strong>
+                <small id="adminFilmText">...</small>
+              </div>
+              <div class="catalog-progress"><span id="adminFilmProgress"></span></div>
+            </div>
+            <div class="catalog-health-item">
+              <div>
+                <strong>Séries</strong>
+                <small id="adminSeriesText">...</small>
+              </div>
+              <div class="catalog-progress"><span id="adminSeriesProgress"></span></div>
+            </div>
+          </div>
+          <p id="adminCatalogMessage">Lecture du statut catalogue...</p>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary full-width" id="adminWarmCache" type="button"><i class="fa-solid fa-fire-flame-curved"></i><span>Préparer cache</span></button>
+          <a class="btn glass full-width" href="/api/catalog/status?limit=all" target="_blank" rel="noreferrer"><i class="fa-solid fa-up-right-from-square"></i><span>Voir JSON</span></a>
+        </div>
+      </article>
+
+      <article class="settings-card admin-panel admin-wide">
+        <div class="section-head compact">
+          <div>
+            <span>Endpoints</span>
+            <h2>Routes critiques</h2>
+          </div>
+        </div>
+        <div class="admin-endpoints" id="adminEndpoints"></div>
+      </article>
+
+      <article class="settings-card admin-panel admin-wide">
+        <div class="section-head compact">
+          <div>
+            <span>Debug</span>
+            <h2>Données brutes</h2>
+          </div>
+          <button class="btn glass" id="adminCopyRaw" type="button"><i class="fa-solid fa-copy"></i><span>Copier</span></button>
+        </div>
+        <pre class="admin-raw" id="adminRaw">Chargement...</pre>
+      </article>
+    </section>
   </main>
-  <script>
-    async function api(url, opts){
-      const r = await fetch(url, opts);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    }
-    async function load(){
-      const [status, stats] = await Promise.allSettled([api('/api/status'), api('/api/library/stats')]);
-      const s = status.status === 'fulfilled' ? status.value : {};
-      const l = stats.status === 'fulfilled' ? stats.value : {};
-      document.querySelector('#stats').innerHTML = [
-        ['Domaine actif', s.source || l.source || '-'],
-        ['Films', l.movies ?? '-'],
-        ['Séries', l.series ?? '-'],
-        ['Cache serveur', s.cacheSize ?? l.cacheSize ?? '-'],
-        ['Uptime', s.uptime ? Math.round(s.uptime)+'s' : '-'],
-        ['RAM', s.memory ? Math.round(s.memory.rss/1024/1024)+' MB' : '-']
-      ].map(x => `<div class="pro-admin-card pro-glass"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
-      document.querySelector('#raw').textContent = JSON.stringify({
-        status: status.status === 'fulfilled' ? s : { ok:false, error: status.reason?.message || 'Indisponible' },
-        stats: stats.status === 'fulfilled' ? l : { ok:false, error: stats.reason?.message || 'Indisponible' }
-      }, null, 2);
-    }
-    document.querySelector('#refresh').onclick = load;
-    document.querySelector('#refreshDomain').onclick = async () => { await api('/api/refresh-domain', {method:'POST'}); load(); };
-    load();
-  </script>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./library.html"><i class="fa-solid fa-bookmark"></i><span>Liste</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./js/storage.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/admin.js"></script>
 </body>
 </html>
