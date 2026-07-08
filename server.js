@@ -48,8 +48,12 @@ const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
 const DETAILS_CACHE_DURATION = 10 * 60 * 1000;
 const SOURCES_CACHE_DURATION = 5 * 60 * 1000;
-const DEFAULT_ALL_PAGE_LIMIT = 500;
-const MAX_ALL_PAGE_LIMIT = 500;
+const FULL_CATALOG_PAGE_LIMITS = {
+    movie: 1312,
+    series: 691
+};
+const DEFAULT_ALL_PAGE_LIMIT = FULL_CATALOG_PAGE_LIMITS.movie;
+const MAX_ALL_PAGE_LIMIT = Math.max(FULL_CATALOG_PAGE_LIMITS.movie, FULL_CATALOG_PAGE_LIMITS.series);
 const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
 
@@ -266,18 +270,59 @@ function dedupeById(items) {
     });
 }
 
-function getAllPageLimit(value) {
-    if (String(value || '').toLowerCase() === 'all') return DEFAULT_ALL_PAGE_LIMIT;
+function groupSeriesSeasons(items = []) {
+    const grouped = new Map();
+
+    items.forEach((item) => {
+        const parsed = parseSeasonTitle(item.title || item.name || '');
+        const baseTitle = item.baseTitle || parsed.baseTitle || item.title || 'Série';
+        const key = normalizeTitleKey(baseTitle);
+        const season = Number(item.season || parsed.season || 1);
+
+        if (!grouped.has(key)) {
+            grouped.set(key, {
+                title: baseTitle,
+                baseTitle,
+                seasons: []
+            });
+        }
+
+        const group = grouped.get(key);
+        if (!group.seasons.some((entry) => String(entry.id) === String(item.id) || Number(entry.season) === season)) {
+            group.seasons.push({
+                season,
+                id: getApiId(item.id),
+                title: cleanDuplicatedTitle(item.title || `${baseTitle} - Saison ${season}`),
+                poster: item.poster || '',
+                quality: item.quality || 'HD',
+                version: item.version || item.lang || ''
+            });
+        }
+    });
+
+    return Array.from(grouped.values())
+        .map((group) => ({
+            ...group,
+            seasons: group.seasons.sort((a, b) => Number(a.season) - Number(b.season)),
+            totalSeasons: group.seasons.length
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title, 'fr'));
+}
+
+function getAllPageLimit(value, kind = 'movie') {
+    const catalogKind = kind === 'series' ? 'series' : 'movie';
+    const maxLimit = FULL_CATALOG_PAGE_LIMITS[catalogKind] || MAX_ALL_PAGE_LIMIT;
+    if (String(value || '').toLowerCase() === 'all') return maxLimit;
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_ALL_PAGE_LIMIT;
-    return Math.min(Math.floor(parsed), MAX_ALL_PAGE_LIMIT);
+    if (!Number.isFinite(parsed) || parsed < 1) return maxLimit;
+    return Math.min(Math.floor(parsed), maxLimit);
 }
 
 function getBootstrapLimit(value) {
-    if (String(value || '').toLowerCase() === 'all') return DEFAULT_ALL_PAGE_LIMIT;
+    if (String(value || '').toLowerCase() === 'all') return 4;
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed < 1) return 4;
-    return Math.min(Math.floor(parsed), MAX_ALL_PAGE_LIMIT);
+    return Math.min(Math.floor(parsed), 24);
 }
 
 async function fetchAllCatalogItems(kind, limit) {
@@ -617,7 +662,7 @@ async function getFilmPage(page = 1) {
 }
 
 async function getAllFilms(limit = 50) {
-    const safeLimit = getAllPageLimit(limit);
+    const safeLimit = getAllPageLimit(limit, 'movie');
     const cacheKey = `film_all_${currentBaseUrl}_${safeLimit}`;
     const cached = getCachedFor(cacheKey, ALL_CACHE_DURATION);
     if (cached) return cached;
@@ -700,26 +745,31 @@ async function getSeriePage(page = 1) {
 }
 
 async function getAllSeries(limit = 50) {
-    const safeLimit = getAllPageLimit(limit);
+    const safeLimit = getAllPageLimit(limit, 'series');
     const cacheKey = `serie_all_${currentBaseUrl}_${safeLimit}`;
     const cached = getCachedFor(cacheKey, ALL_CACHE_DURATION);
     if (cached) return cached;
 
     const result = await fetchAllCatalogItems('series', safeLimit);
+    const items = (result.items || []).map((item) => {
+        const parsed = parseSeasonTitle(item.title);
+        return {
+            ...item,
+            type: 'series',
+            isSeries: true,
+            baseTitle: parsed.baseTitle,
+            season: parsed.season
+        };
+    });
+    const groups = groupSeriesSeasons(items);
     const cleanResult = {
         ...result,
         type: 'series',
-        items: (result.items || []).map((item) => {
-            const parsed = parseSeasonTitle(item.title);
-            return {
-                ...item,
-                type: 'series',
-                isSeries: true,
-                baseTitle: parsed.baseTitle,
-                season: parsed.season
-            };
-        }),
-        total: (result.items || []).length
+        items,
+        groups,
+        total: items.length,
+        totalSeries: groups.length,
+        totalSeasons: items.length
     };
 
     setCachedFor(cacheKey, cleanResult);
@@ -998,7 +1048,7 @@ app.get('/api/film/all', async (req, res) => {
 
 app.get('/api/film/all/progress', async (req, res) => {
     try {
-        const limit = getAllPageLimit(req.query.limit || 'all');
+        const limit = getAllPageLimit(req.query.limit || 'all', 'movie');
         const state = getCatalogBuildState('movie', limit);
         if (state.state === 'idle' || state.state === 'error') {
             getAllFilms(limit).catch((error) => console.error('[BUILD FILM]', error.message));
@@ -1063,7 +1113,7 @@ app.get('/api/serie/all', async (req, res) => {
 
 app.get('/api/serie/all/progress', async (req, res) => {
     try {
-        const limit = getAllPageLimit(req.query.limit || 'all');
+        const limit = getAllPageLimit(req.query.limit || 'all', 'series');
         const state = getCatalogBuildState('series', limit);
         if (state.state === 'idle' || state.state === 'error') {
             getAllSeries(limit).catch((error) => console.error('[BUILD SERIE]', error.message));
@@ -1346,8 +1396,8 @@ app.get('/api/stream/:id', async (req, res) => {
 });
 
 app.get('/api/catalog/status', (req, res) => {
-    const filmLimit = getAllPageLimit(req.query.limit || 'all');
-    const serieLimit = getAllPageLimit(req.query.limit || 'all');
+    const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
+    const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const filmState = getCatalogBuildState('movie', filmLimit);
     const serieState = getCatalogBuildState('series', serieLimit);
 
@@ -1365,23 +1415,24 @@ app.get('/api/catalog/status', (req, res) => {
 });
 
 app.post('/api/cache/build', async (req, res) => {
-    const limit = getAllPageLimit(req.query.limit || 'all');
+    const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
+    const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const target = String(req.query.target || 'all').toLowerCase();
     const tasks = [];
 
     if (target === 'all' || target === 'film' || target === 'movie' || target === 'movies') {
-        const state = getCatalogBuildState('movie', limit);
+        const state = getCatalogBuildState('movie', filmLimit);
         if (state.state !== 'building') {
             tasks.push('movie');
-            getAllFilms(limit).catch((error) => console.error('[CACHE BUILD MOVIE]', error.message));
+            getAllFilms(filmLimit).catch((error) => console.error('[CACHE BUILD MOVIE]', error.message));
         }
     }
 
     if (target === 'all' || target === 'serie' || target === 'series') {
-        const state = getCatalogBuildState('series', limit);
+        const state = getCatalogBuildState('series', serieLimit);
         if (state.state !== 'building') {
             tasks.push('series');
-            getAllSeries(limit).catch((error) => console.error('[CACHE BUILD SERIES]', error.message));
+            getAllSeries(serieLimit).catch((error) => console.error('[CACHE BUILD SERIES]', error.message));
         }
     }
 
@@ -1389,9 +1440,13 @@ app.post('/api/cache/build', async (req, res) => {
         ok: true,
         message: tasks.length ? 'Construction du cache lancee.' : 'Cache deja en cours de construction.',
         tasks,
+        limits: {
+            film: filmLimit,
+            series: serieLimit
+        },
         status: {
-            film: getCatalogBuildState('movie', limit),
-            series: getCatalogBuildState('series', limit)
+            film: getCatalogBuildState('movie', filmLimit),
+            series: getCatalogBuildState('series', serieLimit)
         }
     });
 });
@@ -1409,8 +1464,9 @@ app.get('/api/status', (req, res) => {
         uptime: process.uptime(),
         memory,
         catalog: {
-            film: getCatalogBuildState('movie', DEFAULT_ALL_PAGE_LIMIT),
-            series: getCatalogBuildState('series', DEFAULT_ALL_PAGE_LIMIT)
+            limits: FULL_CATALOG_PAGE_LIMITS,
+            film: getCatalogBuildState('movie', FULL_CATALOG_PAGE_LIMITS.movie),
+            series: getCatalogBuildState('series', FULL_CATALOG_PAGE_LIMITS.series)
         },
         endpoints: [
             '/api/film',
