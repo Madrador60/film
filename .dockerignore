@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+
+madrador-server.log
+madrador-server.err.log
+
+.env
+.env.*
+
+photo
+tmp-*.html
+*.tmp
+*.log
