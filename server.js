@@ -1206,6 +1206,17 @@ app.get('/api/catalog/bootstrap', async (req, res) => {
     }
 });
 
+app.get('/api/keepalive', (req, res) => {
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({
+        ok: true,
+        service: 'madrador-tv',
+        message: 'awake',
+        uptime: Math.round(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
+});
+
 // 📺 Séries
 app.get('/api/series', async (req, res) => {
     try {

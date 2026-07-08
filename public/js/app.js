@@ -1,4 +1,5 @@
 const ITEMS_PER_PAGE = 24;
+const KEEPALIVE_INTERVAL_MS = 14 * 60 * 1000;
 
 let currentTab = 'home';
 let currentPage = 1;
@@ -16,6 +17,7 @@ let searchMode = 'all';
 let searchSuggestIndex = -1;
 let searchDebounce = null;
 let backendSuggestToken = 0;
+let keepaliveTimer = null;
 
 const $ = (id) => document.getElementById(id);
 const rows = $('rows');
@@ -33,8 +35,29 @@ window.addEventListener('DOMContentLoaded', () => {
   renderSkeletons();
   renderFilters();
   bindUI();
+  startKeepalivePing();
   loadHome();
 });
+
+function startKeepalivePing() {
+  if (keepaliveTimer) return;
+  pingKeepalive();
+  keepaliveTimer = window.setInterval(pingKeepalive, KEEPALIVE_INTERVAL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) pingKeepalive();
+  });
+}
+
+async function pingKeepalive() {
+  try {
+    await fetch(`/api/keepalive?t=${Date.now()}`, {
+      cache: 'no-store',
+      keepalive: true
+    });
+  } catch (error) {
+    console.warn('Keepalive indisponible.', error);
+  }
+}
 
 function bindUI() {
   document.querySelectorAll('[data-tab]').forEach((btn) => {
