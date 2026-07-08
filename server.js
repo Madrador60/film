@@ -69,6 +69,10 @@ function getPersistentCatalogPath(kind, limit) {
     return path.join(PERSISTENT_CACHE_DIR, `${kind}-catalog-${limit}.json`);
 }
 
+function getPersistentCatalogCheckpointPath(kind, limit) {
+    return path.join(PERSISTENT_CACHE_DIR, `${kind}-catalog-${limit}.checkpoint.json`);
+}
+
 function readPersistentCatalog(kind, limit) {
     try {
         const file = getPersistentCatalogPath(kind, limit);
@@ -78,6 +82,19 @@ function readPersistentCatalog(kind, limit) {
         return parsed.data || null;
     } catch (error) {
         console.log(`[CACHE] Lecture cache persistant impossible (${kind}) : ${error.message}`);
+        return null;
+    }
+}
+
+function readPersistentCatalogCheckpoint(kind, limit) {
+    try {
+        const file = getPersistentCatalogCheckpointPath(kind, limit);
+        if (!fs.existsSync(file)) return null;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (!parsed?.savedAt || Date.now() - parsed.savedAt > PERSISTENT_CATALOG_DURATION) return null;
+        return parsed.data || null;
+    } catch (error) {
+        console.log(`[CACHE] Lecture checkpoint impossible (${kind}) : ${error.message}`);
         return null;
     }
 }
@@ -92,6 +109,28 @@ function writePersistentCatalog(kind, limit, data) {
         );
     } catch (error) {
         console.log(`[CACHE] Ecriture cache persistant impossible (${kind}) : ${error.message}`);
+    }
+}
+
+function writePersistentCatalogCheckpoint(kind, limit, data) {
+    try {
+        ensurePersistentCacheDir();
+        fs.writeFileSync(
+            getPersistentCatalogCheckpointPath(kind, limit),
+            JSON.stringify({ savedAt: Date.now(), data }, null, 2),
+            'utf8'
+        );
+    } catch (error) {
+        console.log(`[CACHE] Ecriture checkpoint impossible (${kind}) : ${error.message}`);
+    }
+}
+
+function clearPersistentCatalogCheckpoint(kind, limit) {
+    try {
+        const file = getPersistentCatalogCheckpointPath(kind, limit);
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+    } catch (error) {
+        console.log(`[CACHE] Nettoyage checkpoint impossible (${kind}) : ${error.message}`);
     }
 }
 
@@ -348,22 +387,29 @@ async function fetchAllCatalogItems(kind, limit) {
     if (inFlightCache.has(cacheKey)) return inFlightCache.get(cacheKey);
 
     const task = (async () => {
-        const allItems = [];
+        const checkpoint = readPersistentCatalogCheckpoint(kind, limit);
+        const checkpointItems = Array.isArray(checkpoint?.items) ? checkpoint.items : [];
+        const allItems = [...checkpointItems];
         const seen = new Set();
+        allItems.forEach((item) => {
+            const id = String(item?.id || '').trim();
+            if (id) seen.add(id);
+        });
         const batchSize = CATALOG_BATCH_SIZE;
         let stopped = false;
-        let lastPage = 0;
+        let lastPage = Number(checkpoint?.page || checkpoint?.pagesScraped || 0);
+        const firstPage = Math.min(lastPage + 1, limit + 1);
 
         updateCatalogBuildState(kind, limit, {
             state: 'building',
-            page: 0,
-            total: 0,
-            startedAt: new Date().toISOString(),
+            page: lastPage,
+            total: allItems.length,
+            startedAt: checkpoint?.startedAt || new Date().toISOString(),
             doneAt: null,
             error: null
         });
 
-        for (let startPage = 1; startPage <= limit && !stopped; startPage += batchSize) {
+        for (let startPage = firstPage; startPage <= limit && !stopped; startPage += batchSize) {
             const endPage = Math.min(limit, startPage + batchSize - 1);
             const pageNumbers = [];
             for (let page = startPage; page <= endPage; page++) pageNumbers.push(page);
@@ -415,6 +461,16 @@ async function fetchAllCatalogItems(kind, limit) {
                 console.log(`🛑 Arrêt ${kind}: aucune nouveauté dans le lot ${startPage}-${endPage}.`);
                 stopped = true;
             }
+
+            writePersistentCatalogCheckpoint(kind, limit, {
+                type: kind === 'series' ? 'series' : 'movie',
+                limit,
+                page: lastPage,
+                total: allItems.length,
+                startedAt: checkpoint?.startedAt || getCatalogBuildState(kind, limit).startedAt,
+                updatedAt: new Date().toISOString(),
+                items: dedupeById(allItems)
+            });
         }
 
         const items = dedupeById(allItems);
@@ -429,6 +485,7 @@ async function fetchAllCatalogItems(kind, limit) {
 
         setCached(cacheKey, result);
         writePersistentCatalog(kind, limit, result);
+        clearPersistentCatalogCheckpoint(kind, limit);
         updateCatalogBuildState(kind, limit, {
             state: 'ready',
             page: lastPage,
@@ -809,6 +866,63 @@ async function buildFullCatalogCacheSequential(filmLimit, serieLimit) {
     } finally {
         fullCatalogBuildRunning = false;
     }
+}
+
+function startCatalogCacheBuild({ filmLimit, serieLimit, target = 'all' }) {
+    const normalizedTarget = String(target || 'all').toLowerCase();
+    const tasks = [];
+
+    if (normalizedTarget === 'all') {
+        const filmState = getCatalogBuildState('movie', filmLimit);
+        const serieState = getCatalogBuildState('series', serieLimit);
+
+        if (!fullCatalogBuildRunning && (filmState.state !== 'ready' || serieState.state !== 'ready')) {
+            tasks.push('movie', 'series');
+            if (filmState.state !== 'building') {
+                updateCatalogBuildState('movie', filmLimit, {
+                    state: 'queued',
+                    startedAt: filmState.startedAt || new Date().toISOString(),
+                    error: null
+                });
+            }
+            if (serieState.state !== 'building') {
+                updateCatalogBuildState('series', serieLimit, {
+                    state: 'queued',
+                    startedAt: serieState.startedAt || new Date().toISOString(),
+                    error: null
+                });
+            }
+            buildFullCatalogCacheSequential(filmLimit, serieLimit);
+        }
+
+        return {
+            mode: 'sequential',
+            tasks,
+            message: tasks.length ? 'Construction progressive du cache lancee.' : 'Cache deja pret ou en cours de construction.'
+        };
+    }
+
+    if (normalizedTarget === 'film' || normalizedTarget === 'movie' || normalizedTarget === 'movies') {
+        const state = getCatalogBuildState('movie', filmLimit);
+        if (state.state !== 'building') {
+            tasks.push('movie');
+            getAllFilms(filmLimit).catch((error) => console.error('[CACHE BUILD MOVIE]', error.message));
+        }
+    }
+
+    if (normalizedTarget === 'serie' || normalizedTarget === 'series') {
+        const state = getCatalogBuildState('series', serieLimit);
+        if (state.state !== 'building') {
+            tasks.push('series');
+            getAllSeries(serieLimit).catch((error) => console.error('[CACHE BUILD SERIES]', error.message));
+        }
+    }
+
+    return {
+        mode: 'parallel-target',
+        tasks,
+        message: tasks.length ? 'Construction du cache lancee.' : 'Cache deja en cours de construction.'
+    };
 }
 
 async function getSerieDetails(id, includeEpisodes = false) {
@@ -1453,68 +1567,14 @@ app.post('/api/cache/build', async (req, res) => {
     const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
     const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const target = String(req.query.target || 'all').toLowerCase();
-    const tasks = [];
-
-    if (target === 'all') {
-        const filmState = getCatalogBuildState('movie', filmLimit);
-        const serieState = getCatalogBuildState('series', serieLimit);
-
-        if (!fullCatalogBuildRunning && (filmState.state !== 'ready' || serieState.state !== 'ready')) {
-            tasks.push('movie', 'series');
-            if (filmState.state !== 'building') {
-                updateCatalogBuildState('movie', filmLimit, {
-                    state: 'queued',
-                    startedAt: filmState.startedAt || new Date().toISOString(),
-                    error: null
-                });
-            }
-            if (serieState.state !== 'building') {
-                updateCatalogBuildState('series', serieLimit, {
-                    state: 'queued',
-                    startedAt: serieState.startedAt || new Date().toISOString(),
-                    error: null
-                });
-            }
-            buildFullCatalogCacheSequential(filmLimit, serieLimit);
-        }
-
-        return res.json({
-            ok: true,
-            message: tasks.length ? 'Construction progressive du cache lancee.' : 'Cache deja pret ou en cours de construction.',
-            mode: 'sequential',
-            batchSize: CATALOG_BATCH_SIZE,
-            tasks,
-            limits: {
-                film: filmLimit,
-                series: serieLimit
-            },
-            status: {
-                film: getCatalogBuildState('movie', filmLimit),
-                series: getCatalogBuildState('series', serieLimit)
-            }
-        });
-    }
-
-    if (target === 'all' || target === 'film' || target === 'movie' || target === 'movies') {
-        const state = getCatalogBuildState('movie', filmLimit);
-        if (state.state !== 'building') {
-            tasks.push('movie');
-            getAllFilms(filmLimit).catch((error) => console.error('[CACHE BUILD MOVIE]', error.message));
-        }
-    }
-
-    if (target === 'all' || target === 'serie' || target === 'series') {
-        const state = getCatalogBuildState('series', serieLimit);
-        if (state.state !== 'building') {
-            tasks.push('series');
-            getAllSeries(serieLimit).catch((error) => console.error('[CACHE BUILD SERIES]', error.message));
-        }
-    }
+    const build = startCatalogCacheBuild({ filmLimit, serieLimit, target });
 
     res.json({
         ok: true,
-        message: tasks.length ? 'Construction du cache lancee.' : 'Cache deja en cours de construction.',
-        tasks,
+        message: build.message,
+        mode: build.mode,
+        batchSize: CATALOG_BATCH_SIZE,
+        tasks: build.tasks,
         limits: {
             film: filmLimit,
             series: serieLimit
@@ -1523,6 +1583,35 @@ app.post('/api/cache/build', async (req, res) => {
             film: getCatalogBuildState('movie', filmLimit),
             series: getCatalogBuildState('series', serieLimit)
         }
+    });
+});
+
+app.get('/api/cache/warm', (req, res) => {
+    const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
+    const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
+    const target = String(req.query.target || 'all').toLowerCase();
+    const build = startCatalogCacheBuild({ filmLimit, serieLimit, target });
+    const film = getCatalogBuildState('movie', filmLimit);
+    const series = getCatalogBuildState('series', serieLimit);
+
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({
+        ok: true,
+        service: 'madrador-tv',
+        message: build.message,
+        mode: build.mode,
+        batchSize: CATALOG_BATCH_SIZE,
+        tasks: build.tasks,
+        limits: {
+            film: filmLimit,
+            series: serieLimit
+        },
+        ready: film.state === 'ready' && series.state === 'ready',
+        status: {
+            film,
+            series
+        },
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -1564,6 +1653,7 @@ app.get('/api/status', (req, res) => {
             '/api/catalog/bootstrap?limit=4',
             '/api/catalog/status',
             '/api/cache/build',
+            '/api/cache/warm',
             '/api/library/stats',
             '/api/series?page=1',
             '/api/series/all?limit=10',
