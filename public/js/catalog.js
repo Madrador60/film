@@ -33,6 +33,7 @@ function hydrateCatalog() {
     restoreCatalogFilters();
   }
   $('catalogType').value = ['movies', 'series'].includes(catalogType) ? catalogType : 'all';
+  applyCatalogParams();
   document.body.dataset.catalog = catalogType;
   setActiveChrome();
   updateTitle();
@@ -41,7 +42,40 @@ function hydrateCatalog() {
 }
 
 function hasExplicitCatalogNavigation() {
-  return params.has('type') || params.has('view');
+  return ['type', 'view', 'q', 'genre', 'lang', 'quality', 'year', 'sort'].some((key) => params.has(key));
+}
+
+function applyCatalogParams() {
+  const mappings = [
+    ['q', 'catalogSearch'],
+    ['genre', 'catalogGenre'],
+    ['lang', 'catalogLang'],
+    ['quality', 'catalogQuality'],
+    ['year', 'catalogYear'],
+    ['sort', 'catalogSort']
+  ];
+
+  mappings.forEach(([param, id]) => {
+    const value = params.get(param);
+    if (value !== null && $(id)) setSelectOrInputValue($(id), value);
+  });
+
+  const type = params.get('type');
+  if (type && $('catalogType')) {
+    catalogType = ['movies', 'series', 'all'].includes(type) ? type : 'all';
+    $('catalogType').value = catalogType;
+  }
+}
+
+function setSelectOrInputValue(node, value) {
+  if (!node) return;
+  if (node.tagName === 'SELECT') {
+    const normalized = normalizeKey(value);
+    const option = Array.from(node.options).find((item) => normalizeKey(item.value || item.textContent) === normalized);
+    node.value = option ? option.value : '';
+    return;
+  }
+  node.value = value;
 }
 
 function clearSavedCatalogFilters() {
@@ -637,7 +671,24 @@ function updateUrl() {
     url.searchParams.set('type', catalogType);
   }
   url.searchParams.delete('page');
+  syncFilterParams(url);
   history.replaceState(null, '', url);
+}
+
+function syncFilterParams(url) {
+  const values = {
+    q: $('catalogSearch')?.value.trim() || '',
+    genre: $('catalogGenre')?.value || '',
+    lang: $('catalogLang')?.value || '',
+    quality: $('catalogQuality')?.value || '',
+    year: $('catalogYear')?.value || '',
+    sort: $('catalogSort')?.value === 'new' ? '' : $('catalogSort')?.value || ''
+  };
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  });
 }
 
 function setActiveChrome() {

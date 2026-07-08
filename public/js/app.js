@@ -1394,17 +1394,45 @@ function renderFilters() {
     const box = $(id);
     if (!box) return;
     box.innerHTML = labels.map((label) => `
-      <button type="button" data-filter="${escapeHtml(label)}">
+      <button type="button" data-filter="${escapeHtml(label)}" data-filter-group="${escapeHtml(id)}">
         <i class="fa-solid fa-angle-right"></i>${escapeHtml(label)}
       </button>`).join('');
 
     box.querySelectorAll('button').forEach((button) => {
       button.addEventListener('click', () => {
-        $('search').value = button.dataset.filter;
-        search();
+        openFilteredCatalog(button.dataset.filter, button.dataset.filterGroup);
       });
     });
   });
+}
+
+function openFilteredCatalog(label, group) {
+  const url = new URL('./catalog.html', location.href);
+  const value = String(label || '').trim();
+
+  url.searchParams.set('type', 'all');
+
+  if (group === 'genreFilters') {
+    url.searchParams.set('genre', value);
+  } else if (group === 'languageFilters') {
+    url.searchParams.set('lang', value);
+  } else if (group === 'collectionFilters') {
+    const match = value.match(/^(Films|Séries)\s+(\d{4})$/i);
+    if (match) {
+      url.searchParams.set('type', match[1].toLowerCase().startsWith('s') ? 'series' : 'movies');
+      url.searchParams.set('year', match[2]);
+    } else if (normalizeKey(value).includes('top imdb')) {
+      url.searchParams.delete('type');
+      url.searchParams.set('view', 'popular');
+      url.searchParams.set('sort', 'quality');
+    } else {
+      url.searchParams.set('q', value);
+    }
+  } else {
+    url.searchParams.set('q', value);
+  }
+
+  location.href = `${url.pathname}${url.search}`;
 }
 
 function showLoading(show) {
