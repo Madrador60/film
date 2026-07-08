@@ -5,6 +5,8 @@ let results = [];
 let toastTimer = null;
 let instantTimer = null;
 let lastSearchTerm = '';
+let localCatalog = [];
+let lastFilteredItems = [];
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,6 +14,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('searchLoading').innerHTML = Array.from({ length: 24 }, () => '<div class="skeleton-card"></div>').join('');
   bindSearch();
   renderQuickTerms();
+  paintSearchInsights([]);
+  warmSearchCatalog();
   const initial = params.get('q') || getSearchHistory()[0] || '';
   $('advancedQuery').value = initial;
   if (initial) runSearch();
@@ -78,9 +82,14 @@ async function runSearch() {
   lastSearchTerm = q;
   hideSearchApiStatus();
   setLoading(true);
+  const localResults = searchLocalCatalog(q);
+
   try {
     const data = await cachedFetchJson(`/api/search?q=${encodeURIComponent(q)}`, `search:${q}`, 1000 * 60 * 3);
-    results = groupSeries(normalizeItems(data.items || [], 'movies'));
+    results = groupSeries(dedupeMediaItems([
+      ...localResults,
+      ...normalizeItems(data.items || [], 'movies')
+    ]));
     renderResults();
     renderQuickTerms();
     const url = new URL(location.href);
@@ -88,15 +97,61 @@ async function runSearch() {
     history.replaceState(null, '', url);
   } catch (err) {
     console.error(err);
-    results = [];
-    renderEmpty('Recherche impossible', 'Le backend ne répond pas pour cette recherche.');
+    results = groupSeries(localResults);
+    if (results.length) {
+      renderResults();
+    } else {
+      renderEmpty('Recherche impossible', 'Le backend ne répond pas pour cette recherche.');
+    }
     showSearchApiStatus(
-      'Recherche indisponible',
-      'Impossible de joindre /api/search pour le moment. Vérifie le serveur local puis réessaie.'
+      results.length ? 'Résultats locaux affichés' : 'Recherche indisponible',
+      results.length
+        ? 'La recherche en ligne ne répond pas, mais les résultats du catalogue chargé restent utilisables.'
+        : 'Impossible de joindre /api/search pour le moment. Vérifie le serveur local puis réessaie.'
     );
   } finally {
     setLoading(false);
   }
+}
+
+async function warmSearchCatalog() {
+  try {
+    const data = await cachedFetchJson('/api/catalog/bootstrap?limit=80', 'search:catalog:bootstrap:80', 1000 * 60 * 10);
+    const movies = normalizeItems(data.movies?.items || [], 'movies');
+    const series = normalizeItems(data.series?.items || [], 'series');
+    localCatalog = groupSeries(dedupeMediaItems([...movies, ...series]));
+    paintLocalCatalogState();
+    if (!$('advancedQuery').value.trim()) {
+      renderDiscovery();
+    }
+  } catch (err) {
+    console.warn('Catalogue local recherche indisponible.', err);
+    localCatalog = [];
+    paintLocalCatalogState('Indisponible');
+  }
+}
+
+function searchLocalCatalog(query) {
+  const needle = normalizeKey(query);
+  if (!needle || !localCatalog.length) return [];
+  const words = needle.split(/\s+/).filter(Boolean);
+  return localCatalog
+    .map((item) => {
+      const haystack = normalizeKey([
+        item.title,
+        item.originalTitle,
+        item.seriesTitle,
+        item.year,
+        item.quality,
+        item.version
+      ].filter(Boolean).join(' '));
+      const exact = haystack.includes(needle) ? 40 : 0;
+      const score = words.reduce((total, word) => total + (haystack.includes(word) ? 10 : 0), exact);
+      return { item, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item);
 }
 
 function scheduleInstantSearch() {
@@ -117,17 +172,20 @@ function scheduleInstantSearch() {
 function renderResults() {
   let items = applyFilters(results);
   items = sortItems(items);
+  lastFilteredItems = items;
   const grid = $('searchResults');
   grid.innerHTML = '';
 
   if (!items.length) {
     renderEmpty('Aucun résultat', 'Essaie un autre mot-clé ou enlève certains filtres.');
+    paintSearchInsights([]);
     return;
   }
 
   hideSearchApiStatus();
   items.slice(0, ITEMS_PER_PAGE).forEach((item, index) => grid.appendChild(createCard(item, index)));
   $('resultCount').textContent = `${items.length} résultat${items.length > 1 ? 's' : ''}`;
+  paintSearchInsights(items);
   syncTypeTabs();
 }
 
@@ -140,6 +198,25 @@ function renderEmpty(title, message) {
       <a class="btn primary" href="./catalog.html?type=all"><i class="fa-solid fa-layer-group"></i><span>Voir le catalogue</span></a>
     </section>`;
   $('resultCount').textContent = '0 résultat';
+  lastFilteredItems = [];
+}
+
+function renderDiscovery() {
+  const quick = dedupeMediaItems([
+    ...MadradorStorage.continueWatching(),
+    ...MadradorStorage.favorites(),
+    ...localCatalog.slice(0, 18)
+  ]).slice(0, 24);
+
+  if (!quick.length) {
+    renderEmpty('Lance une recherche', 'Tape un titre ou choisis une recherche rapide.');
+    return;
+  }
+
+  $('searchResults').innerHTML = '';
+  quick.forEach((item, index) => $('searchResults').appendChild(createCard(item, index)));
+  $('resultCount').textContent = `${quick.length} suggestion${quick.length > 1 ? 's' : ''}`;
+  paintSearchInsights(quick);
 }
 
 function createCard(item, index) {
@@ -165,6 +242,7 @@ function createCard(item, index) {
       </div>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-play><i class="fa-solid fa-play"></i></button>
+        <button type="button" class="media-action" data-info><i class="fa-solid fa-circle-info"></i></button>
         <button type="button" class="media-action" data-fav><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
       </div>
       <h3>${escapeHtml(item.title)}</h3>
@@ -174,6 +252,10 @@ function createCard(item, index) {
     event.stopPropagation();
     openPlayer(item);
   });
+  card.querySelector('[data-info]').addEventListener('click', (event) => {
+    event.stopPropagation();
+    openDetails(item);
+  });
   card.querySelector('[data-fav]').addEventListener('click', (event) => {
     event.stopPropagation();
     if (MadradorStorage.isFavorite(item.id)) MadradorStorage.removeFavorite(item.id);
@@ -181,6 +263,22 @@ function createCard(item, index) {
     event.currentTarget.innerHTML = `<i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
   });
   return card;
+}
+
+function paintSearchInsights(items) {
+  const list = items || lastFilteredItems || [];
+  const movies = list.filter((item) => item.type === 'movies').length;
+  const series = list.filter((item) => item.type === 'series').length;
+  $('searchTotal').textContent = String(list.length);
+  $('searchMovies').textContent = String(movies);
+  $('searchSeries').textContent = String(series);
+  paintLocalCatalogState();
+}
+
+function paintLocalCatalogState(forcedLabel = '') {
+  const target = $('searchLocalState');
+  if (!target) return;
+  target.textContent = forcedLabel || (localCatalog.length ? `${localCatalog.length}` : 'Chargement');
 }
 
 function applyFilters(items) {
@@ -293,6 +391,24 @@ function groupSeries(items) {
     group.id = group.seasons[0]?.id || group.id;
     return group;
   })];
+}
+
+function dedupeMediaItems(items) {
+  const seen = new Set();
+  return (items || []).filter((item) => {
+    const key = getMediaDedupeKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getMediaDedupeKey(item) {
+  const type = String(item?.type || '').toLowerCase();
+  if (type.includes('series') || type.includes('serie') || item?.seriesTitle || item?.seasonNumber) {
+    return `series:${normalizeKey(item.seriesTitle || item.title || '')}`;
+  }
+  return `movie:${item?.id || normalizeKey(item?.title || '')}`;
 }
 
 function parseSeasonTitle(title) {

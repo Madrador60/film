@@ -109,6 +109,29 @@
       <button class="btn glass danger-btn" id="clearSearchHistory" type="button"><i class="fa-solid fa-trash"></i><span>Vider recherches</span></button>
     </section>
 
+    <section class="search-insights" id="searchInsights" aria-label="Résumé recherche">
+      <article>
+        <i class="fa-solid fa-layer-group"></i>
+        <span>Total</span>
+        <strong id="searchTotal">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-film"></i>
+        <span>Films</span>
+        <strong id="searchMovies">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-tv"></i>
+        <span>Séries</span>
+        <strong id="searchSeries">0</strong>
+      </article>
+      <article>
+        <i class="fa-solid fa-database"></i>
+        <span>Catalogue local</span>
+        <strong id="searchLocalState">Chargement</strong>
+      </article>
+    </section>
+
     <div id="searchLoading" class="skeleton-grid hidden"></div>
     <section class="api-status hidden" id="searchApiStatus" role="status" aria-live="polite">
       <i class="fa-solid fa-wifi"></i>
