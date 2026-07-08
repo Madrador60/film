@@ -784,6 +784,18 @@ async function buildFullCatalogCacheSequential(filmLimit, serieLimit) {
 
     try {
         const filmState = getCatalogBuildState('movie', filmLimit);
+        if (filmState.state === 'building') {
+            const serieState = getCatalogBuildState('series', serieLimit);
+            if (serieState.state !== 'ready') {
+                updateCatalogBuildState('series', serieLimit, {
+                    state: 'queued',
+                    startedAt: serieState.startedAt || new Date().toISOString(),
+                    error: null
+                });
+            }
+            return;
+        }
+
         if (filmState.state !== 'ready' && filmState.state !== 'building') {
             await getAllFilms(filmLimit);
         }
