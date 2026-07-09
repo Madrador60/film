@@ -26,6 +26,8 @@ function hydrateSettings() {
 }
 
 function bindSettings() {
+  $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
+
   document.querySelectorAll('input[name="theme"]').forEach((input) => {
     input.addEventListener('change', saveSettings);
   });

@@ -3463,18 +3463,34 @@ a {
 }
 
 .settings-shell {
-  width: min(1180px, calc(100% - 34px));
-  margin: 0 auto;
-  padding: 22px 0 42px;
+  width: auto;
+  max-width: 1260px;
+  margin-right: auto;
+  padding-top: 22px;
+  padding-bottom: 42px;
 }
 
 .settings-hero {
   margin-bottom: 24px;
   padding: 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(59,130,246,.16), rgba(139,92,246,.12)), rgba(9,12,26,.72);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34,211,238,.16), transparent 34%),
+    linear-gradient(135deg, rgba(59,130,246,.18), rgba(139,92,246,.13)),
+    rgba(9,12,26,.72);
   box-shadow: var(--shadow);
+}
+
+.settings-hero-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .settings-hero h1 {
@@ -3504,7 +3520,7 @@ a {
   align-content: start;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   background: rgba(9, 12, 26, .78);
   backdrop-filter: blur(18px);
 }
@@ -4149,7 +4165,13 @@ a {
   }
 
   .settings-hero {
+    grid-template-columns: 1fr;
+    align-items: start;
     padding: 24px;
+  }
+
+  .settings-hero-actions {
+    justify-content: flex-start;
   }
 
   .settings-hero h1 {

@@ -14,20 +14,38 @@
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body class="settings-body">
-  <header class="player-top">
-    <a href="./index.html" class="btn glass"><i class="fa-solid fa-arrow-left"></i><span>Retour</span></a>
-    <a href="./index.html" class="brand mini">
+<body class="home-body settings-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
       <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
       <b>MADRADOR <em>TV</em></b>
     </a>
-  </header>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav" href="./search.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Recherche</span></a>
+      <a class="nav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav" href="./catalog.html?view=new"><i class="fa-solid fa-plus"></i><span>Nouveautés</span></a>
+      <a class="nav" href="./catalog.html?view=popular"><i class="fa-solid fa-fire"></i><span>Populaires</span></a>
+      <a class="nav" href="./library.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+      <a class="nav" href="./library.html?view=history"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></a>
+      <a class="nav active" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+    </nav>
+  </aside>
 
-  <main class="settings-shell">
+  <main class="main catalog-main settings-shell">
     <section class="settings-hero">
-      <div class="eyebrow"><i class="fa-solid fa-gear"></i> Préférences locales</div>
-      <h1>Paramètres</h1>
-      <p>Tout est sauvegardé dans ce navigateur, sans compte et sans backend.</p>
+      <div>
+        <div class="eyebrow"><i class="fa-solid fa-gear"></i> Préférences locales</div>
+        <h1>Paramètres</h1>
+        <p>Tout est sauvegardé dans ce navigateur, sans compte et sans backend.</p>
+      </div>
+      <div class="settings-hero-actions">
+        <a href="./index.html" class="btn glass"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
+        <a href="./admin.html" class="btn glass"><i class="fa-solid fa-chart-simple"></i><span>Admin</span></a>
+      </div>
     </section>
 
     <section class="settings-grid">
