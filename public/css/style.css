@@ -7234,68 +7234,65 @@ html[data-device="phone"] .library-controls {
   }
 }
 
-/* Professional compact home layout */
+/* Desktop navigation should stay readable; compact modes are reserved for touch layouts. */
 @media (min-width: 1180px) {
   .sidebar {
-    width: 88px !important;
-    padding: 18px 10px;
-    overflow: hidden;
-    transition: width .22s ease, box-shadow .22s ease, background .22s ease;
-  }
-
-  .sidebar:hover,
-  .sidebar:focus-within {
-    width: 238px !important;
+    width: 232px !important;
+    padding: 22px 16px;
     overflow-y: auto;
-    box-shadow: 24px 0 70px rgba(0,0,0,.38);
+    overflow-x: hidden;
+    box-shadow: 18px 0 60px rgba(0,0,0,.28);
   }
 
   .main,
   .catalog-main {
-    margin-left: 88px !important;
-    transition: margin-left .22s ease;
+    margin-left: 232px !important;
   }
 
   .brand {
-    justify-content: center;
-    gap: 0;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 54px;
   }
 
   .brand b,
   .side-nav span,
   .sidebar-categories {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-8px);
-    transition: opacity .18s ease, transform .18s ease;
-  }
-
-  .sidebar:hover .brand,
-  .sidebar:focus-within .brand {
-    justify-content: flex-start;
-    gap: 10px;
-  }
-
-  .sidebar:hover .brand b,
-  .sidebar:focus-within .brand b,
-  .sidebar:hover .side-nav span,
-  .sidebar:focus-within .side-nav span,
-  .sidebar:hover .sidebar-categories,
-  .sidebar:focus-within .sidebar-categories {
     opacity: 1;
     pointer-events: auto;
-    transform: translateX(0);
+    transform: none;
+  }
+
+  .brand-logo {
+    width: 46px;
+    height: 46px;
   }
 
   .nav {
-    justify-content: center;
-    padding: 0;
+    justify-content: flex-start;
+    min-height: 48px;
+    padding: 0 15px;
+    font-size: 15px;
+    gap: 13px;
   }
 
-  .sidebar:hover .nav,
-  .sidebar:focus-within .nav {
-    justify-content: flex-start;
-    padding: 0 14px;
+  .nav i {
+    width: 21px;
+    font-size: 17px;
+  }
+
+  .sidebar-categories {
+    display: grid;
+    gap: 7px;
+    margin-top: 18px;
+    padding-top: 16px;
+  }
+
+  .sidebar-categories button {
+    min-height: 32px;
+    padding: 0 10px;
+    text-align: left;
+    font-size: 14px;
   }
 }
 
@@ -7597,18 +7594,18 @@ html[data-device="4k"] .home-hero {
   }
 }
 
-/* Final navigation correction: compact but readable on desktop */
+/* Final navigation correction: stable, readable desktop rail */
 @media (min-width: 1180px) {
   .sidebar {
-    width: 176px !important;
-    padding: 16px 12px !important;
+    width: 232px !important;
+    padding: 22px 16px !important;
     overflow-x: hidden;
     overflow-y: auto;
   }
 
   .main,
   .catalog-main {
-    margin-left: 176px !important;
+    margin-left: 232px !important;
   }
 
   .brand,
@@ -7617,7 +7614,13 @@ html[data-device="4k"] .home-hero {
   }
 
   .brand {
-    gap: 9px !important;
+    gap: 12px !important;
+    margin-bottom: 18px;
+  }
+
+  .brand-logo {
+    width: 46px !important;
+    height: 46px !important;
   }
 
   .brand b,
@@ -7628,27 +7631,61 @@ html[data-device="4k"] .home-hero {
   }
 
   .nav {
-    min-height: 42px;
-    padding: 0 12px !important;
+    min-height: 49px;
+    padding: 0 15px !important;
+    border-radius: 15px;
+    font-size: 15px;
+    gap: 13px;
+  }
+
+  .nav i {
+    width: 22px;
+    font-size: 17px;
   }
 
   .sidebar-categories {
-    opacity: .9 !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
     transform: none !important;
-    max-height: 190px;
-    overflow: hidden;
-    mask-image: linear-gradient(180deg, #000 74%, transparent);
+    max-height: none;
+    overflow: visible;
+    mask-image: none;
+  }
+
+  .sidebar-categories span {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .sidebar-categories button {
+    min-height: 32px;
+    font-size: 14px;
   }
 }
 
 html[data-device="4k"] .sidebar {
-  width: 188px !important;
+  width: 260px !important;
+  padding: 26px 18px !important;
 }
 
 html[data-device="4k"] .main,
 html[data-device="4k"] .catalog-main {
-  margin-left: 188px !important;
+  margin-left: 260px !important;
+}
+
+html[data-device="4k"] .nav {
+  min-height: 56px;
+  font-size: 17px;
+  border-radius: 17px;
+}
+
+html[data-device="4k"] .brand b {
+  font-size: 17px;
+}
+
+html[data-device="4k"] .sidebar-categories button {
+  min-height: 36px;
+  font-size: 15px;
 }
 
 html[data-device="tablet"] .sidebar,
