@@ -20,6 +20,14 @@
       active = (targetType && targetType === type) || (targetView && targetView === view);
     }
 
+    if (currentPath === 'library.html' && targetPath === 'library.html') {
+      active = true;
+    }
+
+    if (currentPath === 'admin.html' && targetPath === 'settings.html') {
+      active = true;
+    }
+
     if (currentPath === 'player.html' && targetPath === 'catalog.html') {
       active = contentSection && contentSection === targetSection;
     }
@@ -35,9 +43,10 @@
 
   function getContentSection(path, typeValue, viewValue) {
     if (viewValue === 'favorites') return 'favorites';
-    if (path === 'library.html') return 'favorites';
+    if (viewValue === 'history') return 'history';
+    if (path === 'library.html') return 'library';
     if (path === 'search.html') return 'search';
-    if (path === 'settings.html') return 'settings';
+    if (path === 'settings.html' || path === 'admin.html') return 'settings';
     if (path === 'index.html' || path === '') return 'home';
     if (typeValue === 'series') return 'series';
     if (typeValue === 'movies' || typeValue === 'movie') return 'movies';
