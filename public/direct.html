@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Madrador TV" />
+  <title>Direct - Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="home-body direct-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html" aria-label="Madrador TV">
+      <span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span>
+      <b>MADRADOR <em>TV</em></b>
+    </a>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav active" href="./direct.html"><i class="fa-solid fa-satellite-dish"></i><span>Direct</span></a>
+      <a class="nav" href="./search.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Recherche</span></a>
+      <a class="nav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav" href="./catalog.html?view=new"><i class="fa-solid fa-plus"></i><span>Nouveautés</span></a>
+      <a class="nav" href="./library.html?view=favorites"><i class="fa-solid fa-heart"></i><span>Ma liste</span></a>
+      <a class="nav" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+    </nav>
+  </aside>
+
+  <main class="main catalog-main direct-main">
+    <header class="catalog-hero-head direct-hero">
+      <div>
+        <span>Lecture directe</span>
+        <h1>Direct Madrador</h1>
+        <p>Lance rapidement une URL vidéo ou iframe dans l'interface Madrador, sans quitter l'application.</p>
+      </div>
+      <a class="btn glass" href="./index.html"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
+    </header>
+
+    <section class="direct-layout">
+      <article class="direct-player">
+        <div class="direct-screen" id="directScreen">
+          <div class="direct-placeholder" id="directPlaceholder">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <h2>Aucun direct lancé</h2>
+            <p>Colle une URL vidéo, iframe ou page lecteur, puis appuie sur Lancer.</p>
+          </div>
+        </div>
+      </article>
+
+      <aside class="direct-panel">
+        <div class="direct-form">
+          <label for="directUrl">URL directe</label>
+          <div class="direct-input">
+            <i class="fa-solid fa-link"></i>
+            <input id="directUrl" type="url" placeholder="https://..." autocomplete="off" />
+            <button class="icon-btn" id="directClear" type="button" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="direct-actions">
+            <button class="btn primary" id="directPlay" type="button"><i class="fa-solid fa-play"></i><span>Lancer</span></button>
+            <button class="btn glass" id="directOpen" type="button"><i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir</span></button>
+          </div>
+        </div>
+
+        <div class="direct-recent">
+          <div class="section-head compact">
+            <div>
+              <span>Local</span>
+              <h2>Derniers directs</h2>
+            </div>
+            <button class="btn glass" id="directReset" type="button"><i class="fa-solid fa-trash"></i><span>Vider</span></button>
+          </div>
+          <div class="direct-list" id="directList"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./direct.html"><i class="fa-solid fa-satellite-dish"></i><span>Direct</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./js/storage.js"></script>
+  <script src="./js/device-profile.js"></script>
+  <script src="./js/antiads.js"></script>
+  <script src="./js/mini-player.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/ui-system.js"></script>
+  <script src="./js/direct.js"></script>
+</body>
+</html>

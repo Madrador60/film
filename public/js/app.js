@@ -122,6 +122,9 @@ function bindUI() {
     const q = $('search').value.trim();
     location.href = `./search.html${q ? `?q=${encodeURIComponent(q)}` : ''}`;
   });
+  $('directBtn').addEventListener('click', () => {
+    location.href = './direct.html';
+  });
   $('newBtn').addEventListener('click', () => renderNewReleases());
   $('popularBtn').addEventListener('click', () => renderPopular());
   $('favoritesBtn').addEventListener('click', () => renderLocalCollection('Ma liste', MadradorStorage.favorites(), $('favoritesBtn')));

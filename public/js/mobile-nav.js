@@ -45,6 +45,7 @@
     if (viewValue === 'favorites') return 'favorites';
     if (viewValue === 'history') return 'history';
     if (path === 'library.html') return 'library';
+    if (path === 'direct.html') return 'direct';
     if (path === 'search.html') return 'search';
     if (path === 'settings.html' || path === 'admin.html') return 'settings';
     if (path === 'index.html' || path === '') return 'home';
