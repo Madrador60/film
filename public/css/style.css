@@ -8681,3 +8681,163 @@ body {
     z-index: 210 !important;
   }
 }
+
+/* Final platform tuning: make the app feel native on large screens, TV and phones. */
+.home-body .topbar {
+  grid-template-columns: minmax(0, min(920px, 100%)) !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.home-body .search-area {
+  width: min(920px, 100%) !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.home-body .searchbox {
+  min-width: 0;
+}
+
+html[data-device="4k"] .sidebar {
+  width: 324px !important;
+  padding: 32px 24px !important;
+}
+
+html[data-device="4k"] .main,
+html[data-device="4k"] .catalog-main {
+  margin-left: 324px !important;
+  max-width: none !important;
+  padding: 36px 56px 78px !important;
+}
+
+html[data-device="4k"] .brand b,
+html[data-device="tv"] .brand b {
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+html[data-device="4k"] .brand-logo,
+html[data-device="tv"] .brand-logo {
+  width: 52px;
+  height: 52px;
+}
+
+html[data-device="4k"] .nav,
+html[data-device="tv"] .nav {
+  min-height: 58px;
+  font-size: 18px;
+  border-radius: 18px;
+}
+
+html[data-device="4k"] .nav i,
+html[data-device="tv"] .nav i {
+  font-size: 22px;
+}
+
+html[data-device="4k"] .sidebar-categories button,
+html[data-device="tv"] .sidebar-categories button {
+  min-height: 40px;
+  font-size: 16px;
+}
+
+html[data-device="tv"] .sidebar {
+  width: 340px !important;
+  padding: 34px 26px !important;
+}
+
+html[data-device="tv"] .main,
+html[data-device="tv"] .catalog-main {
+  margin-left: 340px !important;
+  padding: 40px 58px 84px !important;
+}
+
+html[data-device="tv"] .topbar,
+html[data-device="tv"] .catalog-hero-head,
+html[data-device="tv"] .settings-hero,
+html[data-device="tv"] .advanced-search-panel,
+html[data-device="tv"] .direct-screen {
+  border-radius: 30px;
+}
+
+html[data-device="tv"] .hero {
+  min-height: min(62vh, 720px) !important;
+}
+
+html[data-device="tv"] .media-card:focus,
+html[data-device="tv"] .btn:focus,
+html[data-device="tv"] .nav:focus,
+html[data-device="tv"] .source-btn:focus,
+html[data-device="tv"] .episode-card:focus,
+html[data-device="tv"] .direct-item:focus {
+  transform: translateY(-3px) scale(1.025);
+}
+
+html[data-device="tablet"] .sidebar,
+html[data-device="tablet-landscape"] .sidebar {
+  width: 94px !important;
+}
+
+html[data-device="tablet"] .main,
+html[data-device="tablet-landscape"] .main,
+html[data-device="tablet"] .catalog-main,
+html[data-device="tablet-landscape"] .catalog-main {
+  margin-left: 94px !important;
+  padding-inline: 22px !important;
+}
+
+html[data-device="tablet"] .nav,
+html[data-device="tablet-landscape"] .nav {
+  min-height: 54px;
+  border-radius: 18px;
+}
+
+html[data-device="phone"] .home-body .topbar,
+html[data-device="phone"] .topbar {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-device="phone"] .direct-layout {
+  gap: 14px;
+}
+
+html[data-device="phone"] .direct-screen {
+  aspect-ratio: 16 / 10;
+}
+
+html[data-device="phone"] .direct-placeholder {
+  width: 90%;
+}
+
+html[data-device="phone"] .direct-placeholder i {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+}
+
+html[data-device="phone"] .direct-placeholder h2 {
+  font-size: 24px;
+}
+
+html[data-device="phone"] .mobile-bottom-nav {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+html[data-device="phone"] .mobile-bottom-nav a {
+  gap: 3px;
+}
+
+html[data-device="phone"] .mobile-bottom-nav span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 390px) {
+  html[data-device="phone"] .mobile-bottom-nav span {
+    font-size: 8px !important;
+  }
+
+  html[data-device="phone"] .mobile-bottom-nav i {
+    font-size: 17px !important;
+  }
+}

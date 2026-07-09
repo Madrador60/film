@@ -76,7 +76,7 @@ function bindUI() {
     btn.addEventListener('click', () => setTab(btn.dataset.switch));
   });
 
-  $('backBtn').addEventListener('click', () => {
+  $('backBtn')?.addEventListener('click', () => {
     if (currentTab !== 'home' || isSearching) {
       currentTab = 'home';
       isSearching = false;
@@ -87,8 +87,8 @@ function bindUI() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
-  $('searchBtn').addEventListener('click', search);
-  $('reloadBtn').addEventListener('click', () => {
+  $('searchBtn')?.addEventListener('click', search);
+  $('reloadBtn')?.addEventListener('click', () => {
     $('search').value = '';
     isSearching = false;
     loadHome();
@@ -132,10 +132,10 @@ function bindUI() {
   $('settingsBtn').addEventListener('click', () => {
     location.href = './settings.html';
   });
-  $('topSettingsBtn').addEventListener('click', () => {
+  $('topSettingsBtn')?.addEventListener('click', () => {
     location.href = './settings.html';
   });
-  $('notifyBtn').addEventListener('click', () => {
+  $('notifyBtn')?.addEventListener('click', () => {
     renderDashboardPanel('Notifications', [
       ['Nouveautés chargées', String([...movieItems, ...seriesItems].length)],
       ['Films disponibles', String(movieItems.length)],
