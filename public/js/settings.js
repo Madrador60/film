@@ -5,7 +5,13 @@ window.addEventListener('DOMContentLoaded', () => {
   bindSettings();
   renderServerStats();
   renderCatalogStatus();
+  renderAppInfo();
 });
+
+function renderAppInfo() {
+  if ($('appVersion')) $('appVersion').textContent = 'Version interface 2026.07';
+  if ($('appOrigin')) $('appOrigin').textContent = `Adresse de l'application : ${location.origin}`;
+}
 
 function hydrateSettings() {
   const prefs = MadradorStorage.getPrefs();

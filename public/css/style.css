@@ -5153,6 +5153,16 @@ html[data-device="tv"] .direct-channel-tile:focus-within {
   }
 }
 
+/* Progressive rendering for long catalog pages */
+.rows > .content-row,
+.browse-panels > article,
+.settings-grid > .settings-card,
+.admin-grid > .admin-panel,
+.direct-channel-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
 /* Premium visual pass */
 :root {
   --premium-line: rgba(165, 180, 252, .18);

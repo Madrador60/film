@@ -1,7 +1,7 @@
 {
   "name": "Madrador TV",
   "short_name": "Madrador",
-  "description": "Plateforme locale de streaming Madrador TV",
+  "description": "Plateforme de streaming et télévision en direct Madrador TV",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

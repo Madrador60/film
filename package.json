@@ -1,7 +1,7 @@
 {
   "name": "french-stream-madrador",
-  "version": "1.0.0",
-  "description": "Adaptateur Madrador pour French Stream",
+  "version": "2.0.0",
+  "description": "Plateforme Madrador TV : films, séries et télévision en direct",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
