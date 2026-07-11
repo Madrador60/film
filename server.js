@@ -40,6 +40,8 @@ const BASE_URLS = [
 let currentBaseUrl = BASE_URLS[0];
 
 app.use(cors());
+app.use(express.json({ limit: '256kb' }));
+app.use(express.urlencoded({ extended: false, limit: '256kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Cache simple
@@ -64,6 +66,80 @@ const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_TOKEN || '';
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
+
+const DIRECT_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
+
+function normalizeDirectUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    try {
+        const candidate = raw.startsWith('http://') || raw.startsWith('https://')
+            ? raw
+            : `https://${raw}`;
+        const url = new URL(candidate);
+        if (!DIRECT_ALLOWED_PROTOCOLS.has(url.protocol)) return '';
+        return url.href;
+    } catch {
+        return '';
+    }
+}
+
+function extractDirectUrlFromText(value) {
+    const text = String(value || '').replace(/^\uFEFF/, '').trim();
+    if (!text) return '';
+
+    const lines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    for (const line of lines) {
+        if (line.startsWith('#')) continue;
+        const urlLine = line.match(/^URL=(.+)$/i);
+        const candidate = urlLine ? urlLine[1].trim() : line;
+        const direct = normalizeDirectUrl(candidate);
+        if (direct) return direct;
+    }
+
+    const match = text.match(/https?:\/\/[^\s"'<>]+/i);
+    return match ? normalizeDirectUrl(match[0]) : '';
+}
+
+function getDirectType(url) {
+    const clean = String(url || '').split('?')[0].toLowerCase();
+    if (clean.endsWith('.m3u8')) return 'hls';
+    if (clean.endsWith('.m3u')) return 'playlist';
+    if (clean.endsWith('.mp4')) return 'video';
+    if (clean.endsWith('.webm')) return 'video';
+    if (clean.endsWith('.mkv')) return 'video';
+    if (clean.endsWith('.avi')) return 'video';
+    return 'iframe';
+}
+
+function buildDirectResponse(input = {}) {
+    const url = normalizeDirectUrl(input.url) || extractDirectUrlFromText(input.content);
+    if (!url) {
+        return {
+            ok: false,
+            error: 'Aucune URL http/https valide trouvée.',
+            url: '',
+            type: '',
+            filename: input.filename || ''
+        };
+    }
+
+    const parsed = new URL(url);
+    return {
+        ok: true,
+        url,
+        type: getDirectType(url),
+        title: parsed.hostname.replace(/^www\./, '') || 'Direct',
+        hostname: parsed.hostname,
+        filename: input.filename || '',
+        playable: true
+    };
+}
 
 function loadEnvFile() {
     try {
@@ -1801,6 +1877,38 @@ app.get('/api/cache/warm', (req, res) => {
     });
 });
 
+// 📡 Direct : normalise une URL ou extrait l'URL d'un fichier .url/.txt/.m3u
+app.get('/api/direct/resolve', (req, res) => {
+    const result = buildDirectResponse({
+        url: req.query.url,
+        content: req.query.content,
+        filename: req.query.filename
+    });
+    res.status(result.ok ? 200 : 400).json(result);
+});
+
+app.post('/api/direct/resolve', (req, res) => {
+    const result = buildDirectResponse({
+        url: req.body?.url,
+        content: req.body?.content,
+        filename: req.body?.filename
+    });
+    res.status(result.ok ? 200 : 400).json(result);
+});
+
+app.get('/api/direct/status', (req, res) => {
+    res.json({
+        ok: true,
+        service: 'direct',
+        accepted: ['url', 'txt', 'm3u', 'm3u8'],
+        endpoints: [
+            'GET /api/direct/resolve?url=https://...',
+            'POST /api/direct/resolve { url }',
+            'POST /api/direct/resolve { filename, content }'
+        ]
+    });
+});
+
 // 🩺 Etat de l'API et du domaine actif
 app.get('/api/status', (req, res) => {
     const memory = process.memoryUsage();
@@ -1847,7 +1955,9 @@ app.get('/api/status', (req, res) => {
             '/api/details/:id',
             '/api/stream/:id',
             '/api/episodes/:id',
-            '/api/seasons/:query'
+            '/api/seasons/:query',
+            '/api/direct/resolve',
+            '/api/direct/status'
         ],
         updatedAt: new Date().toISOString()
     });

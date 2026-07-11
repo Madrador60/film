@@ -5,8 +5,10 @@ window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
   $('directPlay')?.addEventListener('click', playFromInput);
   $('directOpen')?.addEventListener('click', openFromInput);
+  $('directFile')?.addEventListener('change', handleDirectFile);
   $('directClear')?.addEventListener('click', () => {
     $('directUrl').value = '';
+    setHint('API locale : /api/direct/resolve');
     $('directUrl').focus();
   });
   $('directReset')?.addEventListener('click', () => {
@@ -23,26 +25,65 @@ window.addEventListener('DOMContentLoaded', () => {
   if (last?.url) $('directUrl').value = last.url;
 });
 
-function playFromInput() {
-  const url = normalizeUrl($('directUrl').value);
-  if (!url) {
+async function playFromInput() {
+  const direct = await resolveDirect({ url: $('directUrl').value });
+  if (!direct.ok) {
     showToast('Colle une URL valide');
     return;
   }
-  playUrl(url);
-  saveRecent(url);
+  $('directUrl').value = direct.url;
+  playUrl(direct.url);
+  saveRecent(direct.url, direct);
   renderRecent();
 }
 
-function openFromInput() {
-  const url = normalizeUrl($('directUrl').value);
-  if (!url) {
+async function openFromInput() {
+  const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
+  const direct = await resolveDirect({ url: $('directUrl').value });
+  if (!direct.ok) {
+    popup?.close();
     showToast('Colle une URL valide');
     return;
   }
-  saveRecent(url);
+  $('directUrl').value = direct.url;
+  saveRecent(direct.url, direct);
   renderRecent();
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (popup) popup.location.href = direct.url;
+  else window.open(direct.url, '_blank', 'noopener,noreferrer');
+}
+
+async function handleDirectFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (file.size > 256 * 1024) {
+      showToast('Fichier trop grand');
+      event.target.value = '';
+      return;
+    }
+
+    setHint(`Lecture de ${file.name}...`);
+    const content = await file.text();
+    const direct = await resolveDirect({ content, filename: file.name });
+    if (!direct.ok) {
+      showToast('Aucune URL trouvée dans le fichier');
+      setHint('Aucune URL valide trouvée');
+      return;
+    }
+
+    $('directUrl').value = direct.url;
+    playUrl(direct.url);
+    saveRecent(direct.url, direct);
+    renderRecent();
+    setHint(`${file.name} -> ${direct.hostname || direct.title}`);
+  } catch (error) {
+    console.error(error);
+    showToast('Impossible de lire le fichier');
+    setHint('Erreur lecture fichier');
+  } finally {
+    event.target.value = '';
+  }
 }
 
 function playUrl(url) {
@@ -56,6 +97,7 @@ function playUrl(url) {
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
   screen.appendChild(frame);
+  setHint(`Lecture : ${getTitleFromUrl(url)}`);
   showToast('Direct lancé');
 }
 
@@ -92,10 +134,10 @@ function renderRecent() {
   });
 }
 
-function saveRecent(url) {
-  const title = getTitleFromUrl(url);
+function saveRecent(url, direct = {}) {
+  const title = direct.title || getTitleFromUrl(url);
   const items = getRecent().filter((item) => item.url !== url);
-  items.unshift({ url, title, at: Date.now() });
+  items.unshift({ url, title, type: direct.type || getDirectType(url), filename: direct.filename || '', at: Date.now() });
   localStorage.setItem(DIRECT_KEY, JSON.stringify(items.slice(0, 8)));
 }
 
@@ -120,6 +162,59 @@ function normalizeUrl(value) {
   }
 }
 
+async function resolveDirect(payload) {
+  const localUrl = normalizeUrl(payload?.url);
+  if (localUrl && !payload?.content) {
+    try {
+      const response = await fetch('/api/direct/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: localUrl })
+      });
+      const data = await response.json();
+      if (data?.ok && data.url) return data;
+    } catch {
+      return { ok: true, url: localUrl, title: getTitleFromUrl(localUrl), type: getDirectType(localUrl) };
+    }
+  }
+
+  if (payload?.content) {
+    try {
+      const response = await fetch('/api/direct/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: payload.content,
+          filename: payload.filename || ''
+        })
+      });
+      const data = await response.json();
+      if (data?.ok && data.url) return data;
+      return { ok: false };
+    } catch {
+      const url = extractUrlFromText(payload.content);
+      return url ? { ok: true, url, title: getTitleFromUrl(url), type: getDirectType(url), filename: payload.filename || '' } : { ok: false };
+    }
+  }
+
+  return localUrl ? { ok: true, url: localUrl, title: getTitleFromUrl(localUrl), type: getDirectType(localUrl) } : { ok: false };
+}
+
+function extractUrlFromText(value) {
+  const text = String(value || '').replace(/^\uFEFF/, '').trim();
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    if (line.startsWith('#')) continue;
+    const match = line.match(/^URL=(.+)$/i);
+    const url = normalizeUrl(match ? match[1] : line);
+    if (url) return url;
+  }
+
+  const match = text.match(/https?:\/\/[^\s"'<>]+/i);
+  return match ? normalizeUrl(match[0]) : '';
+}
+
 function getTitleFromUrl(url) {
   try {
     const parsed = new URL(url);
@@ -127,6 +222,19 @@ function getTitleFromUrl(url) {
   } catch {
     return 'Direct';
   }
+}
+
+function getDirectType(url) {
+  const clean = String(url || '').split('?')[0].toLowerCase();
+  if (clean.endsWith('.m3u8')) return 'hls';
+  if (clean.endsWith('.m3u')) return 'playlist';
+  if (/\.(mp4|webm|mkv|avi)$/.test(clean)) return 'video';
+  return 'iframe';
+}
+
+function setHint(message) {
+  const hint = $('directHint');
+  if (hint) hint.textContent = message;
 }
 
 function showToast(message) {

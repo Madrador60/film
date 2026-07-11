@@ -6273,6 +6273,78 @@ body {
   gap: 10px;
 }
 
+.direct-file-zone {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed rgba(34,211,238,.30);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(34,211,238,.13), transparent 34%),
+    rgba(255,255,255,.045);
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.direct-file-zone:hover,
+.direct-file-zone:focus-within {
+  transform: translateY(-1px);
+  border-color: rgba(34,211,238,.62);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(34,211,238,.20), transparent 34%),
+    rgba(59,130,246,.08);
+}
+
+.direct-file-zone input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.direct-file-zone > i {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: var(--cyan);
+  background: rgba(34,211,238,.12);
+}
+
+.direct-file-zone span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.direct-file-zone b,
+.direct-file-zone small,
+.direct-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.direct-file-zone b {
+  color: var(--text);
+}
+
+.direct-file-zone small,
+.direct-hint {
+  color: var(--muted);
+}
+
+.direct-hint {
+  margin: -4px 2px 0;
+  font-size: 12px;
+}
+
 .direct-list {
   display: grid;
   gap: 10px;
@@ -6342,6 +6414,11 @@ body {
 
   .direct-actions {
     grid-template-columns: 1fr;
+  }
+
+  .direct-file-zone {
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 10px;
   }
 }
 
