@@ -1329,6 +1329,7 @@ function updateHero(item, query = '') {
   if (!item) {
     hero.classList.remove('hero-ready', 'hero-fit');
     hero.style.backgroundImage = '';
+    hero.style.setProperty('--hero-background', 'none');
     $('heroEyebrow').innerHTML = '<i class="fa-solid fa-bolt"></i> À la une';
     title.textContent = query ? `Recherche : ${query}` : 'Madrador TV';
     text.textContent = 'Une interface cinéma rapide, responsive et compatible avec ton backend actuel.';
@@ -1339,6 +1340,7 @@ function updateHero(item, query = '') {
   const image = prefs.dataSaver ? '' : (item.backdrop || item.poster);
   hero.classList.remove('hero-ready', 'hero-fit');
   hero.style.backgroundImage = image ? getHeroBackground(image) : '';
+  hero.style.setProperty('--hero-background', image ? getHeroBackground(image) : 'none');
   $('heroEyebrow').innerHTML = `<i class="fa-solid fa-bolt"></i> À la une${String(image || '').includes('image.tmdb.org') ? ' • TMDB HD' : ''}`;
   title.textContent = item.title;
   text.textContent = `${item.type === 'series' ? 'Série' : 'Film'} • ${item.quality || 'HD'}${item.version ? ` • ${item.version}` : ''}${item.year ? ` • ${item.year}` : ''}`;
@@ -1389,6 +1391,7 @@ async function enrichHeroSlide(item, query, token) {
     const hero = $('hero');
     hero.classList.remove('hero-ready', 'hero-fit');
     hero.style.backgroundImage = getHeroBackground(nextImage);
+    hero.style.setProperty('--hero-background', getHeroBackground(nextImage));
     $('heroEyebrow').innerHTML = '<i class="fa-solid fa-bolt"></i> À la une • TMDB HD';
     $('heroTitle').textContent = enriched.title;
     $('heroText').textContent = `${enriched.type === 'series' ? 'Série' : 'Film'} • ${enriched.quality || 'HD'}${enriched.version ? ` • ${enriched.version}` : ''}${enriched.year ? ` • ${enriched.year}` : ''}`;

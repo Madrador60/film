@@ -4635,6 +4635,19 @@ a {
   }
 }
 
+/* Stable dynamic media surfaces */
+.home-body .hero {
+  background-image: var(--hero-background, none) !important;
+}
+
+@media (max-width: 760px) {
+  .direct-channel-list,
+  .direct-playlist-list {
+    max-height: min(72vh, 680px) !important;
+    overscroll-behavior: contain;
+  }
+}
+
 /* Premium visual pass */
 :root {
   --premium-line: rgba(165, 180, 252, .18);
