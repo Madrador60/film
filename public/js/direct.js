@@ -159,8 +159,12 @@ function playUrl(url, direct = {}) {
       });
       activeHls.loadSource(url);
       activeHls.attachMedia(video);
+      activeHls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
+      });
     } else {
       video.src = url;
+      video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
     }
   } else {
     const frame = document.createElement('iframe');
@@ -247,7 +251,8 @@ function renderDirectPlaylist() {
   box.innerHTML = items.map((item) => `
     <button class="direct-channel" type="button" data-playlist-url="${escapeHtml(item.url)}">
       <span class="direct-channel-logo">
-        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : '<i class="fa-solid fa-tower-broadcast"></i>'}
+        <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(item.name || item.title))}</span>
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : ''}
       </span>
       <span class="direct-channel-copy">
         <b>${escapeHtml(item.name || item.title || 'Direct')}</b>
@@ -263,6 +268,7 @@ function renderDirectPlaylist() {
       if (item) playChannel(item);
     });
   });
+  bindDirectLogoFallbacks(box);
 }
 
 function destroyActiveHls() {
@@ -377,7 +383,8 @@ function renderDirectChannels() {
         ${channels.map((channel) => `
           <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
             <span class="direct-channel-logo">
-              ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="${escapeHtml(channel.name)}" loading="lazy">` : '<i class="fa-solid fa-tv"></i>'}
+              <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
+              ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
             </span>
             <span class="direct-channel-copy">
               <b>${escapeHtml(channel.name)}</b>
@@ -401,6 +408,20 @@ function renderDirectChannels() {
       playChannel(channel);
     });
   });
+  bindDirectLogoFallbacks(box);
+}
+
+function bindDirectLogoFallbacks(scope) {
+  scope.querySelectorAll('.direct-channel-logo img').forEach((img) => {
+    const removeBrokenImage = () => img.remove();
+    if (img.complete && !img.naturalWidth) removeBrokenImage();
+    else img.addEventListener('error', removeBrokenImage, { once: true });
+  });
+}
+
+function getChannelInitials(value) {
+  const words = String(value || 'TV').trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'TV';
 }
 
 function renderDirectCategoryTabs(channels) {
@@ -440,12 +461,65 @@ function classifyChannel(channel) {
   return countries[String(channel?.code || '').toLowerCase()] || 'International';
 }
 
-function playChannel(channel) {
+async function playChannel(channel) {
   if (!channel?.url) return;
   $('directUrl').value = channel.url;
+  const isCdnLive = channel.source === 'cdnlivetv' || isCdnLivePlayerUrl(channel.url);
+
+  if (isCdnLive) {
+    showDirectLoading(channel.name || channel.title || 'Chaîne');
+    try {
+      const response = await fetch(`/api/direct/channel-stream?url=${encodeURIComponent(channel.url)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data?.ok || !data.url) throw new Error(data?.error || 'Flux indisponible');
+      playUrl(data.url, { ...channel, type: 'hls' });
+      saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
+      renderRecent();
+      return;
+    } catch (error) {
+      console.error(error);
+      showDirectError(channel, error.message);
+      return;
+    }
+  }
+
   playUrl(channel.url, channel);
   saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
   renderRecent();
+}
+
+function showDirectLoading(name) {
+  destroyActiveHls();
+  $('directScreen').innerHTML = `
+    <div class="direct-placeholder">
+      <span class="search-loader"></span>
+      <h2>Connexion à ${escapeHtml(name)}</h2>
+      <p>Récupération du flux sécurisé...</p>
+    </div>`;
+  setHint(`Connexion : ${name}`);
+}
+
+function showDirectError(channel, message) {
+  $('directScreen').innerHTML = `
+    <div class="direct-placeholder direct-error-state">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <h2>Flux indisponible</h2>
+      <p>${escapeHtml(message || 'Cette chaîne ne répond pas pour le moment.')}</p>
+      <a class="btn glass" href="${escapeHtml(channel.url)}" target="_blank" rel="noopener noreferrer" data-allow-popup="true">
+        <i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir le lecteur externe</span>
+      </a>
+    </div>`;
+  setHint(`Échec : ${channel.name || channel.title || 'chaîne'}`);
+  showToast('Flux momentanément indisponible');
+}
+
+function isCdnLivePlayerUrl(value) {
+  try {
+    const url = new URL(normalizeUrl(value));
+    return url.hostname.endsWith('cdnlivetv.tv') && url.pathname.includes('/api/v1/channels/player/');
+  } catch {
+    return false;
+  }
 }
 
 function installImportedChannels(channels) {

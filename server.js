@@ -295,6 +295,56 @@ async function getDirectChannels() {
     return result;
 }
 
+function decodeBase64Url(value) {
+    const clean = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    return Buffer.from(clean, 'base64').toString('utf8');
+}
+
+function extractCdnLiveStream(html) {
+    const source = String(html || '');
+    const values = new Map(
+        Array.from(source.matchAll(/var\s+(\w+)='([^']*)';/g), (match) => [match[1], match[2]])
+    );
+    const assignments = Array.from(source.matchAll(/var\s+(\w+)=((?:\w+\(\w+\)\+?)+);/g));
+
+    for (const assignment of assignments) {
+        const names = Array.from(assignment[2].matchAll(/\((\w+)\)/g), (match) => match[1]);
+        if (!names.length) continue;
+        try {
+            const url = names.map((name) => decodeBase64Url(values.get(name) || '')).join('');
+            if (/^https:\/\/[^\s]+\.m3u8(?:\?|$)/i.test(url)) return url;
+        } catch {}
+    }
+    return '';
+}
+
+async function resolveCdnLiveStream(playerUrl) {
+    const normalizedUrl = normalizeDirectUrl(playerUrl);
+    if (!normalizedUrl) throw new Error('URL lecteur invalide.');
+    const parsed = new URL(normalizedUrl);
+    if (!parsed.hostname.endsWith('cdnlivetv.tv') || !parsed.pathname.includes('/api/v1/channels/player/')) {
+        throw new Error('Cette URL ne correspond pas à un lecteur CDNLiveTV.');
+    }
+
+    const response = await axios.get(normalizedUrl, {
+        timeout: 15000,
+        headers: {
+            'User-Agent': axiosConfig.headers['User-Agent'],
+            'Accept': 'text/html,application/xhtml+xml'
+        }
+    });
+    const streamUrl = extractCdnLiveStream(response.data);
+    if (!streamUrl) throw new Error('Flux HLS introuvable ou temporairement indisponible.');
+    return {
+        ok: true,
+        source: 'cdnlivetv',
+        playerUrl: normalizedUrl,
+        url: streamUrl,
+        type: 'hls',
+        resolvedAt: new Date().toISOString()
+    };
+}
+
 function loadEnvFile() {
     try {
         const envPath = path.join(__dirname, '.env');
@@ -2082,6 +2132,7 @@ app.get('/api/direct/status', (req, res) => {
             'POST /api/direct/resolve { filename, content }',
             'GET /api/direct/playlist?url=https://.../playlist.m3u',
             'POST /api/direct/playlist { filename, content }',
+            'GET /api/direct/channel-stream?url=https://...',
             'GET /api/direct/channels'
         ]
     });
@@ -2121,6 +2172,16 @@ app.get('/api/direct/channels', async (req, res) => {
             count: 0,
             channels: []
         });
+    }
+});
+
+app.get('/api/direct/channel-stream', async (req, res) => {
+    try {
+        res.set('Cache-Control', 'no-store');
+        res.json(await resolveCdnLiveStream(req.query.url));
+    } catch (error) {
+        console.error('[ERROR DIRECT STREAM]', error.message);
+        res.status(502).json({ ok: false, source: 'cdnlivetv', error: error.message });
     }
 });
 
@@ -2174,6 +2235,7 @@ app.get('/api/status', (req, res) => {
             '/api/direct/resolve',
             '/api/direct/status',
             '/api/direct/playlist',
+            '/api/direct/channel-stream?url=...',
             '/api/direct/channels'
         ],
         updatedAt: new Date().toISOString()
