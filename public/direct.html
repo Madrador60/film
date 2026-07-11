@@ -61,15 +61,15 @@
           <label for="directUrl">URL directe</label>
           <div class="direct-input">
             <i class="fa-solid fa-link"></i>
-            <input id="directUrl" type="url" placeholder="https://..." autocomplete="off" />
+            <input id="directUrl" type="text" placeholder="URL du lecteur, flux ou JSON channels..." autocomplete="off" />
             <button class="icon-btn" id="directClear" type="button" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
           </div>
           <label class="direct-file-zone" for="directFile">
-            <input id="directFile" type="file" accept=".url,.txt,.m3u,.m3u8,text/plain,audio/x-mpegurl,application/vnd.apple.mpegurl" />
+            <input id="directFile" type="file" accept=".url,.txt,.json,.m3u,.m3u8,text/plain,application/json,audio/x-mpegurl,application/vnd.apple.mpegurl" />
             <i class="fa-solid fa-file-arrow-up"></i>
             <span>
               <b>Importer un fichier URL</b>
-              <small>.url, .txt, .m3u ou .m3u8</small>
+              <small>.url, .txt, .json, .m3u ou .m3u8</small>
             </span>
           </label>
           <p class="direct-hint" id="directHint">API locale : /api/direct/resolve</p>

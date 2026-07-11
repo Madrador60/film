@@ -29,10 +29,26 @@ window.addEventListener('DOMContentLoaded', () => {
   loadCachedChannels();
   const last = getRecent()[0];
   if (last?.url) $('directUrl').value = last.url;
+  window.setTimeout(() => loadDirectChannels(false), 200);
 });
 
 async function playFromInput() {
-  const direct = await resolveDirect({ url: $('directUrl').value });
+  const raw = String($('directUrl')?.value || '').trim();
+  const importedChannels = parseChannelsPayload(raw);
+  if (importedChannels.length) {
+    installImportedChannels(importedChannels);
+    playChannel(importedChannels[0]);
+    showToast(`${importedChannels.length} chaînes importées`);
+    return;
+  }
+
+  if (isChannelsApiUrl(raw)) {
+    const channels = await loadDirectChannels(true);
+    if (channels.length) playChannel(channels[0]);
+    return;
+  }
+
+  const direct = await resolveDirect({ url: raw });
   if (!direct.ok) {
     showToast('Colle une URL valide');
     return;
@@ -71,6 +87,13 @@ async function handleDirectFile(event) {
 
     setHint(`Lecture de ${file.name}...`);
     const content = await file.text();
+    const importedChannels = parseChannelsPayload(content);
+    if (importedChannels.length) {
+      installImportedChannels(importedChannels);
+      playChannel(importedChannels[0]);
+      showToast(`${importedChannels.length} chaînes importées`);
+      return;
+    }
     const direct = await resolveDirect({ content, filename: file.name });
     if (!direct.ok) {
       showToast('Aucune URL trouvée dans le fichier');
@@ -162,9 +185,10 @@ function renderRecent() {
   box.querySelectorAll('[data-url]').forEach((button) => {
     button.addEventListener('click', () => {
       const url = button.dataset.url;
+      const item = items.find((entry) => entry.url === url) || {};
       $('directUrl').value = url;
       playUrl(url, item);
-      saveRecent(url);
+      saveRecent(url, item);
       renderRecent();
     });
   });
@@ -197,10 +221,12 @@ async function loadDirectChannels(force = false) {
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     renderDirectChannels();
     setHint(`${directChannels.length} chaînes chargées`);
+    return directChannels;
   } catch (error) {
     console.error(error);
     setChannelsState('Impossible de charger les chaînes pour le moment.');
     showToast('API chaînes indisponible');
+    return directChannels;
   } finally {
     button?.classList.remove('loading');
     if (button) button.disabled = false;
@@ -241,12 +267,65 @@ function renderDirectChannels() {
         title: button.dataset.name,
         type: getDirectType(button.dataset.url)
       };
-      $('directUrl').value = channel.url;
-      playUrl(channel.url, channel);
-      saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
-      renderRecent();
+      playChannel(channel);
     });
   });
+}
+
+function playChannel(channel) {
+  if (!channel?.url) return;
+  $('directUrl').value = channel.url;
+  playUrl(channel.url, channel);
+  saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
+  renderRecent();
+}
+
+function installImportedChannels(channels) {
+  directChannels = channels;
+  localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(channels.slice(0, 800)));
+  renderDirectChannels();
+  setHint(`${channels.length} chaînes JSON prêtes`);
+}
+
+function parseChannelsPayload(value) {
+  const raw = String(value || '').trim();
+  if (!raw || (!raw.startsWith('{') && !raw.startsWith('['))) return [];
+
+  try {
+    const data = JSON.parse(raw);
+    const items = Array.isArray(data) ? data : data.channels;
+    if (!Array.isArray(items)) return [];
+
+    return items.map((channel, index) => {
+      const url = normalizeUrl(channel?.url);
+      const name = String(channel?.name || channel?.title || `Chaîne ${index + 1}`).trim();
+      const code = String(channel?.code || '').trim().toLowerCase();
+      return {
+        id: `${code || 'tv'}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        name,
+        title: name,
+        code,
+        country: code.toUpperCase(),
+        url,
+        image: normalizeUrl(channel?.image),
+        status: String(channel?.status || 'unknown').toLowerCase(),
+        viewers: Number(channel?.viewers || 0),
+        type: getDirectType(url),
+        source: 'json'
+      };
+    }).filter((channel) => channel.url);
+  } catch {
+    return [];
+  }
+}
+
+function isChannelsApiUrl(value) {
+  try {
+    const url = new URL(normalizeUrl(value));
+    return url.hostname.endsWith('cdnlivetv.tv') && /\/api\/v1\/channels\/?$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
 }
 
 function setChannelsState(message) {
@@ -260,7 +339,7 @@ function setChannelsState(message) {
 }
 
 function saveRecent(url, direct = {}) {
-  const title = direct.title || getTitleFromUrl(url);
+  const title = direct.name || direct.title || getTitleFromUrl(url);
   const items = getRecent().filter((item) => item.url !== url);
   items.unshift({ url, title, type: direct.type || getDirectType(url), filename: direct.filename || '', at: Date.now() });
   localStorage.setItem(DIRECT_KEY, JSON.stringify(items.slice(0, 8)));
