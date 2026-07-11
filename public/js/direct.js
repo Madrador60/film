@@ -4,6 +4,7 @@ const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
+let activeDirectCategory = 'Toutes';
 let activeHls = null;
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -349,26 +350,44 @@ function renderDirectChannels() {
   const box = $('directChannelList');
   if (!box) return;
   const query = String($('directChannelSearch')?.value || '').trim().toLowerCase();
-  const filtered = directChannels
-    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country}`.toLowerCase().includes(query))
-    .slice(0, 80);
+  const normalized = directChannels.map((channel) => ({
+    ...channel,
+    category: channel.category || classifyChannel(channel)
+  }));
+  renderDirectCategoryTabs(normalized);
+  const filtered = normalized
+    .filter((channel) => activeDirectCategory === 'Toutes' || channel.category === activeDirectCategory)
+    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query))
+    .slice(0, 600);
 
   if (!filtered.length) {
     setChannelsState(directChannels.length ? 'Aucune chaîne trouvée.' : 'Charge les chaînes pour regarder la TV en direct.');
     return;
   }
 
-  box.innerHTML = filtered.map((channel) => `
-    <button class="direct-channel" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
-      <span class="direct-channel-logo">
-        ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="">` : '<i class="fa-solid fa-tv"></i>'}
-      </span>
-      <span class="direct-channel-copy">
-        <b>${escapeHtml(channel.name)}</b>
-        <small>${escapeHtml(channel.country || channel.code || 'TV')} • ${escapeHtml(channel.status || 'online')}</small>
-      </span>
-      <i class="fa-solid fa-play"></i>
-    </button>
+  const groups = filtered.reduce((result, channel) => {
+    (result[channel.category] ||= []).push(channel);
+    return result;
+  }, {});
+
+  box.innerHTML = Object.entries(groups).map(([category, channels]) => `
+    <section class="direct-channel-group">
+      <header><h3>${escapeHtml(category)}</h3><span>${channels.length} chaînes</span></header>
+      <div class="direct-channel-grid">
+        ${channels.map((channel) => `
+          <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
+            <span class="direct-channel-logo">
+              ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="${escapeHtml(channel.name)}" loading="lazy">` : '<i class="fa-solid fa-tv"></i>'}
+            </span>
+            <span class="direct-channel-copy">
+              <b>${escapeHtml(channel.name)}</b>
+              <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i>${escapeHtml(channel.country || channel.code || 'TV')}</small>
+            </span>
+            <i class="fa-solid fa-play"></i>
+          </button>
+        `).join('')}
+      </div>
+    </section>
   `).join('');
 
   box.querySelectorAll('.direct-channel').forEach((button) => {
@@ -384,6 +403,43 @@ function renderDirectChannels() {
   });
 }
 
+function renderDirectCategoryTabs(channels) {
+  const box = $('directCategoryTabs');
+  if (!box) return;
+  const counts = channels.reduce((result, channel) => {
+    result[channel.category] = (result[channel.category] || 0) + 1;
+    return result;
+  }, {});
+  const categories = ['Toutes', ...Object.keys(counts).sort((a, b) => a.localeCompare(b, 'fr'))];
+  if (!categories.includes(activeDirectCategory)) activeDirectCategory = 'Toutes';
+  box.innerHTML = categories.map((category) => `
+    <button type="button" class="direct-category-tab ${category === activeDirectCategory ? 'active' : ''}" data-category="${escapeHtml(category)}">
+      ${escapeHtml(category)} <span>${category === 'Toutes' ? channels.length : counts[category]}</span>
+    </button>
+  `).join('');
+  box.querySelectorAll('[data-category]').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeDirectCategory = button.dataset.category;
+      renderDirectChannels();
+    });
+  });
+}
+
+function classifyChannel(channel) {
+  const value = String(channel?.name || '').toLowerCase();
+  if (/sport|espn|bein|racing|football|soccer|nba|nfl|tennis|golf/.test(value)) return 'Sports';
+  if (/news|info|cnn|bbc|fox news|weather/.test(value)) return 'Information';
+  if (/music|musique|mtv|radio|hits|vevo/.test(value)) return 'Musique';
+  if (/kids|junior|cartoon|nick|disney|baby/.test(value)) return 'Jeunesse';
+  if (/movie|movies|cinema|film|series|drama|action/.test(value)) return 'Cinéma & séries';
+  const countries = {
+    fr: 'France', us: 'États-Unis', gb: 'Royaume-Uni', uk: 'Royaume-Uni', ca: 'Canada',
+    be: 'Belgique', ch: 'Suisse', de: 'Allemagne', es: 'Espagne', it: 'Italie',
+    pt: 'Portugal', ma: 'Maroc', dz: 'Algérie', tn: 'Tunisie'
+  };
+  return countries[String(channel?.code || '').toLowerCase()] || 'International';
+}
+
 function playChannel(channel) {
   if (!channel?.url) return;
   $('directUrl').value = channel.url;
@@ -393,10 +449,17 @@ function playChannel(channel) {
 }
 
 function installImportedChannels(channels) {
-  directChannels = channels;
-  localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(channels.slice(0, 800)));
-  renderDirectChannels();
-  setHint(`${channels.length} chaînes JSON prêtes`);
+  directPlaylist = channels.map((channel) => ({
+    ...channel,
+    group: channel.group || 'JSON personnel',
+    source: 'json'
+  }));
+  localStorage.setItem(DIRECT_PLAYLIST_KEY, JSON.stringify({
+    title: 'Chaînes personnelles',
+    items: directPlaylist.slice(0, 1000)
+  }));
+  showDirectPlaylist('Chaînes personnelles');
+  setHint(`${directPlaylist.length} chaînes personnelles prêtes`);
 }
 
 function parseChannelsPayload(value) {

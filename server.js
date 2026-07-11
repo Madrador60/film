@@ -245,8 +245,25 @@ function normalizeDirectChannel(channel = {}, index = 0) {
         status: String(channel.status || 'unknown').toLowerCase(),
         viewers: Number(channel.viewers || 0),
         type: getDirectType(url),
+        category: classifyDirectChannel(name, code),
         source: 'cdnlivetv'
     };
+}
+
+function classifyDirectChannel(name, code) {
+    const value = String(name || '').toLowerCase();
+    if (/sport|espn|bein|racing|football|soccer|nba|nfl|tennis|golf/.test(value)) return 'Sports';
+    if (/news|info|actualité|actualite|cnn|bbc|fox news|weather/.test(value)) return 'Information';
+    if (/music|musique|mtv|radio|hits|vevo/.test(value)) return 'Musique';
+    if (/kids|junior|cartoon|nick|disney|baby|enfant/.test(value)) return 'Jeunesse';
+    if (/movie|movies|cinema|film|series|drama|action/.test(value)) return 'Cinéma & séries';
+
+    const countries = {
+        fr: 'France', us: 'États-Unis', gb: 'Royaume-Uni', uk: 'Royaume-Uni',
+        ca: 'Canada', be: 'Belgique', ch: 'Suisse', de: 'Allemagne', es: 'Espagne',
+        it: 'Italie', pt: 'Portugal', ma: 'Maroc', dz: 'Algérie', tn: 'Tunisie'
+    };
+    return countries[String(code || '').toLowerCase()] || 'International';
 }
 
 async function getDirectChannels() {
