@@ -68,6 +68,8 @@ const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 
 const DIRECT_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
+const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user=cdnlivetv&plan=free';
+const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 
 function normalizeDirectUrl(value) {
     const raw = String(value || '').trim();
@@ -139,6 +141,55 @@ function buildDirectResponse(input = {}) {
         filename: input.filename || '',
         playable: true
     };
+}
+
+function normalizeDirectChannel(channel = {}, index = 0) {
+    const name = String(channel.name || '').trim();
+    const code = String(channel.code || '').trim().toLowerCase();
+    const url = normalizeDirectUrl(channel.url);
+    const image = normalizeDirectUrl(channel.image);
+
+    return {
+        id: `${code || 'xx'}-${name || index}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        name: name || `Chaîne ${index + 1}`,
+        code,
+        country: code.toUpperCase(),
+        url,
+        image,
+        status: String(channel.status || 'unknown').toLowerCase(),
+        viewers: Number(channel.viewers || 0),
+        type: getDirectType(url),
+        source: 'cdnlivetv'
+    };
+}
+
+async function getDirectChannels() {
+    const cacheKey = 'direct_channels_cdnlivetv';
+    const cached = getCachedFor(cacheKey, DIRECT_CHANNELS_CACHE_DURATION);
+    if (cached) return cached;
+
+    const response = await axios.get(CDN_LIVE_TV_CHANNELS_URL, {
+        timeout: 15000,
+        headers: {
+            'User-Agent': axiosConfig.headers['User-Agent'],
+            'Accept': 'application/json,text/plain,*/*'
+        }
+    });
+
+    const channels = Array.isArray(response.data?.channels)
+        ? response.data.channels.map(normalizeDirectChannel).filter((channel) => channel.url)
+        : [];
+
+    const result = {
+        ok: true,
+        source: 'cdnlivetv',
+        total: Number(response.data?.total_channels || channels.length),
+        count: channels.length,
+        channels,
+        updatedAt: new Date().toISOString()
+    };
+    setCachedFor(cacheKey, result);
+    return result;
 }
 
 function loadEnvFile() {
@@ -1900,13 +1951,51 @@ app.get('/api/direct/status', (req, res) => {
     res.json({
         ok: true,
         service: 'direct',
-        accepted: ['url', 'txt', 'm3u', 'm3u8'],
+        accepted: ['url', 'txt', 'm3u', 'm3u8', 'cdnlivetv'],
         endpoints: [
             'GET /api/direct/resolve?url=https://...',
             'POST /api/direct/resolve { url }',
-            'POST /api/direct/resolve { filename, content }'
+            'POST /api/direct/resolve { filename, content }',
+            'GET /api/direct/channels'
         ]
     });
+});
+
+app.get('/api/direct/channels', async (req, res) => {
+    try {
+        const query = String(req.query.q || '').trim().toLowerCase();
+        const country = String(req.query.country || '').trim().toLowerCase();
+        const data = await getDirectChannels();
+        let channels = data.channels || [];
+
+        if (query) {
+            channels = channels.filter((channel) => (
+                channel.name.toLowerCase().includes(query) ||
+                channel.code.toLowerCase().includes(query) ||
+                channel.country.toLowerCase().includes(query)
+            ));
+        }
+
+        if (country) {
+            channels = channels.filter((channel) => channel.code === country);
+        }
+
+        res.json({
+            ...data,
+            count: channels.length,
+            channels
+        });
+    } catch (error) {
+        console.error('[ERROR DIRECT CHANNELS]', error.message);
+        res.status(500).json({
+            ok: false,
+            source: 'cdnlivetv',
+            error: error.message,
+            total: 0,
+            count: 0,
+            channels: []
+        });
+    }
 });
 
 // 🩺 Etat de l'API et du domaine actif
@@ -1957,7 +2046,8 @@ app.get('/api/status', (req, res) => {
             '/api/episodes/:id',
             '/api/seasons/:query',
             '/api/direct/resolve',
-            '/api/direct/status'
+            '/api/direct/status',
+            '/api/direct/channels'
         ],
         updatedAt: new Date().toISOString()
     });

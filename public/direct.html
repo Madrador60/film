@@ -89,6 +89,26 @@
           </div>
           <div class="direct-list" id="directList"></div>
         </div>
+
+        <div class="direct-channels">
+          <div class="section-head compact">
+            <div>
+              <span>API CDNLiveTV</span>
+              <h2>Chaînes gratuites</h2>
+            </div>
+            <button class="btn glass" id="directChannelsReload" type="button"><i class="fa-solid fa-rotate-right"></i><span>Charger</span></button>
+          </div>
+          <div class="direct-channel-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="directChannelSearch" type="search" placeholder="Rechercher une chaîne..." autocomplete="off" />
+          </div>
+          <div class="direct-channel-list" id="directChannelList">
+            <div class="direct-empty">
+              <i class="fa-solid fa-tv"></i>
+              <span>Charge les chaînes pour regarder la TV en direct.</span>
+            </div>
+          </div>
+        </div>
       </aside>
     </section>
   </main>
@@ -109,6 +129,7 @@
   <script src="./js/mini-player.js"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
   <script src="./js/direct.js"></script>
 </body>
 </html>

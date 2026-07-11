@@ -1,11 +1,16 @@
 const DIRECT_KEY = 'madrador:direct:recent';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels';
 const $ = (id) => document.getElementById(id);
+let directChannels = [];
+let activeHls = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
   $('directPlay')?.addEventListener('click', playFromInput);
   $('directOpen')?.addEventListener('click', openFromInput);
   $('directFile')?.addEventListener('change', handleDirectFile);
+  $('directChannelsReload')?.addEventListener('click', () => loadDirectChannels(true));
+  $('directChannelSearch')?.addEventListener('input', renderDirectChannels);
   $('directClear')?.addEventListener('click', () => {
     $('directUrl').value = '';
     setHint('API locale : /api/direct/resolve');
@@ -21,6 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   renderRecent();
+  loadCachedChannels();
   const last = getRecent()[0];
   if (last?.url) $('directUrl').value = last.url;
 });
@@ -32,7 +38,7 @@ async function playFromInput() {
     return;
   }
   $('directUrl').value = direct.url;
-  playUrl(direct.url);
+  playUrl(direct.url, direct);
   saveRecent(direct.url, direct);
   renderRecent();
 }
@@ -73,7 +79,7 @@ async function handleDirectFile(event) {
     }
 
     $('directUrl').value = direct.url;
-    playUrl(direct.url);
+    playUrl(direct.url, direct);
     saveRecent(direct.url, direct);
     renderRecent();
     setHint(`${file.name} -> ${direct.hostname || direct.title}`);
@@ -86,19 +92,49 @@ async function handleDirectFile(event) {
   }
 }
 
-function playUrl(url) {
+function playUrl(url, direct = {}) {
   const screen = $('directScreen');
+  destroyActiveHls();
   screen.innerHTML = '';
-  const frame = document.createElement('iframe');
-  frame.className = 'direct-frame';
-  frame.src = url;
-  frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-  frame.allowFullscreen = true;
-  frame.referrerPolicy = 'strict-origin-when-cross-origin';
-  frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
-  screen.appendChild(frame);
-  setHint(`Lecture : ${getTitleFromUrl(url)}`);
+  const type = direct.type || getDirectType(url);
+
+  if (type === 'hls' || type === 'video') {
+    const video = document.createElement('video');
+    video.className = 'direct-frame direct-video';
+    video.controls = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('webkit-playsinline', '');
+    screen.appendChild(video);
+
+    if (type === 'hls' && window.Hls?.isSupported()) {
+      activeHls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      activeHls.loadSource(url);
+      activeHls.attachMedia(video);
+    } else {
+      video.src = url;
+    }
+  } else {
+    const frame = document.createElement('iframe');
+    frame.className = 'direct-frame';
+    frame.src = url;
+    frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    frame.allowFullscreen = true;
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
+    screen.appendChild(frame);
+  }
+
+  setHint(`Lecture : ${direct.name || direct.title || getTitleFromUrl(url)}`);
   showToast('Direct lancé');
+}
+
+function destroyActiveHls() {
+  if (!activeHls) return;
+  try {
+    activeHls.destroy();
+  } catch {}
+  activeHls = null;
 }
 
 function renderRecent() {
@@ -127,11 +163,100 @@ function renderRecent() {
     button.addEventListener('click', () => {
       const url = button.dataset.url;
       $('directUrl').value = url;
-      playUrl(url);
+      playUrl(url, item);
       saveRecent(url);
       renderRecent();
     });
   });
+}
+
+function loadCachedChannels() {
+  try {
+    const data = JSON.parse(localStorage.getItem(DIRECT_CHANNELS_KEY) || '[]');
+    if (Array.isArray(data) && data.length) {
+      directChannels = data;
+      renderDirectChannels();
+      setHint(`${data.length} chaînes prêtes depuis le cache local`);
+    }
+  } catch {}
+}
+
+async function loadDirectChannels(force = false) {
+  const button = $('directChannelsReload');
+  button?.classList.add('loading');
+  if (button) button.disabled = true;
+  setChannelsState('Chargement des chaînes CDNLiveTV...');
+
+  try {
+    if (!force) loadCachedChannels();
+    const response = await fetch('/api/direct/channels', { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || !data?.ok) throw new Error(data?.error || 'API Direct indisponible');
+
+    directChannels = Array.isArray(data.channels) ? data.channels : [];
+    localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
+    renderDirectChannels();
+    setHint(`${directChannels.length} chaînes chargées`);
+  } catch (error) {
+    console.error(error);
+    setChannelsState('Impossible de charger les chaînes pour le moment.');
+    showToast('API chaînes indisponible');
+  } finally {
+    button?.classList.remove('loading');
+    if (button) button.disabled = false;
+  }
+}
+
+function renderDirectChannels() {
+  const box = $('directChannelList');
+  if (!box) return;
+  const query = String($('directChannelSearch')?.value || '').trim().toLowerCase();
+  const filtered = directChannels
+    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country}`.toLowerCase().includes(query))
+    .slice(0, 80);
+
+  if (!filtered.length) {
+    setChannelsState(directChannels.length ? 'Aucune chaîne trouvée.' : 'Charge les chaînes pour regarder la TV en direct.');
+    return;
+  }
+
+  box.innerHTML = filtered.map((channel) => `
+    <button class="direct-channel" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
+      <span class="direct-channel-logo">
+        ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="">` : '<i class="fa-solid fa-tv"></i>'}
+      </span>
+      <span class="direct-channel-copy">
+        <b>${escapeHtml(channel.name)}</b>
+        <small>${escapeHtml(channel.country || channel.code || 'TV')} • ${escapeHtml(channel.status || 'online')}</small>
+      </span>
+      <i class="fa-solid fa-play"></i>
+    </button>
+  `).join('');
+
+  box.querySelectorAll('.direct-channel').forEach((button) => {
+    button.addEventListener('click', () => {
+      const channel = directChannels.find((item) => item.url === button.dataset.url) || {
+        url: button.dataset.url,
+        name: button.dataset.name,
+        title: button.dataset.name,
+        type: getDirectType(button.dataset.url)
+      };
+      $('directUrl').value = channel.url;
+      playUrl(channel.url, channel);
+      saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
+      renderRecent();
+    });
+  });
+}
+
+function setChannelsState(message) {
+  const box = $('directChannelList');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="direct-empty">
+      <i class="fa-solid fa-tv"></i>
+      <span>${escapeHtml(message)}</span>
+    </div>`;
 }
 
 function saveRecent(url, direct = {}) {

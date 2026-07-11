@@ -6224,7 +6224,8 @@ body {
 }
 
 .direct-form,
-.direct-recent {
+.direct-recent,
+.direct-channels {
   display: grid;
   gap: 14px;
   padding: 18px;
@@ -6350,6 +6351,103 @@ body {
   gap: 10px;
 }
 
+.direct-channel-search {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 999px;
+  background: rgba(3,7,18,.54);
+}
+
+.direct-channel-search i {
+  color: var(--cyan);
+}
+
+.direct-channel-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.direct-channel-list {
+  max-height: 430px;
+  overflow: auto;
+  display: grid;
+  gap: 9px;
+  padding-right: 4px;
+}
+
+.direct-channel {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(148,163,184,.10);
+  border-radius: 18px;
+  color: var(--text);
+  background: rgba(255,255,255,.045);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.direct-channel:hover,
+.direct-channel:focus {
+  transform: translateY(-1px);
+  border-color: rgba(34,211,238,.36);
+  background: rgba(59,130,246,.10);
+}
+
+.direct-channel-logo {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(3,7,18,.55);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.direct-channel-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+
+.direct-channel-logo i,
+.direct-channel > i {
+  color: var(--cyan);
+}
+
+.direct-channel-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.direct-channel-copy b,
+.direct-channel-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.direct-channel-copy small {
+  color: var(--muted);
+}
+
 .direct-item,
 .direct-empty {
   min-width: 0;
@@ -6407,7 +6505,8 @@ body {
   }
 
   .direct-form,
-  .direct-recent {
+  .direct-recent,
+  .direct-channels {
     padding: 14px;
     border-radius: 20px;
   }
@@ -6419,6 +6518,10 @@ body {
   .direct-file-zone {
     grid-template-columns: 42px minmax(0, 1fr);
     padding: 10px;
+  }
+
+  .direct-channel-list {
+    max-height: none;
   }
 }
 
