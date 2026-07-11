@@ -1,7 +1,9 @@
 const DIRECT_KEY = 'madrador:direct:recent';
 const DIRECT_CHANNELS_KEY = 'madrador:direct:channels';
+const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
+let directPlaylist = [];
 let activeHls = null;
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -11,6 +13,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('directFile')?.addEventListener('change', handleDirectFile);
   $('directChannelsReload')?.addEventListener('click', () => loadDirectChannels(true));
   $('directChannelSearch')?.addEventListener('input', renderDirectChannels);
+  $('directPlaylistSearch')?.addEventListener('input', renderDirectPlaylist);
+  $('directPlaylistClear')?.addEventListener('click', clearDirectPlaylist);
   $('directClear')?.addEventListener('click', () => {
     $('directUrl').value = '';
     setHint('API locale : /api/direct/resolve');
@@ -26,6 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   renderRecent();
+  loadCachedPlaylist();
   loadCachedChannels();
   const last = getRecent()[0];
   if (last?.url) $('directUrl').value = last.url;
@@ -51,6 +56,10 @@ async function playFromInput() {
   const direct = await resolveDirect({ url: raw });
   if (!direct.ok) {
     showToast('Colle une URL valide');
+    return;
+  }
+  if (direct.type === 'playlist') {
+    await loadDirectPlaylist({ url: direct.url });
     return;
   }
   $('directUrl').value = direct.url;
@@ -79,7 +88,7 @@ async function handleDirectFile(event) {
   if (!file) return;
 
   try {
-    if (file.size > 256 * 1024) {
+    if (file.size > 1024 * 1024) {
       showToast('Fichier trop grand');
       event.target.value = '';
       return;
@@ -92,6 +101,10 @@ async function handleDirectFile(event) {
       installImportedChannels(importedChannels);
       playChannel(importedChannels[0]);
       showToast(`${importedChannels.length} chaînes importées`);
+      return;
+    }
+    if (/\.m3u$/i.test(file.name) || /^#EXTM3U/i.test(content)) {
+      await loadDirectPlaylist({ content, filename: file.name });
       return;
     }
     const direct = await resolveDirect({ content, filename: file.name });
@@ -132,6 +145,17 @@ function playUrl(url, direct = {}) {
 
     if (type === 'hls' && window.Hls?.isSupported()) {
       activeHls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      activeHls.on(window.Hls.Events.ERROR, (_event, data) => {
+        if (!data?.fatal) return;
+        if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+          setHint('Flux HLS indisponible. Essaie une autre chaîne ou ouvre la source.');
+          activeHls.startLoad();
+        } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+          activeHls.recoverMediaError();
+        } else {
+          destroyActiveHls();
+        }
+      });
       activeHls.loadSource(url);
       activeHls.attachMedia(video);
     } else {
@@ -150,6 +174,94 @@ function playUrl(url, direct = {}) {
 
   setHint(`Lecture : ${direct.name || direct.title || getTitleFromUrl(url)}`);
   showToast('Direct lancé');
+}
+
+async function loadDirectPlaylist(payload) {
+  setHint('Analyse de la playlist...');
+  try {
+    const response = await fetch('/api/direct/playlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok || !data?.ok || !Array.isArray(data.items)) {
+      throw new Error(data?.error || 'Playlist invalide');
+    }
+
+    directPlaylist = data.items;
+    localStorage.setItem(DIRECT_PLAYLIST_KEY, JSON.stringify({
+      title: data.filename || 'Playlist importée',
+      items: directPlaylist.slice(0, 1000)
+    }));
+    showDirectPlaylist(data.filename || 'Playlist importée');
+    if (directPlaylist[0]) playChannel(directPlaylist[0]);
+    showToast(`${directPlaylist.length} flux importés`);
+    return directPlaylist;
+  } catch (error) {
+    console.error(error);
+    setHint(error.message || 'Impossible de lire la playlist');
+    showToast('Playlist illisible');
+    return [];
+  }
+}
+
+function loadCachedPlaylist() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DIRECT_PLAYLIST_KEY) || '{}');
+    if (!Array.isArray(cached.items) || !cached.items.length) return;
+    directPlaylist = cached.items;
+    showDirectPlaylist(cached.title || 'Playlist récente');
+  } catch {}
+}
+
+function showDirectPlaylist(title) {
+  const panel = $('directPlaylistPanel');
+  if (panel) panel.hidden = false;
+  if ($('directPlaylistTitle')) $('directPlaylistTitle').textContent = `${title} · ${directPlaylist.length}`;
+  renderDirectPlaylist();
+}
+
+function clearDirectPlaylist() {
+  directPlaylist = [];
+  localStorage.removeItem(DIRECT_PLAYLIST_KEY);
+  if ($('directPlaylistSearch')) $('directPlaylistSearch').value = '';
+  if ($('directPlaylistPanel')) $('directPlaylistPanel').hidden = true;
+  showToast('Playlist fermée');
+}
+
+function renderDirectPlaylist() {
+  const box = $('directPlaylistList');
+  if (!box) return;
+  const query = String($('directPlaylistSearch')?.value || '').trim().toLowerCase();
+  const items = directPlaylist.filter((item) => (
+    !query || `${item.name || item.title} ${item.group || ''} ${item.language || ''}`.toLowerCase().includes(query)
+  )).slice(0, 200);
+
+  if (!items.length) {
+    box.innerHTML = '<div class="direct-empty"><i class="fa-solid fa-list"></i><span>Aucun flux trouvé.</span></div>';
+    return;
+  }
+
+  box.innerHTML = items.map((item) => `
+    <button class="direct-channel" type="button" data-playlist-url="${escapeHtml(item.url)}">
+      <span class="direct-channel-logo">
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : '<i class="fa-solid fa-tower-broadcast"></i>'}
+      </span>
+      <span class="direct-channel-copy">
+        <b>${escapeHtml(item.name || item.title || 'Direct')}</b>
+        <small>${escapeHtml(item.group || 'Playlist')} · ${escapeHtml(String(item.type || 'direct').toUpperCase())}</small>
+      </span>
+      <i class="fa-solid fa-play"></i>
+    </button>
+  `).join('');
+
+  box.querySelectorAll('[data-playlist-url]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const item = directPlaylist.find((entry) => entry.url === button.dataset.playlistUrl);
+      if (item) playChannel(item);
+    });
+  });
 }
 
 function destroyActiveHls() {

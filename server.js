@@ -40,8 +40,8 @@ const BASE_URLS = [
 let currentBaseUrl = BASE_URLS[0];
 
 app.use(cors());
-app.use(express.json({ limit: '256kb' }));
-app.use(express.urlencoded({ extended: false, limit: '256kb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Cache simple
@@ -70,6 +70,8 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 const DIRECT_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
 const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user=cdnlivetv&plan=free';
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
+const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
+const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
 
 function normalizeDirectUrl(value) {
     const raw = String(value || '').trim();
@@ -141,6 +143,90 @@ function buildDirectResponse(input = {}) {
         filename: input.filename || '',
         playable: true
     };
+}
+
+function parseDirectPlaylist(content, options = {}) {
+    const text = String(content || '').replace(/^\uFEFF/, '').trim();
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const items = [];
+    const seen = new Set();
+    let metadata = {};
+
+    for (const line of lines) {
+        if (line.startsWith('#EXTINF:')) {
+            const attributes = {};
+            line.replace(/([\w-]+)="([^"]*)"/g, (_match, key, value) => {
+                attributes[key.toLowerCase()] = value.trim();
+                return _match;
+            });
+            const comma = line.lastIndexOf(',');
+            metadata = {
+                name: comma >= 0 ? line.slice(comma + 1).trim() : '',
+                logo: attributes['tvg-logo'] || '',
+                group: attributes['group-title'] || '',
+                tvgId: attributes['tvg-id'] || '',
+                language: attributes['tvg-language'] || ''
+            };
+            continue;
+        }
+
+        if (line.startsWith('#')) continue;
+        const url = normalizeDirectUrl(line.replace(/^URL=/i, ''));
+        if (!url || seen.has(url)) {
+            metadata = {};
+            continue;
+        }
+
+        seen.add(url);
+        const parsed = new URL(url);
+        const name = metadata.name || parsed.hostname.replace(/^www\./, '') || `Chaîne ${items.length + 1}`;
+        items.push({
+            id: `${metadata.tvgId || name}-${items.length + 1}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+            name,
+            title: name,
+            url,
+            image: normalizeDirectUrl(metadata.logo),
+            group: metadata.group || 'Playlist',
+            language: metadata.language,
+            type: getDirectType(url),
+            source: 'playlist'
+        });
+        metadata = {};
+        if (items.length >= DIRECT_PLAYLIST_ITEM_LIMIT) break;
+    }
+
+    return {
+        ok: items.length > 0,
+        type: 'playlist',
+        filename: String(options.filename || ''),
+        sourceUrl: String(options.sourceUrl || ''),
+        total: items.length,
+        items,
+        first: items[0] || null,
+        error: items.length ? undefined : 'Aucun flux valide trouvé dans la playlist.'
+    };
+}
+
+async function loadDirectPlaylist(url) {
+    const normalizedUrl = normalizeDirectUrl(url);
+    if (!normalizedUrl) throw new Error('URL de playlist invalide.');
+    const cacheKey = `direct_playlist_${normalizedUrl}`;
+    const cached = getCachedFor(cacheKey, DIRECT_PLAYLIST_CACHE_DURATION);
+    if (cached) return cached;
+
+    const response = await axios.get(normalizedUrl, {
+        timeout: 15000,
+        responseType: 'text',
+        maxContentLength: 2 * 1024 * 1024,
+        headers: {
+            'User-Agent': axiosConfig.headers['User-Agent'],
+            'Accept': 'application/vnd.apple.mpegurl,audio/x-mpegurl,text/plain,*/*'
+        }
+    });
+    const result = parseDirectPlaylist(response.data, { sourceUrl: normalizedUrl });
+    if (!result.ok) throw new Error(result.error);
+    setCachedFor(cacheKey, result);
+    return result;
 }
 
 function normalizeDirectChannel(channel = {}, index = 0) {
@@ -1947,6 +2033,27 @@ app.post('/api/direct/resolve', (req, res) => {
     res.status(result.ok ? 200 : 400).json(result);
 });
 
+app.get('/api/direct/playlist', async (req, res) => {
+    try {
+        const result = await loadDirectPlaylist(req.query.url);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ ok: false, type: 'playlist', total: 0, items: [], error: error.message });
+    }
+});
+
+app.post('/api/direct/playlist', async (req, res) => {
+    try {
+        const content = String(req.body?.content || '');
+        const result = content
+            ? parseDirectPlaylist(content, { filename: req.body?.filename })
+            : await loadDirectPlaylist(req.body?.url);
+        res.status(result.ok ? 200 : 400).json(result);
+    } catch (error) {
+        res.status(400).json({ ok: false, type: 'playlist', total: 0, items: [], error: error.message });
+    }
+});
+
 app.get('/api/direct/status', (req, res) => {
     res.json({
         ok: true,
@@ -1956,6 +2063,8 @@ app.get('/api/direct/status', (req, res) => {
             'GET /api/direct/resolve?url=https://...',
             'POST /api/direct/resolve { url }',
             'POST /api/direct/resolve { filename, content }',
+            'GET /api/direct/playlist?url=https://.../playlist.m3u',
+            'POST /api/direct/playlist { filename, content }',
             'GET /api/direct/channels'
         ]
     });
@@ -2047,6 +2156,7 @@ app.get('/api/status', (req, res) => {
             '/api/seasons/:query',
             '/api/direct/resolve',
             '/api/direct/status',
+            '/api/direct/playlist',
             '/api/direct/channels'
         ],
         updatedAt: new Date().toISOString()
