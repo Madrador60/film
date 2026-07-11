@@ -4648,6 +4648,511 @@ a {
   }
 }
 
+/* Direct TV experience */
+.direct-tv-app {
+  width: auto;
+  max-width: none;
+  padding: clamp(24px, 3vw, 48px);
+  padding-bottom: 110px;
+  background:
+    radial-gradient(circle at 75% 8%, rgba(59,130,246,.13), transparent 28%),
+    radial-gradient(circle at 35% 28%, rgba(139,92,246,.09), transparent 30%);
+}
+
+.direct-load-more {
+  min-width: 240px;
+  margin: 8px auto 0;
+}
+
+.direct-tv-header,
+.direct-section-heading,
+.direct-tools-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.direct-tv-header {
+  margin-bottom: 20px;
+}
+
+.direct-live-kicker,
+.direct-section-heading span,
+.direct-tools-head span {
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.direct-live-kicker i,
+.direct-now-copy > span i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 12px rgba(239,68,68,.75);
+  animation: direct-live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes direct-live-pulse {
+  50% { opacity: .45; transform: scale(.82); }
+}
+
+.direct-tv-header h1 {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 48px;
+  line-height: 1;
+}
+
+.direct-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.direct-channel-total {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.direct-tv-stage {
+  margin-bottom: 38px;
+}
+
+.direct-tv-stage .direct-screen {
+  min-height: 0;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 14px 14px 0 0;
+  background: #02040a;
+  box-shadow: 0 30px 80px rgba(0,0,0,.48);
+}
+
+.direct-nowbar {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border: 1px solid rgba(148,163,184,.13);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  background: rgba(8,13,28,.82);
+  backdrop-filter: blur(20px);
+}
+
+.direct-now-logo {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(71,213,255,.18);
+  border-radius: 12px;
+  color: var(--cyan);
+  background: rgba(34,211,238,.08);
+  font-weight: 900;
+}
+
+.direct-now-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  object-fit: contain;
+  background: #07101d;
+}
+
+.direct-now-copy {
+  min-width: 0;
+}
+
+.direct-now-copy > span {
+  color: #fca5a5;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.direct-now-copy h2 {
+  margin: 3px 0 2px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.direct-now-copy p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.direct-now-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.direct-control,
+.direct-refresh,
+.direct-card-favorite {
+  border: 1px solid rgba(148,163,184,.14);
+  color: var(--text);
+  background: rgba(255,255,255,.045);
+  cursor: pointer;
+  transition: transform .18s ease, color .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.direct-control,
+.direct-refresh {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.direct-control:hover,
+.direct-control:focus-visible,
+.direct-refresh:hover,
+.direct-refresh:focus-visible,
+.direct-card-favorite:hover,
+.direct-card-favorite:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(71,213,255,.42);
+  color: var(--cyan);
+  background: rgba(34,211,238,.10);
+}
+
+.direct-control.active,
+.direct-card-favorite.active {
+  color: #f472b6;
+  border-color: rgba(244,114,182,.38);
+  background: rgba(244,114,182,.10);
+}
+
+.direct-control:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.direct-tv-stage > .direct-hint {
+  margin: 8px 4px 0;
+}
+
+.direct-tools,
+.direct-playlist {
+  margin: 0 0 36px;
+  padding: 18px 0 22px;
+  border-block: 1px solid rgba(148,163,184,.12);
+  background: transparent;
+}
+
+.direct-tools[hidden],
+.direct-playlist[hidden] {
+  display: none !important;
+}
+
+.direct-tools-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.direct-tools .direct-form,
+.direct-tools .direct-recent {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.direct-tools .direct-recent {
+  margin-top: 18px;
+}
+
+.direct-explore {
+  min-width: 0;
+}
+
+.direct-section-heading {
+  margin-bottom: 16px;
+}
+
+.direct-section-heading h2,
+.direct-tools-head h2 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 28px;
+}
+
+.direct-discovery-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.direct-explore .direct-channel-search,
+.direct-playlist > .direct-channel-search {
+  min-height: 52px;
+  border-color: rgba(71,213,255,.18);
+  background: rgba(3,7,18,.48);
+}
+
+.direct-view-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.direct-view-tabs button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.direct-view-tabs button.active {
+  color: #fff;
+  background: rgba(59,130,246,.16);
+}
+
+.direct-explore .direct-category-tabs {
+  margin: 0 -4px 16px;
+  padding: 4px;
+}
+
+.direct-explore .direct-channel-list {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+}
+
+.direct-explore .direct-channel-group {
+  margin-bottom: 28px;
+}
+
+.direct-explore .direct-channel-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.direct-channel-tile {
+  position: relative;
+  min-width: 0;
+}
+
+.direct-channel-tile .direct-channel {
+  min-height: 76px;
+  padding: 9px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+}
+
+.direct-channel-tile.is-playing .direct-channel {
+  border-color: rgba(71,213,255,.55);
+  background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(139,92,246,.12));
+  box-shadow: 0 0 0 1px rgba(71,213,255,.12) inset;
+}
+
+.direct-channel-tile.is-playing .direct-channel > i {
+  color: #fff;
+}
+
+.direct-card-favorite {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.direct-channel-tile:hover .direct-card-favorite,
+.direct-channel-tile:focus-within .direct-card-favorite,
+.direct-card-favorite.active {
+  opacity: 1;
+}
+
+.direct-channel-tile .direct-channel > i {
+  margin-top: 30px;
+}
+
+.direct-error-state .btn {
+  justify-self: center;
+}
+
+html[data-device="tv"] .direct-tv-app {
+  padding: 44px 56px 120px;
+}
+
+html[data-device="tv"] .direct-explore .direct-channel-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+html[data-device="tv"] .direct-channel-tile .direct-channel {
+  min-height: 96px;
+}
+
+html[data-device="tv"] .direct-channel-tile:focus-within {
+  z-index: 5;
+  transform: scale(1.04);
+}
+
+@media (min-width: 2100px) {
+  .direct-explore .direct-channel-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .direct-tv-app {
+    width: auto;
+    padding: 84px 18px 110px;
+  }
+
+  .direct-tools-grid,
+  .direct-discovery-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .direct-view-tabs {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .direct-tv-app {
+    padding: 78px 12px 108px;
+  }
+
+  .direct-tv-header {
+    align-items: center;
+  }
+
+  .direct-tv-header h1 {
+    font-size: 36px;
+  }
+
+  .direct-channel-total,
+  #directSourceToggle span {
+    display: none;
+  }
+
+  .direct-header-actions .btn {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .direct-tv-stage .direct-screen {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .direct-nowbar {
+    grid-template-columns: 48px minmax(0, 1fr);
+    margin-inline: -12px;
+    padding: 12px;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .direct-now-logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .direct-now-copy h2 {
+    font-size: 18px;
+  }
+
+  .direct-now-actions {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(148,163,184,.10);
+  }
+
+  .direct-control {
+    width: 48px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .direct-section-heading h2,
+  .direct-tools-head h2 {
+    font-size: 23px;
+  }
+
+  .direct-view-tabs button {
+    flex: 1 0 auto;
+    justify-content: center;
+  }
+
+  .direct-explore .direct-channel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .direct-channel-tile .direct-channel {
+    min-height: 82px;
+    grid-template-columns: 42px minmax(0, 1fr) 18px;
+    gap: 8px;
+  }
+
+  .direct-channel-tile .direct-channel-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .direct-card-favorite {
+    opacity: 1;
+  }
+
+  .direct-channel-copy b {
+    font-size: 12px;
+  }
+
+  .direct-channel-copy small {
+    font-size: 10px;
+  }
+
+  .direct-tools,
+  .direct-playlist {
+    margin-bottom: 28px;
+  }
+}
+
 /* Premium visual pass */
 :root {
   --premium-line: rgba(165, 180, 252, .18);

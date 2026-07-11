@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
-  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/style.css?v=20260712-direct-tv" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body direct-body">
@@ -35,97 +35,111 @@
     </nav>
   </aside>
 
-  <main class="main catalog-main direct-main">
-    <header class="catalog-hero-head direct-hero">
+  <main class="main direct-main direct-tv-app">
+    <header class="direct-tv-header">
       <div>
-        <span>Lecture directe</span>
-        <h1>Direct Madrador</h1>
-        <p>Lance rapidement une URL vidéo ou iframe dans l'interface Madrador, sans quitter l'application.</p>
+        <span class="direct-live-kicker"><i></i> Télévision en direct</span>
+        <h1>Direct</h1>
       </div>
-      <a class="btn glass" href="./index.html"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
+      <div class="direct-header-actions">
+        <span class="direct-channel-total" id="directChannelTotal">Connexion...</span>
+        <button class="btn glass" id="directSourceToggle" type="button" aria-expanded="false" aria-controls="directTools">
+          <i class="fa-solid fa-plus"></i><span>Ajouter une source</span>
+        </button>
+      </div>
     </header>
 
-    <section class="direct-layout">
-      <article class="direct-player">
-        <div class="direct-screen" id="directScreen">
-          <div class="direct-placeholder" id="directPlaceholder">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <h2>Aucun direct lancé</h2>
-            <p>Colle une URL vidéo, iframe ou page lecteur, puis appuie sur Lancer.</p>
-          </div>
+    <section class="direct-tv-stage" aria-label="Lecteur télévision">
+      <div class="direct-screen" id="directScreen">
+        <div class="direct-placeholder" id="directPlaceholder">
+          <i class="fa-solid fa-satellite-dish"></i>
+          <h2>Choisis une chaîne</h2>
+          <p>Le direct démarrera ici avec le lecteur Madrador.</p>
         </div>
-      </article>
+      </div>
+      <div class="direct-nowbar">
+        <div class="direct-now-logo" id="directNowLogo"><span>TV</span></div>
+        <div class="direct-now-copy">
+          <span><i></i> En direct</span>
+          <h2 id="directNowTitle">Madrador TV</h2>
+          <p id="directNowProgram">Sélectionne une chaîne pour commencer.</p>
+        </div>
+        <div class="direct-now-actions">
+          <button class="direct-control" id="directPrevChannel" type="button" title="Chaîne précédente" disabled><i class="fa-solid fa-backward-step"></i></button>
+          <button class="direct-control direct-favorite-control" id="directFavoriteChannel" type="button" title="Ajouter aux favoris" disabled><i class="fa-regular fa-heart"></i></button>
+          <button class="direct-control" id="directNextChannel" type="button" title="Chaîne suivante" disabled><i class="fa-solid fa-forward-step"></i></button>
+          <button class="direct-control" id="directFullscreen" type="button" title="Plein écran"><i class="fa-solid fa-expand"></i></button>
+        </div>
+      </div>
+      <p class="direct-hint" id="directHint">Choisis une chaîne dans le catalogue.</p>
+    </section>
 
-      <aside class="direct-panel">
+    <section class="direct-tools" id="directTools" hidden>
+      <div class="direct-tools-head">
+        <div><span>Sources personnelles</span><h2>Ajouter un flux ou une playlist</h2></div>
+        <button class="icon-btn" id="directToolsClose" type="button" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="direct-tools-grid">
         <div class="direct-form">
-          <label for="directUrl">URL directe</label>
+          <label for="directUrl">URL directe ou JSON</label>
           <div class="direct-input">
             <i class="fa-solid fa-link"></i>
-            <input id="directUrl" type="text" placeholder="URL du lecteur, flux ou JSON channels..." autocomplete="off" />
+            <input id="directUrl" type="text" placeholder="https://... ou JSON channels" autocomplete="off" />
             <button class="icon-btn" id="directClear" type="button" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <label class="direct-file-zone" for="directFile">
-            <input id="directFile" type="file" accept=".url,.txt,.json,.m3u,.m3u8,text/plain,application/json,audio/x-mpegurl,application/vnd.apple.mpegurl" />
-            <i class="fa-solid fa-file-arrow-up"></i>
-            <span>
-              <b>Importer un fichier URL</b>
-              <small>.url, .txt, .json, .m3u ou .m3u8</small>
-            </span>
-          </label>
-          <p class="direct-hint" id="directHint">API locale : /api/direct/resolve</p>
           <div class="direct-actions">
             <button class="btn primary" id="directPlay" type="button"><i class="fa-solid fa-play"></i><span>Lancer</span></button>
             <button class="btn glass" id="directOpen" type="button"><i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir</span></button>
           </div>
         </div>
-
-        <div class="direct-recent">
-          <div class="section-head compact">
-            <div>
-              <span>Local</span>
-              <h2>Derniers directs</h2>
-            </div>
-            <button class="btn glass" id="directReset" type="button"><i class="fa-solid fa-trash"></i><span>Vider</span></button>
-          </div>
-          <div class="direct-list" id="directList"></div>
+        <label class="direct-file-zone" for="directFile">
+          <input id="directFile" type="file" accept=".url,.txt,.json,.m3u,.m3u8,text/plain,application/json,audio/x-mpegurl,application/vnd.apple.mpegurl" />
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span><b>Importer une playlist</b><small>.m3u, .m3u8, .json, .url ou .txt</small></span>
+        </label>
+      </div>
+      <div class="direct-recent">
+        <div class="section-head compact">
+          <div><span>Local</span><h2>Sources récemment ouvertes</h2></div>
+          <button class="btn glass" id="directReset" type="button"><i class="fa-solid fa-trash"></i><span>Vider</span></button>
         </div>
+        <div class="direct-list" id="directList"></div>
+      </div>
+    </section>
 
-        <div class="direct-playlist" id="directPlaylistPanel" hidden>
-          <div class="section-head compact">
-            <div>
-              <span>Playlist locale</span>
-              <h2 id="directPlaylistTitle">Chaînes importées</h2>
-            </div>
-            <button class="btn glass" id="directPlaylistClear" type="button"><i class="fa-solid fa-xmark"></i><span>Fermer</span></button>
-          </div>
-          <div class="direct-channel-search">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input id="directPlaylistSearch" type="search" placeholder="Filtrer la playlist..." autocomplete="off" />
-          </div>
-          <div class="direct-playlist-list" id="directPlaylistList"></div>
-        </div>
+    <section class="direct-playlist" id="directPlaylistPanel" hidden>
+      <div class="direct-section-heading">
+        <div><span>Playlist personnelle</span><h2 id="directPlaylistTitle">Chaînes importées</h2></div>
+        <button class="btn glass" id="directPlaylistClear" type="button"><i class="fa-solid fa-xmark"></i><span>Fermer</span></button>
+      </div>
+      <div class="direct-channel-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="directPlaylistSearch" type="search" placeholder="Filtrer la playlist..." autocomplete="off" />
+      </div>
+      <div class="direct-playlist-list" id="directPlaylistList"></div>
+    </section>
 
-        <div class="direct-channels">
-          <div class="section-head compact">
-            <div>
-              <span>API CDNLiveTV</span>
-              <h2>Chaînes gratuites</h2>
-            </div>
-            <button class="btn glass" id="directChannelsReload" type="button"><i class="fa-solid fa-rotate-right"></i><span>Charger</span></button>
-          </div>
-          <div class="direct-channel-search">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input id="directChannelSearch" type="search" placeholder="Rechercher une chaîne..." autocomplete="off" />
-          </div>
-          <div class="direct-category-tabs" id="directCategoryTabs" aria-label="Catégories des chaînes"></div>
-          <div class="direct-channel-list" id="directChannelList">
-            <div class="direct-empty">
-              <i class="fa-solid fa-tv"></i>
-              <span>Charge les chaînes pour regarder la TV en direct.</span>
-            </div>
-          </div>
+    <section class="direct-explore">
+      <div class="direct-section-heading">
+        <div><span>Catalogue en direct</span><h2>Choisir une chaîne</h2></div>
+        <button class="direct-refresh" id="directChannelsReload" type="button" title="Actualiser"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <div class="direct-discovery-bar">
+        <div class="direct-channel-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="directChannelSearch" type="search" placeholder="Rechercher une chaîne, un pays ou une catégorie..." autocomplete="off" />
         </div>
-      </aside>
+        <div class="direct-view-tabs" id="directViewTabs" aria-label="Vues des chaînes">
+          <button class="active" type="button" data-direct-view="all"><i class="fa-solid fa-border-all"></i><span>Toutes</span></button>
+          <button type="button" data-direct-view="favorites"><i class="fa-solid fa-heart"></i><span>Favoris</span></button>
+          <button type="button" data-direct-view="recent"><i class="fa-solid fa-clock-rotate-left"></i><span>Récentes</span></button>
+        </div>
+      </div>
+      <div class="direct-category-tabs" id="directCategoryTabs" aria-label="Catégories des chaînes"></div>
+      <div class="direct-channel-list" id="directChannelList">
+        <div class="direct-empty"><i class="fa-solid fa-tv"></i><span>Chargement des chaînes...</span></div>
+      </div>
+      <button class="btn glass direct-load-more hidden" id="directLoadMore" type="button"><i class="fa-solid fa-plus"></i><span>Afficher plus de chaînes</span></button>
     </section>
   </main>
 
@@ -146,6 +160,6 @@
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-  <script src="./js/direct.js"></script>
+  <script src="./js/direct.js?v=20260712-direct-tv"></script>
 </body>
 </html>

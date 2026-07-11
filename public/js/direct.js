@@ -1,10 +1,16 @@
 const DIRECT_KEY = 'madrador:direct:recent';
 const DIRECT_CHANNELS_KEY = 'madrador:direct:channels';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
+const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
+const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
 let activeDirectCategory = 'Toutes';
+let activeDirectView = 'all';
+let currentDirectChannel = null;
+let visibleDirectChannels = [];
+let directRenderLimit = DIRECT_BATCH_SIZE;
 let activeHls = null;
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -13,9 +19,23 @@ window.addEventListener('DOMContentLoaded', () => {
   $('directOpen')?.addEventListener('click', openFromInput);
   $('directFile')?.addEventListener('change', handleDirectFile);
   $('directChannelsReload')?.addEventListener('click', () => loadDirectChannels(true));
-  $('directChannelSearch')?.addEventListener('input', renderDirectChannels);
+  $('directChannelSearch')?.addEventListener('input', () => {
+    directRenderLimit = DIRECT_BATCH_SIZE;
+    renderDirectChannels();
+  });
   $('directPlaylistSearch')?.addEventListener('input', renderDirectPlaylist);
   $('directPlaylistClear')?.addEventListener('click', clearDirectPlaylist);
+  $('directSourceToggle')?.addEventListener('click', toggleDirectTools);
+  $('directToolsClose')?.addEventListener('click', () => setDirectToolsOpen(false));
+  $('directFavoriteChannel')?.addEventListener('click', toggleCurrentChannelFavorite);
+  $('directPrevChannel')?.addEventListener('click', () => playRelativeChannel(-1));
+  $('directNextChannel')?.addEventListener('click', () => playRelativeChannel(1));
+  $('directFullscreen')?.addEventListener('click', enterDirectFullscreen);
+  $('directViewTabs')?.addEventListener('click', handleDirectViewClick);
+  $('directLoadMore')?.addEventListener('click', () => {
+    directRenderLimit += DIRECT_BATCH_SIZE;
+    renderDirectChannels();
+  });
   $('directClear')?.addEventListener('click', () => {
     $('directUrl').value = '';
     setHint('API locale : /api/direct/resolve');
@@ -29,6 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('directUrl')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') playFromInput();
   });
+  window.addEventListener('keydown', handleDirectKeyboard);
 
   renderRecent();
   loadCachedPlaylist();
@@ -37,6 +58,34 @@ window.addEventListener('DOMContentLoaded', () => {
   if (last?.url) $('directUrl').value = last.url;
   window.setTimeout(() => loadDirectChannels(false), 200);
 });
+
+function toggleDirectTools() {
+  setDirectToolsOpen($('directTools')?.hidden !== false);
+}
+
+function setDirectToolsOpen(open) {
+  const tools = $('directTools');
+  if (!tools) return;
+  tools.hidden = !open;
+  $('directSourceToggle')?.setAttribute('aria-expanded', String(open));
+  if (open) tools.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function handleDirectViewClick(event) {
+  const button = event.target.closest('[data-direct-view]');
+  if (!button) return;
+  activeDirectView = button.dataset.directView;
+  activeDirectCategory = 'Toutes';
+  directRenderLimit = DIRECT_BATCH_SIZE;
+  renderDirectChannels();
+}
+
+function handleDirectKeyboard(event) {
+  if (event.target.matches('input,textarea,select')) return;
+  if (event.key === 'ArrowLeft') playRelativeChannel(-1);
+  if (event.key === 'ArrowRight') playRelativeChannel(1);
+  if (event.key.toLowerCase() === 'f') enterDirectFullscreen();
+}
 
 async function playFromInput() {
   const raw = String($('directUrl')?.value || '').trim();
@@ -178,6 +227,7 @@ function playUrl(url, direct = {}) {
   }
 
   setHint(`Lecture : ${direct.name || direct.title || getTitleFromUrl(url)}`);
+  if (!currentDirectChannel || currentDirectChannel.url !== direct.url) setCurrentChannel({ ...direct, url });
   showToast('Direct lancé');
 }
 
@@ -306,9 +356,7 @@ function renderRecent() {
       const url = button.dataset.url;
       const item = items.find((entry) => entry.url === url) || {};
       $('directUrl').value = url;
-      playUrl(url, item);
-      saveRecent(url, item);
-      renderRecent();
+      playChannel(item);
     });
   });
 }
@@ -338,6 +386,7 @@ async function loadDirectChannels(force = false) {
 
     directChannels = Array.isArray(data.channels) ? data.channels : [];
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
+    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
     renderDirectChannels();
     setHint(`${directChannels.length} chaînes chargées`);
     return directChannels;
@@ -360,18 +409,34 @@ function renderDirectChannels() {
     ...channel,
     category: channel.category || classifyChannel(channel)
   }));
-  renderDirectCategoryTabs(normalized);
-  const filtered = normalized
+  const favoriteKeys = getDirectFavorites();
+  const recentOrder = new Map(getRecent().map((item, index) => [getChannelKey(item), index]));
+  const viewChannels = normalized
+    .filter((channel) => activeDirectView !== 'favorites' || favoriteKeys.has(getChannelKey(channel)))
+    .filter((channel) => activeDirectView !== 'recent' || recentOrder.has(getChannelKey(channel)));
+  renderDirectCategoryTabs(viewChannels);
+  let filtered = viewChannels
     .filter((channel) => activeDirectCategory === 'Toutes' || channel.category === activeDirectCategory)
-    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query))
-    .slice(0, 600);
+    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query));
+  if (activeDirectView === 'recent') {
+    filtered = filtered.sort((a, b) => recentOrder.get(getChannelKey(a)) - recentOrder.get(getChannelKey(b)));
+  }
+  visibleDirectChannels = filtered;
+  renderDirectViewTabs(normalized, favoriteKeys, recentOrder);
+  const totalFiltered = filtered.length;
+  const displayedChannels = filtered.slice(0, directRenderLimit);
+  const loadMore = $('directLoadMore');
+  if (loadMore) {
+    loadMore.classList.toggle('hidden', displayedChannels.length >= totalFiltered);
+    loadMore.querySelector('span').textContent = `Afficher plus · ${displayedChannels.length}/${totalFiltered}`;
+  }
 
-  if (!filtered.length) {
+  if (!displayedChannels.length) {
     setChannelsState(directChannels.length ? 'Aucune chaîne trouvée.' : 'Charge les chaînes pour regarder la TV en direct.');
     return;
   }
 
-  const groups = filtered.reduce((result, channel) => {
+  const groups = displayedChannels.reduce((result, channel) => {
     (result[channel.category] ||= []).push(channel);
     return result;
   }, {});
@@ -381,17 +446,22 @@ function renderDirectChannels() {
       <header><h3>${escapeHtml(category)}</h3><span>${channels.length} chaînes</span></header>
       <div class="direct-channel-grid">
         ${channels.map((channel) => `
-          <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
-            <span class="direct-channel-logo">
-              <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
-              ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
-            </span>
-            <span class="direct-channel-copy">
-              <b>${escapeHtml(channel.name)}</b>
-              <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i>${escapeHtml(channel.country || channel.code || 'TV')}</small>
-            </span>
-            <i class="fa-solid fa-play"></i>
-          </button>
+          <article class="direct-channel-tile ${currentDirectChannel?.url === channel.url ? 'is-playing' : ''}">
+            <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
+              <span class="direct-channel-logo">
+                <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
+                ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
+              </span>
+              <span class="direct-channel-copy">
+                <b>${escapeHtml(channel.name)}</b>
+                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i>${escapeHtml(channel.country || channel.code || 'TV')}</small>
+              </span>
+              <i class="fa-solid fa-play"></i>
+            </button>
+            <button class="direct-card-favorite ${favoriteKeys.has(getChannelKey(channel)) ? 'active' : ''}" type="button" data-favorite-url="${escapeHtml(channel.url)}" aria-label="Favori">
+              <i class="fa-${favoriteKeys.has(getChannelKey(channel)) ? 'solid' : 'regular'} fa-heart"></i>
+            </button>
+          </article>
         `).join('')}
       </div>
     </section>
@@ -408,11 +478,30 @@ function renderDirectChannels() {
       playChannel(channel);
     });
   });
+  box.querySelectorAll('[data-favorite-url]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const channel = directChannels.find((item) => item.url === button.dataset.favoriteUrl);
+      if (channel) toggleChannelFavorite(channel);
+    });
+  });
   bindDirectLogoFallbacks(box);
 }
 
+function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
+  const counts = {
+    all: channels.length,
+    favorites: channels.filter((channel) => favoriteKeys.has(getChannelKey(channel))).length,
+    recent: channels.filter((channel) => recentOrder.has(getChannelKey(channel))).length
+  };
+  $('directViewTabs')?.querySelectorAll('[data-direct-view]').forEach((button) => {
+    const view = button.dataset.directView;
+    button.classList.toggle('active', view === activeDirectView);
+    button.querySelector('span').textContent = `${view === 'all' ? 'Toutes' : view === 'favorites' ? 'Favoris' : 'Récentes'} · ${counts[view]}`;
+  });
+}
+
 function bindDirectLogoFallbacks(scope) {
-  scope.querySelectorAll('.direct-channel-logo img').forEach((img) => {
+  scope.querySelectorAll('img').forEach((img) => {
     const removeBrokenImage = () => img.remove();
     if (img.complete && !img.naturalWidth) removeBrokenImage();
     else img.addEventListener('error', removeBrokenImage, { once: true });
@@ -441,6 +530,7 @@ function renderDirectCategoryTabs(channels) {
   box.querySelectorAll('[data-category]').forEach((button) => {
     button.addEventListener('click', () => {
       activeDirectCategory = button.dataset.category;
+      directRenderLimit = DIRECT_BATCH_SIZE;
       renderDirectChannels();
     });
   });
@@ -463,6 +553,7 @@ function classifyChannel(channel) {
 
 async function playChannel(channel) {
   if (!channel?.url) return;
+  setCurrentChannel(channel);
   $('directUrl').value = channel.url;
   const isCdnLive = channel.source === 'cdnlivetv' || isCdnLivePlayerUrl(channel.url);
 
@@ -475,6 +566,7 @@ async function playChannel(channel) {
       playUrl(data.url, { ...channel, type: 'hls' });
       saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
       renderRecent();
+      refreshDiscoveryAfterHistory();
       return;
     } catch (error) {
       console.error(error);
@@ -486,6 +578,92 @@ async function playChannel(channel) {
   playUrl(channel.url, channel);
   saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
   renderRecent();
+  refreshDiscoveryAfterHistory();
+}
+
+function refreshDiscoveryAfterHistory() {
+  if (activeDirectView === 'recent') renderDirectChannels();
+  else {
+    const normalized = directChannels.map((channel) => ({ ...channel, category: channel.category || classifyChannel(channel) }));
+    renderDirectViewTabs(normalized, getDirectFavorites(), new Map(getRecent().map((item, index) => [getChannelKey(item), index])));
+  }
+}
+
+function setCurrentChannel(channel) {
+  currentDirectChannel = { ...channel, name: channel.name || channel.title || getTitleFromUrl(channel.url) };
+  const logo = $('directNowLogo');
+  if (logo) {
+    logo.innerHTML = `<span>${escapeHtml(getChannelInitials(currentDirectChannel.name))}</span>${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}`;
+    bindDirectLogoFallbacks(logo);
+  }
+  if ($('directNowTitle')) $('directNowTitle').textContent = currentDirectChannel.name;
+  if ($('directNowProgram')) $('directNowProgram').textContent = `${currentDirectChannel.category || currentDirectChannel.group || 'Télévision'} · ${currentDirectChannel.country || currentDirectChannel.code?.toUpperCase() || 'Direct'}`;
+  $('directPrevChannel').disabled = false;
+  $('directNextChannel').disabled = false;
+  $('directFavoriteChannel').disabled = false;
+  renderCurrentFavorite();
+  document.title = `${currentDirectChannel.name} en direct - Madrador TV`;
+  document.querySelectorAll('.direct-channel-tile').forEach((tile) => {
+    tile.classList.toggle('is-playing', tile.querySelector('[data-url]')?.dataset.url === currentDirectChannel.url);
+  });
+}
+
+function playRelativeChannel(offset) {
+  if (!currentDirectChannel) return;
+  const pool = visibleDirectChannels.length > 1 ? visibleDirectChannels : directChannels;
+  if (!pool.length) return;
+  const currentIndex = pool.findIndex((channel) => channel.url === currentDirectChannel.url);
+  const nextIndex = (Math.max(0, currentIndex) + offset + pool.length) % pool.length;
+  playChannel(pool[nextIndex]);
+}
+
+async function enterDirectFullscreen() {
+  const target = $('directScreen');
+  if (!target) return;
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (target.requestFullscreen) await target.requestFullscreen();
+    else target.querySelector('video')?.webkitEnterFullscreen?.();
+  } catch {
+    showToast('Plein écran indisponible');
+  }
+}
+
+function getDirectFavorites() {
+  try {
+    const values = JSON.parse(localStorage.getItem(DIRECT_FAVORITES_KEY) || '[]');
+    return new Set(Array.isArray(values) ? values : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function getChannelKey(channel) {
+  return String(channel?.url || channel?.id || '').trim();
+}
+
+function toggleCurrentChannelFavorite() {
+  if (currentDirectChannel) toggleChannelFavorite(currentDirectChannel);
+}
+
+function toggleChannelFavorite(channel) {
+  const favorites = getDirectFavorites();
+  const key = getChannelKey(channel);
+  if (favorites.has(key)) favorites.delete(key);
+  else favorites.add(key);
+  localStorage.setItem(DIRECT_FAVORITES_KEY, JSON.stringify(Array.from(favorites)));
+  renderCurrentFavorite();
+  renderDirectChannels();
+  showToast(favorites.has(key) ? 'Chaîne ajoutée aux favoris' : 'Chaîne retirée des favoris');
+}
+
+function renderCurrentFavorite() {
+  const button = $('directFavoriteChannel');
+  if (!button || !currentDirectChannel) return;
+  const active = getDirectFavorites().has(getChannelKey(currentDirectChannel));
+  button.classList.toggle('active', active);
+  button.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} fa-heart"></i>`;
+  button.title = active ? 'Retirer des favoris' : 'Ajouter aux favoris';
 }
 
 function showDirectLoading(name) {
@@ -590,14 +768,27 @@ function setChannelsState(message) {
 function saveRecent(url, direct = {}) {
   const title = direct.name || direct.title || getTitleFromUrl(url);
   const items = getRecent().filter((item) => item.url !== url);
-  items.unshift({ url, title, type: direct.type || getDirectType(url), filename: direct.filename || '', at: Date.now() });
-  localStorage.setItem(DIRECT_KEY, JSON.stringify(items.slice(0, 8)));
+  items.unshift({
+    url,
+    title,
+    name: title,
+    id: direct.id || '',
+    code: direct.code || '',
+    country: direct.country || '',
+    category: direct.category || direct.group || '',
+    image: direct.image || '',
+    source: direct.source || '',
+    type: direct.type || getDirectType(url),
+    filename: direct.filename || '',
+    at: Date.now()
+  });
+  localStorage.setItem(DIRECT_KEY, JSON.stringify(items.slice(0, 24)));
 }
 
 function getRecent() {
   try {
     const data = JSON.parse(localStorage.getItem(DIRECT_KEY) || '[]');
-    return Array.isArray(data) ? data.filter((item) => item?.url).slice(0, 8) : [];
+    return Array.isArray(data) ? data.filter((item) => item?.url).slice(0, 24) : [];
   } catch {
     return [];
   }
