@@ -5,6 +5,8 @@
   if (!body) return;
 
   root.classList.add('ui2-booting');
+  root.classList.add('mx-experience');
+  root.dataset.input = 'pointer';
 
   window.addEventListener('load', () => {
     root.classList.remove('ui2-booting');
@@ -23,6 +25,7 @@
   }, true);
 
   document.addEventListener('pointerdown', (event) => {
+    root.dataset.input = 'pointer';
     const target = event.target.closest('a,button,.media-card,.episode-card,.source-btn,.detail-action-card');
     if (!target || target.matches('[disabled],.disabled')) return;
     target.classList.add('ui2-pressed');
@@ -32,6 +35,10 @@
   document.addEventListener('pointercancel', clearPressed, { passive: true });
 
   document.addEventListener('keydown', (event) => {
+    if (['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      root.dataset.input = 'keyboard';
+    }
+    trapActiveDialog(event);
     if (event.key !== 'Escape') return;
     document.getElementById('sidebar')?.classList.remove('open');
     document.querySelector('.quick-modal:not(.hidden) .quick-close')?.click();
@@ -41,6 +48,8 @@
   enhanceImages();
   watchDynamicCards();
   setActiveSidebarLink();
+  installNetworkFeedback();
+  secureExternalLinks();
 
   function pulse(element, event) {
     const rect = element.getBoundingClientRect();
@@ -116,6 +125,56 @@
       link.classList.toggle('active', active);
       if (active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
+    });
+  }
+
+  function trapActiveDialog(event) {
+    if (event.key !== 'Tab') return;
+    const dialog = document.querySelector('[role="dialog"]:not(.hidden), dialog[open]');
+    if (!dialog) return;
+    const focusable = Array.from(dialog.querySelectorAll(
+      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter((element) => !element.hidden && element.getClientRects().length);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function installNetworkFeedback() {
+    const toast = document.createElement('div');
+    toast.className = 'mx-network-toast hidden';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toast);
+
+    const announce = (online) => {
+      toast.dataset.state = online ? 'online' : 'offline';
+      toast.innerHTML = online
+        ? '<i class="fa-solid fa-wifi"></i> Connexion rétablie'
+        : '<i class="fa-solid fa-triangle-exclamation"></i> Mode hors connexion';
+      toast.classList.remove('hidden');
+      window.clearTimeout(announce.timer);
+      announce.timer = window.setTimeout(() => toast.classList.add('hidden'), online ? 2200 : 5000);
+    };
+
+    window.addEventListener('online', () => announce(true));
+    window.addEventListener('offline', () => announce(false));
+    if (!navigator.onLine) announce(false);
+  }
+
+  function secureExternalLinks() {
+    document.querySelectorAll('a[target="_blank"]').forEach((link) => {
+      const rel = new Set(String(link.rel || '').split(/\s+/).filter(Boolean));
+      rel.add('noopener');
+      rel.add('noreferrer');
+      link.rel = Array.from(rel).join(' ');
     });
   }
 })();

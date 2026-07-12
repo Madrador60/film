@@ -1,4 +1,5 @@
 const { spawn } = require('child_process');
+const { existsSync } = require('fs');
 const { chromium } = require('playwright');
 
 const PORT = Number(process.env.AUDIT_PORT || 3099);
@@ -16,10 +17,26 @@ const PAGES = [
   '/player.html?id=15113307-the-last-of-us-saison-1.html&type=series&seriesTitle=The%20Last%20Of%20Us'
 ];
 const PROFILES = [
-  ['mobile', 390, 844],
-  ['tablet', 820, 1180],
-  ['desktop', 1440, 900]
+  ['mobile-small', 320, 568, true],
+  ['mobile', 390, 844, true],
+  ['tablet', 820, 1180, true],
+  ['laptop', 1143, 900, false],
+  ['desktop', 1440, 900, false],
+  ['tv', 1920, 1080, true],
+  ['4k', 3840, 2160, false]
 ];
+
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium'
+  ].filter(Boolean);
+  return candidates.find((candidate) => existsSync(candidate));
+}
 
 async function waitForServer() {
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -43,13 +60,14 @@ async function run() {
 
   try {
     await waitForServer();
+    const chromePath = findChrome();
     browser = await chromium.launch({
       headless: true,
-      ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {})
+      ...(chromePath ? { executablePath: chromePath } : {})
     });
 
-    for (const [profile, width, height] of PROFILES) {
-      const context = await browser.newContext({ viewport: { width, height }, hasTouch: profile !== 'desktop' });
+    for (const [profile, width, height, hasTouch] of PROFILES) {
+      const context = await browser.newContext({ viewport: { width, height }, hasTouch });
       for (const target of PAGES) {
         const page = await context.newPage();
         const errors = [];
@@ -66,7 +84,7 @@ async function run() {
         try {
           const response = await page.goto(`${BASE_URL}${target}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
           status = response?.status() || 0;
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(800);
         } catch (error) {
           errors.push(error.message);
         }

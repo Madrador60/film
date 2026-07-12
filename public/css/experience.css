@@ -1,0 +1,475 @@
+:root {
+  --mx-bg: #040711;
+  --mx-bg-soft: #080d1b;
+  --mx-surface: rgba(13, 19, 38, .72);
+  --mx-surface-strong: rgba(16, 23, 45, .92);
+  --mx-line: rgba(148, 163, 184, .14);
+  --mx-line-active: rgba(71, 213, 255, .52);
+  --mx-text: #f8fafc;
+  --mx-muted: #9aa8c2;
+  --mx-blue: #3b82f6;
+  --mx-violet: #8b5cf6;
+  --mx-cyan: #22d3ee;
+  --mx-radius: 8px;
+  --mx-shadow: 0 24px 64px rgba(0, 0, 0, .34);
+  --mx-content: 1920px;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--mx-bg);
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--mx-text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(88, 75, 190, .14), transparent 30%),
+    linear-gradient(180deg, #040711, #070b17 48%, #040711) !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(34, 211, 238, .035), transparent 24%, transparent 76%, rgba(139, 92, 246, .045));
+}
+
+.main,
+.catalog-main,
+.player-shell {
+  width: auto;
+  max-width: var(--mx-content);
+}
+
+.home-body .main {
+  overflow-x: clip;
+}
+
+.sidebar {
+  background: rgba(4, 8, 20, .94) !important;
+  border-right: 1px solid rgba(148, 163, 184, .12) !important;
+  box-shadow: 20px 0 55px rgba(0, 0, 0, .16);
+  backdrop-filter: blur(24px);
+}
+
+.brand {
+  border-radius: var(--mx-radius) !important;
+}
+
+.nav {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  background: transparent !important;
+}
+
+.nav:hover,
+.nav:focus-visible {
+  background: rgba(59, 130, 246, .10) !important;
+}
+
+.nav.active {
+  background: linear-gradient(90deg, rgba(59, 130, 246, .30), rgba(139, 92, 246, .20)) !important;
+  box-shadow: inset 3px 0 var(--mx-cyan);
+}
+
+.nav.active::before {
+  display: none !important;
+}
+
+.topbar,
+.catalog-hero-head,
+.settings-hero,
+.library-hero,
+.admin-hero,
+.diagnostic-hero,
+.direct-tv-header {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.topbar {
+  backdrop-filter: blur(20px);
+}
+
+.searchbox,
+.direct-channel-search,
+.catalog-search,
+.search-input-wrap {
+  border: 1px solid var(--mx-line) !important;
+  background: rgba(7, 12, 27, .82) !important;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(18px);
+}
+
+.searchbox:focus-within,
+.direct-channel-search:focus-within,
+.catalog-search:focus-within,
+.search-input-wrap:focus-within {
+  border-color: var(--mx-line-active) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12), 0 16px 42px rgba(0, 0, 0, .24) !important;
+}
+
+.hero,
+.home-hero,
+.media-hero {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  box-shadow: none !important;
+}
+
+.hero-shade {
+  background:
+    linear-gradient(90deg, rgba(3, 6, 15, .95), rgba(3, 6, 15, .66) 42%, rgba(3, 6, 15, .08) 78%),
+    linear-gradient(0deg, var(--mx-bg-soft), transparent 42%) !important;
+}
+
+.btn,
+.icon-btn,
+.page-pill,
+.smart-tabs a,
+.search-type-tabs button,
+.library-tabs button,
+.direct-view-tabs button,
+.direct-category-tab {
+  border-radius: var(--mx-radius) !important;
+}
+
+.btn.primary {
+  border: 0 !important;
+  background: linear-gradient(120deg, var(--mx-blue), var(--mx-violet) 72%, var(--mx-cyan)) !important;
+  box-shadow: 0 12px 30px rgba(59, 130, 246, .24);
+}
+
+.btn.glass,
+.icon-btn,
+.page-pill {
+  border-color: var(--mx-line) !important;
+  background: rgba(13, 19, 38, .72) !important;
+  box-shadow: none !important;
+}
+
+.btn:hover,
+.icon-btn:hover {
+  filter: brightness(1.12);
+}
+
+.content-row,
+.rows > section,
+.catalog-filters,
+.catalog-toolbar,
+.advanced-search-panel,
+.library-controls,
+.direct-explore,
+.direct-playlist,
+.direct-tools,
+.series-panel,
+.sources-panel,
+.settings-card,
+.admin-panel,
+.diagnostic-layout > *,
+.browse-panels > * {
+  box-shadow: none !important;
+}
+
+.content-row,
+.rows > section {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.catalog-filters,
+.advanced-search-panel,
+.library-controls,
+.direct-tools,
+.direct-playlist {
+  border: 1px solid var(--mx-line) !important;
+  background: rgba(9, 14, 29, .62) !important;
+  backdrop-filter: blur(20px);
+}
+
+.settings-card,
+.admin-panel,
+.diagnostic-layout > article,
+.browse-panels > article {
+  border: 0 !important;
+  border-top: 1px solid var(--mx-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.media-card,
+.direct-channel-tile,
+.episode-btn,
+.source-btn {
+  border-color: transparent !important;
+  border-radius: var(--mx-radius) !important;
+  box-shadow: none !important;
+}
+
+.media-card {
+  background: transparent !important;
+}
+
+.media-thumb,
+.media-thumb img,
+.direct-channel-logo,
+.episode-thumb {
+  border-radius: var(--mx-radius) !important;
+}
+
+.media-card:hover,
+.media-card:focus-visible,
+.direct-channel-tile:focus-within,
+.episode-btn:hover,
+.episode-btn:focus-visible,
+.source-btn:hover,
+.source-btn:focus-visible {
+  border-color: var(--mx-line-active) !important;
+  transform: translateY(-4px) scale(1.018);
+  box-shadow: var(--mx-shadow) !important;
+}
+
+.catalog-grid,
+.catalog-page-grid {
+  align-items: start;
+}
+
+.empty-state,
+.direct-empty,
+.source-empty {
+  border: 1px dashed rgba(148, 163, 184, .20) !important;
+  background: rgba(9, 14, 29, .32) !important;
+}
+
+.watch-zone {
+  align-items: start;
+}
+
+.screen,
+.direct-screen {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  background: #000 !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .42) !important;
+}
+
+.sources-panel {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.source-status,
+.episode-now,
+.direct-nowbar {
+  border-color: var(--mx-line) !important;
+  background: rgba(10, 16, 32, .76) !important;
+}
+
+.direct-tv-stage {
+  margin-bottom: clamp(28px, 4vw, 54px);
+}
+
+.direct-explore {
+  padding-inline: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.direct-channel-group {
+  margin-bottom: clamp(26px, 3vw, 44px);
+}
+
+.direct-channel-group > header {
+  padding-inline: 2px;
+}
+
+.direct-channel-tile {
+  background: rgba(10, 15, 30, .62) !important;
+}
+
+.toast,
+.mx-network-toast {
+  position: fixed;
+  z-index: 400;
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  max-width: min(390px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border: 1px solid var(--mx-line);
+  border-radius: var(--mx-radius);
+  background: rgba(6, 10, 23, .94);
+  color: var(--mx-text);
+  box-shadow: var(--mx-shadow);
+  backdrop-filter: blur(20px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.mx-network-toast[data-state="online"] {
+  border-color: rgba(46, 230, 166, .38);
+}
+
+.mx-network-toast[data-state="offline"] {
+  border-color: rgba(248, 113, 113, .42);
+}
+
+.mx-network-toast.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(71, 213, 255, .82) !important;
+  outline-offset: 3px !important;
+}
+
+html[data-input="pointer"] :focus:not(:focus-visible) {
+  outline: 0 !important;
+}
+
+@media (min-width: 1280px) {
+  .main,
+  .catalog-main {
+    padding-inline: clamp(28px, 3vw, 60px) !important;
+  }
+
+  .catalog-page-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+  }
+
+  .watch-zone {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 360px) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .settings-grid,
+  .admin-grid,
+  .diagnostic-layout,
+  .browse-panels {
+    grid-template-columns: 1fr !important;
+  }
+
+  .watch-zone {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sources-panel {
+    padding-inline: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body,
+  .main,
+  .catalog-main,
+  .player-shell,
+  .direct-main {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: clip !important;
+  }
+
+  .main,
+  .catalog-main,
+  .direct-main {
+    padding-inline: 14px !important;
+  }
+
+  .home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .catalog-hero-head,
+  .catalog-filters,
+  .catalog-toolbar,
+  .advanced-search-panel,
+  .library-controls,
+  .settings-shell > *,
+  .admin-main > *,
+  .diagnostic-main > * {
+    margin-inline: 0 !important;
+  }
+
+  .hero,
+  .home-hero,
+  .media-hero,
+  .screen,
+  .direct-screen {
+    border-radius: 0 !important;
+  }
+
+  .player-shell {
+    padding-inline: 0 !important;
+  }
+
+  .media-info,
+  .series-panel,
+  .sources-panel {
+    padding-inline: 16px !important;
+  }
+
+  .catalog-page-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .direct-tv-stage .direct-screen,
+  .direct-nowbar {
+    width: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  .direct-category-tabs,
+  .smart-tabs,
+  .library-tabs,
+  .search-type-tabs {
+    scroll-padding-inline: 14px;
+  }
+
+  .toast,
+  .mx-network-toast {
+    right: 14px;
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html[data-device="tv"] body {
+  font-size: 18px;
+}
+
+html[data-device="tv"] .main,
+html[data-device="tv"] .catalog-main,
+html[data-device="4k"] .main,
+html[data-device="4k"] .catalog-main {
+  max-width: none;
+}
+
+html[data-device="tv"] :focus,
+html[data-device="4k"] :focus-visible {
+  outline-width: 4px !important;
+  outline-offset: 5px !important;
+}
+
+html[data-device="tv"] .media-card:focus,
+html[data-device="tv"] .direct-channel-tile:focus-within,
+html[data-device="tv"] .episode-btn:focus,
+html[data-device="tv"] .source-btn:focus {
+  transform: scale(1.035);
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
