@@ -618,6 +618,54 @@ body.nova-app::before {
   background: #f7f8fa;
 }
 
+.nova-app .direct-brand-mark {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  place-items: center;
+  padding: 4px;
+  color: #111827;
+  line-height: 1;
+  text-align: center;
+}
+
+.nova-app .direct-brand-mark strong {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+}
+
+.nova-app .direct-brand-mark small {
+  max-width: 100%;
+  color: #526075;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nova-app .direct-channel-logo.is-canal .direct-brand-mark,
+.nova-app .direct-now-logo.is-canal .direct-brand-mark {
+  color: white;
+}
+
+.nova-app .direct-channel-logo.is-canal .direct-brand-mark small,
+.nova-app .direct-now-logo.is-canal .direct-brand-mark small {
+  color: var(--nova-mint);
+}
+
+.nova-app .direct-channel-logo > img,
+.nova-app .direct-now-logo > img {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+
 .nova-app .direct-channel-logo.is-canal,
 .nova-app .direct-now-logo.is-canal {
   border-color: rgba(255, 255, 255, .18) !important;

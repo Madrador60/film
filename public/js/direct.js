@@ -412,7 +412,7 @@ async function loadDirectChannels(force = false) {
       cdnChannels = groupChannels(frenchApiChannels.map((channel) => ({
         ...channel,
         category: channel.category || classifyChannel(channel),
-        logo: channel.image || getReliableChannelLogo(channel)
+        logo: getReliableChannelLogo(channel) || channel.image
       })));
     } catch (apiError) {
       console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
@@ -497,7 +497,7 @@ function renderDirectChannels() {
           <article class="direct-channel-tile ${getChannelKey(currentDirectChannel) === getChannelKey(channel) ? 'is-playing' : ''}">
             <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
               <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
-                <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
+                ${getChannelBrandMark(channel)}
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
               </span>
               <span class="direct-channel-copy">
@@ -670,6 +670,19 @@ function getFrenchChannels(channels) {
 function getReliableChannelLogo(channel) {
   const name = String(channel?.name || '').toLowerCase();
   const commons = 'https://commons.wikimedia.org/wiki/Special:Redirect/file/';
+  if (/canal live\s*\d+/i.test(name)) return '';
+  if (/^rmc sport 1/.test(name)) return './logos/rmc-sport-1-fr.png';
+  if (/bein.*(?:sport|sports).*1/.test(name)) return './logos/bein-sports-1-french-fr.png';
+  if (/bein.*(?:sport|sports).*2/.test(name)) return './logos/bein-sports-2-french-fr.png';
+  if (/bein.*(?:sport|sports).*3/.test(name)) return './logos/bein-sports-3-french-fr.png';
+  if (/bein.*(?:max|sport).*4/.test(name)) return './logos/bein-sports-4-max.png';
+  if (/canal.*sport.*360|canal\+?\s*360/.test(name)) return './logos/canal-plus-sport-360-fr.png';
+  if (/canal.*sport/.test(name)) return './logos/canal-plus-sport-fr.png';
+  if (/canal.*foot/.test(name)) return './logos/canal-plus-foot-fr.png';
+  if (/^tf1/.test(name)) return './logos/tf1-fr.png';
+  if (/^m6/.test(name)) return './logos/m6-fr.png';
+  if (/france\s*4/.test(name)) return './logos/france-4-fr.png';
+  if (/equipe/.test(name)) return './logos/lequipe-fr.png';
   if (name.includes('canal premier league')) return `${commons}Logo-CanalPlus-PremierLeague.png`;
   if (name.includes('canal foot')) return `${commons}Foot%2B%20(logo%2C%202011-).svg`;
   if (name.startsWith('canal')) return `${commons}CanalPlus.svg`;
@@ -677,6 +690,33 @@ function getReliableChannelLogo(channel) {
   if (name.includes('rmc sport 2')) return `${commons}Logo%20RMC%20Sport%202%202018.svg`;
   if (name.includes('bein')) return `${commons}BeIN_Sports_logo_(2017).png`;
   return channel?.image || '';
+}
+
+function getChannelBrandMark(channel) {
+  const name = String(channel?.name || 'TV').trim();
+  let brand = getChannelInitials(name);
+  let variant = '';
+  const canalLive = name.match(/canal live\s*(\d+)/i);
+  const bein = name.match(/bein\s*(?:sports?)?\s*(?:max\s*)?(\d+)/i);
+  const rmc = name.match(/rmc sport\s*(\d+)/i);
+  const france = name.match(/france\s*(\d+)/i);
+  if (/canal/i.test(name)) {
+    brand = 'CANAL+';
+    variant = canalLive ? `LIVE ${canalLive[1]}` : name.replace(/canal\+?/i, '').replace(/\bfr\b/gi, '').trim();
+  } else if (bein) {
+    brand = 'beIN';
+    variant = /max/i.test(name) ? `MAX ${bein[1]}` : `SPORTS ${bein[1]}`;
+  } else if (rmc) {
+    brand = 'RMC';
+    variant = `SPORT ${rmc[1]}`;
+  } else if (france) {
+    brand = 'france•tv';
+    variant = france[1];
+  } else if (/^tf1/i.test(name)) brand = 'TF1';
+  else if (/^m6/i.test(name)) brand = 'M6';
+  else if (/equipe/i.test(name)) brand = "L'ÉQUIPE";
+  else if (/dazn/i.test(name)) brand = 'DAZN';
+  return `<span class="direct-brand-mark"><strong>${escapeHtml(brand)}</strong>${variant ? `<small>${escapeHtml(variant)}</small>` : ''}</span>`;
 }
 
 function getChannelLogoClass(channel) {
@@ -828,7 +868,7 @@ function setCurrentChannel(channel) {
   const logo = $('directNowLogo');
   if (logo) {
     logo.className = `direct-now-logo ${getChannelLogoClass(currentDirectChannel)}`.trim();
-    logo.innerHTML = `<span>${escapeHtml(getChannelInitials(currentDirectChannel.name))}</span>${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}`;
+    logo.innerHTML = `${getChannelBrandMark(currentDirectChannel)}${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}`;
     bindDirectLogoFallbacks(logo);
   }
   if ($('directNowTitle')) $('directNowTitle').textContent = currentDirectChannel.name;
