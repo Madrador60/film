@@ -1211,6 +1211,38 @@ html[data-device="4k"] body.nova-app .sidebar {
   height: 96px !important;
 }
 
+/* Keep the complete live player and its controls inside a 1080p viewport. */
+@media (min-width: 992px) and (min-height: 650px) {
+  body.nova-app.direct-body .direct-tv-stage {
+    --direct-stage-width: min(100%, calc((100dvh - var(--nova-nav-height) - 300px) * 16 / 9));
+    scroll-margin-top: calc(var(--nova-nav-height) + 12px);
+  }
+
+  body.nova-app.direct-body .direct-tv-stage > .direct-screen,
+  body.nova-app.direct-body .direct-tv-stage > .direct-nowbar,
+  body.nova-app.direct-body .direct-tv-stage > .direct-epg,
+  body.nova-app.direct-body .direct-tv-stage > .direct-source-switcher,
+  body.nova-app.direct-body .direct-tv-stage > .direct-hint {
+    width: var(--direct-stage-width) !important;
+    margin-inline: auto !important;
+  }
+
+  body.nova-app.direct-body .direct-tv-stage > .direct-screen {
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  body.nova-app.direct-body .direct-screen .direct-video {
+    object-fit: contain !important;
+  }
+}
+
+@media (min-width: 2560px) and (min-height: 1200px) {
+  body.nova-app.direct-body .direct-tv-stage {
+    --direct-stage-width: min(100%, calc((100dvh - var(--nova-nav-height) - 420px) * 16 / 9));
+  }
+}
+
 html[data-device="tv"] body.nova-app .main,
 html[data-device="tv"] body.nova-app .catalog-main,
 html[data-device="tv"] body.nova-app .direct-main,
