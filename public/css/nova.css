@@ -305,6 +305,10 @@ body.nova-app::before {
   transform: translateY(-50%) scale(.96) !important;
 }
 
+.nova-app .hero-nav.ui2-ripple-host {
+  position: absolute !important;
+}
+
 .nova-app .hero-dots button.active,
 .nova-app .hero-dots button[aria-current="true"] {
   background: var(--nova-coral) !important;
@@ -707,17 +711,48 @@ body.nova-app::before {
 
   .nova-app .hero,
   .nova-app .home-hero {
-    min-height: 70dvh !important;
+    min-height: 660px !important;
     margin-inline: 0 !important;
+    background-color: #071018 !important;
+    background-position: center top !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% auto !important;
   }
 
   .nova-app .hero-content {
     width: 100% !important;
-    padding: 86px 20px 66px !important;
+    align-self: stretch !important;
+    padding: clamp(270px, 76vw, 330px) 20px 70px !important;
   }
 
   .nova-app .hero h1 {
-    font-size: clamp(42px, 14vw, 64px) !important;
+    max-width: 100% !important;
+    font-size: clamp(38px, 11vw, 52px) !important;
+    line-height: 1 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .nova-app .hero-shade {
+    background:
+      linear-gradient(0deg, #071018 0%, rgba(7, 16, 24, .96) 42%, rgba(7, 16, 24, .12) 76%),
+      linear-gradient(90deg, rgba(7, 16, 24, .28), transparent 75%) !important;
+  }
+
+  .nova-app .hero-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px !important;
+  }
+
+  .nova-app .hero-actions .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 10px !important;
+  }
+
+  .nova-app .hero-nav {
+    width: 42px !important;
+    height: 42px !important;
   }
 
   .nova-app .content-row,
