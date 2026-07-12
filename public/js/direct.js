@@ -661,7 +661,19 @@ function mergeGroupedChannels(...catalogs) {
     });
     target.url = target.sources[0]?.url || target.url || '';
   });
-  return [...merged.values()];
+  return [...merged.values()].map((channel) => {
+    const sources = [...channel.sources]
+      .sort((a, b) => getSourcePriority(a) - getSourcePriority(b))
+      .map((source, index) => ({ ...source, name: `Source ${index + 1}` }));
+    return { ...channel, sources, url: sources[0]?.url || channel.url || '' };
+  });
+}
+
+function getSourcePriority(source) {
+  const provider = String(source?.provider || '').toLowerCase();
+  if (provider.includes('cdnlivetv')) return 0;
+  if (provider.includes('cartelive')) return 10;
+  return 5;
 }
 
 function getFrenchChannels(channels) {
