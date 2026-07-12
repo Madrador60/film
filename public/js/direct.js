@@ -2,7 +2,7 @@ const DIRECT_KEY = 'madrador:direct:recent';
 const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-livelive24';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
-const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
+const DIRECT_BATCH_SIZE = 500;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com'];
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
@@ -671,6 +671,7 @@ function getReliableChannelLogo(channel) {
   const name = String(channel?.name || '').toLowerCase();
   const commons = 'https://commons.wikimedia.org/wiki/Special:Redirect/file/';
   if (/canal live\s*\d+/i.test(name)) return '';
+  if (/^dazn/.test(name)) return '';
   if (/^rmc sport 1/.test(name)) return './logos/rmc-sport-1-fr.png';
   if (/bein.*(?:sport|sports).*1/.test(name)) return './logos/bein-sports-1-french-fr.png';
   if (/bein.*(?:sport|sports).*2/.test(name)) return './logos/bein-sports-2-french-fr.png';
