@@ -1,43 +1,9 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:v2';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-only';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
-const ALLOWED_HOSTS = ['cartelive.club', 'embedme.click', 'brigittetv.lat', 'cdnlivetv.tv'];
-const CURATED_RAW_CHANNELS = [
-  ['Eurosport 1', 'Sport', 'https://cartelive.club/player/1/15', 'eurosport-1-fr.png'],
-  ['Eurosport 1', 'Sport', 'https://cartelive.club/player/2/15', 'eurosport-1-fr.png'],
-  ['Eurosport 2', 'Sport', 'https://cartelive.club/player/1/16', 'eurosport-2-fr.png'],
-  ['Eurosport 2', 'Sport', 'https://cartelive.club/player/2/16', 'eurosport-2-fr.png'],
-  ['France 4', 'TV', 'https://cartelive.club/player/1/30', 'france-4-fr.png'],
-  ['France 4', 'TV', 'https://cartelive.club/player/2/30', 'france-4-fr.png'],
-  ['France TV', 'TV', 'https://cartelive.club/player/1/28', 'France.tv.png'],
-  ['France TV', 'TV', 'https://cartelive.club/player/1/29', 'France.tv.png'],
-  ['CANAL+', 'TV', 'https://cartelive.club/player/1/11', 'canal-plus-fr.png'],
-  ['L\'Équipe', 'TV', 'https://cartelive.club/player/1/19', 'lequipe-fr.png'],
-  ['Automoto', 'TV', 'https://cartelive.club/player/1/23', 'automoto-la-chaine-fr.png'],
-  ['TF1', 'TV', 'https://cartelive.club/player/1/24', 'tf1-fr.png'],
-  ['TMC', 'TV', 'https://cartelive.club/player/1/25', 'tmc-fr.png'],
-  ['CANAL+', 'TV', 'https://cartelive.club/player/2/11', 'canal-plus-fr.png'],
-  ['M6', 'TV', 'https://cartelive.club/player/1/26', 'm6-fr.png'],
-  ['RMC Sport 1', 'Sport', 'https://cartelive.club/player/1/17', 'rmc-sport-1-fr.png'],
-  ['RMC Sport 1', 'Sport', 'https://cartelive.club/player/2/17', 'rmc-sport-1-fr.png'],
-  ['W9', 'TV', 'https://cartelive.club/player/1/27', 'w9-fr.png'],
-  ['Bein Sport 1', 'Sport', 'https://cartelive.club/player/1/1', 'bein-sports-1-french-fr.png'],
-  ['Bein Sport 1', 'Sport', 'https://cartelive.club/player/2/1', 'bein-sports-1-french-fr.png'],
-  ['Bein Sport 2', 'Sport', 'https://cartelive.club/player/1/2', 'bein-sports-2-french-fr.png'],
-  ['Bein Sport 2', 'Sport', 'https://cartelive.club/player/2/2', 'bein-sports-2-french-fr.png'],
-  ['Bein Sport 3', 'Sport', 'https://cartelive.club/player/1/3', 'bein-sports-3-french-fr.png'],
-  ['Bein Sport 3', 'Sport', 'https://cartelive.club/player/2/3', 'bein-sports-3-french-fr.png'],
-  ['Bein Sport 4 Max', 'Sport', 'https://cartelive.club/player/2/4', 'bein-sports-4-max.png'],
-  ['Bein Sport 4 Max', 'Sport', 'https://cartelive.club/player/1/4', 'bein-sports-4-max.png'],
-  ['Canal+ Foot', 'Sport', 'https://cartelive.club/player/1/12', 'canal-plus-foot-fr.png'],
-  ['Canal+ Foot', 'Sport', 'https://cartelive.club/player/2/12', 'canal-plus-foot-fr.png'],
-  ['Canal+ Sport 360', 'Sport', 'https://cartelive.club/player/2/14', 'canal-plus-sport-360-fr.png'],
-  ['Canal+ Sport', 'Sport', 'https://cartelive.club/player/2/13', 'canal-plus-sport-fr.png'],
-  ['Canal+ Sport 360', 'Sport', 'https://cartelive.club/player/1/14', 'canal-plus-sport-360-fr.png'],
-  ['Canal+ Sport', 'Sport', 'https://cartelive.club/player/1/13', 'canal-plus-sport-fr.png']
-].map(([name, category, url, logo]) => ({ name, category, url, logo: `./logos/${logo}` }));
+const ALLOWED_HOSTS = ['cdnlivetv.tv'];
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
@@ -436,7 +402,6 @@ async function loadDirectChannels(force = false) {
   setChannelsState('Préparation des chaînes françaises...');
 
   try {
-    const curatedChannels = groupChannels(CURATED_RAW_CHANNELS);
     let cdnChannels = [];
     try {
       const response = await fetch('/api/direct/channels', { cache: 'no-store' });
@@ -451,7 +416,7 @@ async function loadDirectChannels(force = false) {
     } catch (apiError) {
       console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
     }
-    directChannels = mergeGroupedChannels(curatedChannels, cdnChannels);
+    directChannels = mergeGroupedChannels(cdnChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();
@@ -590,12 +555,6 @@ function detectProvider(url) {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
-    if (hostname === 'cartelive.club') {
-      const match = parsed.pathname.match(/\/player\/(\d+)\//);
-      return match ? `Cartelive ${match[1]}` : 'Cartelive';
-    }
-    if (hostname === 'embedme.click') return 'Embedme';
-    if (hostname === 'brigittetv.lat') return 'BrigitteTV';
     if (hostname === 'cdnlivetv.tv' || hostname.endsWith('.cdnlivetv.tv')) return 'CDNLiveTV';
     return hostname;
   } catch {
@@ -672,7 +631,6 @@ function mergeGroupedChannels(...catalogs) {
 function getSourcePriority(source) {
   const provider = String(source?.provider || '').toLowerCase();
   if (provider.includes('cdnlivetv')) return 0;
-  if (provider.includes('cartelive')) return 10;
   return 5;
 }
 
