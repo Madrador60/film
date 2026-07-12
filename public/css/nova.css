@@ -1,0 +1,647 @@
+:root {
+  --nova-bg: #08090d;
+  --nova-panel: #111319;
+  --nova-panel-soft: rgba(17, 19, 25, .78);
+  --nova-text: #f5f7fa;
+  --nova-muted: #9299a8;
+  --nova-line: rgba(255, 255, 255, .11);
+  --nova-mint: #42d9c8;
+  --nova-coral: #ff6b5f;
+  --nova-gold: #f0c56e;
+  --nova-radius: 4px;
+  --nova-nav-height: 76px;
+}
+
+html.nova-ready,
+body.nova-app {
+  background: var(--nova-bg) !important;
+}
+
+body.nova-app {
+  color: var(--nova-text);
+  background-image:
+    radial-gradient(circle at 76% -18%, rgba(66, 217, 200, .10), transparent 36%),
+    radial-gradient(circle at 14% 86%, rgba(255, 107, 95, .055), transparent 28%) !important;
+}
+
+body.nova-app::before {
+  display: none !important;
+}
+
+.nova-app .sidebar {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  z-index: 180 !important;
+  width: 100% !important;
+  height: var(--nova-nav-height) !important;
+  min-height: 0 !important;
+  padding: 0 clamp(20px, 3vw, 54px) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: clamp(18px, 3vw, 52px) !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: rgba(8, 9, 13, .88) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.nova-app .brand {
+  flex: 0 0 auto;
+  min-width: 0 !important;
+  padding: 0 !important;
+  gap: 10px !important;
+  background: transparent !important;
+}
+
+.nova-app .brand-logo {
+  width: 40px !important;
+  height: 40px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.nova-app .brand b {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.nova-app .brand em {
+  color: var(--nova-mint) !important;
+}
+
+.nova-app .side-nav {
+  min-width: 0;
+  flex: 1;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none;
+}
+
+.nova-app .side-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .nav {
+  flex: 0 0 auto;
+  width: auto !important;
+  min-height: 42px !important;
+  padding: 0 13px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  color: #c8ccd5 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+}
+
+.nova-app .nav i {
+  width: auto !important;
+  color: inherit !important;
+}
+
+.nova-app .nav:hover,
+.nova-app .nav:focus-visible {
+  color: white !important;
+  background: rgba(255, 255, 255, .07) !important;
+}
+
+.nova-app .nav.active {
+  color: #07100f !important;
+  background: var(--nova-mint) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .sidebar-categories {
+  display: none !important;
+}
+
+.nova-app .main,
+.nova-app .catalog-main,
+.nova-app .direct-main {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin-left: 0 !important;
+  padding: calc(var(--nova-nav-height) + 26px) clamp(20px, 4vw, 72px) 80px !important;
+  overflow-x: clip;
+}
+
+.nova-app .topbar {
+  position: relative !important;
+  top: auto !important;
+  max-width: 760px;
+  margin: 0 auto 24px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+.nova-app .searchbox,
+.nova-app .catalog-search,
+.nova-app .direct-channel-search,
+.nova-app .advanced-searchbox {
+  min-height: 52px !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .24) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .searchbox:focus-within,
+.nova-app .catalog-search:focus-within,
+.nova-app .direct-channel-search:focus-within,
+.nova-app .advanced-searchbox:focus-within {
+  border-color: var(--nova-mint) !important;
+  box-shadow: 0 1px var(--nova-mint) !important;
+}
+
+.nova-app .hero,
+.nova-app .home-hero {
+  min-height: min(68vh, 720px) !important;
+  margin-inline: calc(clamp(20px, 4vw, 72px) * -1) !important;
+  margin-bottom: 42px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.nova-app .hero-content {
+  max-width: 760px !important;
+  padding-left: clamp(28px, 8vw, 142px) !important;
+  padding-bottom: clamp(54px, 8vw, 116px) !important;
+}
+
+.nova-app .hero h1 {
+  font-size: clamp(48px, 7vw, 108px) !important;
+  font-weight: 750 !important;
+  line-height: .94 !important;
+}
+
+.nova-app .hero-shade {
+  background:
+    linear-gradient(90deg, rgba(8, 9, 13, .97), rgba(8, 9, 13, .62) 42%, transparent 78%),
+    linear-gradient(0deg, var(--nova-bg), transparent 44%) !important;
+}
+
+.nova-app .eyebrow,
+.nova-app .page-pill,
+.nova-app .media-badges span,
+.nova-app .quality-badge,
+.nova-app .version-badge {
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: var(--nova-mint) !important;
+  background: rgba(66, 217, 200, .11) !important;
+}
+
+.nova-app .btn,
+.nova-app .icon-btn {
+  min-height: 44px;
+  border-radius: 2px !important;
+}
+
+.nova-app .btn.primary {
+  color: #06110f !important;
+  background: var(--nova-mint) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .btn.glass,
+.nova-app .icon-btn {
+  border: 1px solid var(--nova-line) !important;
+  background: rgba(12, 14, 19, .72) !important;
+}
+
+.nova-app .hero-nav {
+  border: 0 !important;
+  border-radius: 2px !important;
+  background: rgba(8, 9, 13, .74) !important;
+}
+
+.nova-app .hero-dots button.active,
+.nova-app .hero-dots button[aria-current="true"] {
+  background: var(--nova-coral) !important;
+}
+
+.nova-app .rows {
+  display: block !important;
+}
+
+.nova-app .content-row,
+.nova-app .rows > section {
+  margin: 0 0 clamp(34px, 5vw, 72px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .row-head h2,
+.nova-app .section-head h2 {
+  padding-left: 0 !important;
+  font-size: clamp(20px, 2vw, 30px) !important;
+  font-weight: 650 !important;
+}
+
+.nova-app .row-head h2::before,
+.nova-app .section-head h2::before {
+  display: none !important;
+}
+
+.nova-app .row-see-all {
+  color: var(--nova-mint) !important;
+}
+
+.nova-app .media-card {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .media-thumb,
+.nova-app .media-thumb img {
+  border-radius: var(--nova-radius) !important;
+}
+
+.nova-app .media-card:hover,
+.nova-app .media-card:focus-visible {
+  transform: scale(1.035) !important;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .55) !important;
+}
+
+.nova-app .catalog-hero-head,
+.nova-app .settings-hero,
+.nova-app .library-hero,
+.nova-app .admin-hero,
+.nova-app .diagnostic-hero,
+.nova-app .direct-tv-header {
+  min-height: 190px;
+  margin: 0 0 34px !important;
+  padding: 28px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .catalog-hero-head h1,
+.nova-app .settings-hero h1,
+.nova-app .direct-tv-header h1 {
+  font-size: clamp(42px, 6vw, 86px) !important;
+  line-height: .96 !important;
+}
+
+.nova-app .smart-tabs,
+.nova-app .catalog-toolbar,
+.nova-app .library-controls,
+.nova-app .direct-discovery-bar,
+.nova-app .direct-view-tabs,
+.nova-app .direct-category-tabs {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .smart-tabs a,
+.nova-app .library-tabs button,
+.nova-app .direct-view-tabs button,
+.nova-app .direct-category-tab,
+.nova-app .search-type-tabs button {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .055) !important;
+}
+
+.nova-app .smart-tabs a.active,
+.nova-app .library-tabs button.active,
+.nova-app .direct-view-tabs button.active,
+.nova-app .direct-category-tab.active,
+.nova-app .search-type-tabs button.active {
+  color: #06110f !important;
+  background: var(--nova-mint) !important;
+}
+
+.nova-app .catalog-filters,
+.nova-app .advanced-search-panel,
+.nova-app .library-controls,
+.nova-app .direct-tools,
+.nova-app .direct-playlist,
+.nova-app .series-panel,
+.nova-app .sources-panel,
+.nova-app .settings-card,
+.nova-app .admin-panel,
+.nova-app .diagnostic-section,
+.nova-app .browse-panels > article {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .catalog-filters,
+.nova-app .advanced-search-panel,
+.nova-app .library-controls,
+.nova-app .direct-tools,
+.nova-app .direct-playlist,
+.nova-app .series-panel {
+  padding: 26px 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .settings-card,
+.nova-app .admin-panel,
+.nova-app .diagnostic-section {
+  padding: 28px 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .screen,
+.nova-app .direct-screen {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.nova-app .direct-tv-stage {
+  margin-inline: calc(clamp(20px, 4vw, 72px) * -1);
+}
+
+.nova-app .direct-nowbar {
+  border: 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: #0d0f14 !important;
+}
+
+.nova-app .direct-explore {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .direct-channel-tile {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  background: #111319 !important;
+}
+
+.nova-app .episode-btn,
+.nova-app .source-btn {
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .episode-btn.active,
+.nova-app .source-btn.active {
+  background: rgba(66, 217, 200, .08) !important;
+  box-shadow: inset 3px 0 var(--nova-mint) !important;
+}
+
+.nova-app .player-top {
+  height: var(--nova-nav-height);
+  padding-inline: clamp(18px, 4vw, 64px) !important;
+  border-bottom: 1px solid var(--nova-line);
+  background: rgba(8, 9, 13, .80) !important;
+  backdrop-filter: blur(24px);
+}
+
+.nova-app .player-shell {
+  max-width: none !important;
+  padding: calc(var(--nova-nav-height) + 28px) clamp(20px, 4vw, 72px) 80px !important;
+}
+
+.nova-app .media-hero {
+  min-height: 62vh;
+  align-items: end !important;
+  padding-block: 48px !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .poster-frame {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .48) !important;
+}
+
+.nova-app .mobile-bottom-nav {
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(9, 11, 15, .92) !important;
+  backdrop-filter: blur(24px);
+}
+
+.nova-app .mobile-bottom-nav a.active {
+  color: #07100f !important;
+  background: var(--nova-mint) !important;
+}
+
+@media (max-width: 1100px) {
+  .nova-app .nav span {
+    display: none;
+  }
+
+  .nova-app .nav {
+    width: 42px !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --nova-nav-height: 64px;
+  }
+
+  .nova-app .sidebar {
+    inset: 0 auto 0 0 !important;
+    width: min(84vw, 320px) !important;
+    height: 100dvh !important;
+    padding: 86px 16px 26px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    transform: translateX(-105%);
+    transition: transform .24s ease;
+  }
+
+  .nova-app .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .nova-app .sidebar .brand {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+  }
+
+  .nova-app .side-nav {
+    width: 100%;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    overflow-y: auto !important;
+  }
+
+  .nova-app .nav,
+  .nova-app .nav span {
+    display: flex !important;
+  }
+
+  .nova-app .nav {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    padding: 0 16px !important;
+  }
+
+  .nova-app .mobile-menu {
+    top: max(12px, env(safe-area-inset-top, 0px)) !important;
+    left: 14px !important;
+    width: 46px !important;
+    height: 46px !important;
+    border: 1px solid var(--nova-line) !important;
+    border-radius: 50% !important;
+    background: rgba(9, 11, 15, .88) !important;
+  }
+
+  .nova-app .main,
+  .nova-app .catalog-main,
+  .nova-app .direct-main {
+    padding: 78px 14px 104px !important;
+  }
+
+  .nova-app .home-body .main,
+  body.nova-app.home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .nova-app .topbar {
+    padding-inline: 14px !important;
+  }
+
+  .nova-app .hero,
+  .nova-app .home-hero {
+    min-height: 70dvh !important;
+    margin-inline: 0 !important;
+  }
+
+  .nova-app .hero-content {
+    width: 100% !important;
+    padding: 86px 20px 66px !important;
+  }
+
+  .nova-app .hero h1 {
+    font-size: clamp(42px, 14vw, 64px) !important;
+  }
+
+  .nova-app .content-row,
+  .nova-app .rows > section {
+    padding-left: 14px !important;
+  }
+
+  .nova-app .catalog-hero-head,
+  .nova-app .settings-hero,
+  .nova-app .library-hero,
+  .nova-app .admin-hero,
+  .nova-app .diagnostic-hero,
+  .nova-app .direct-tv-header {
+    min-height: 150px;
+  }
+
+  .nova-app .direct-tv-stage {
+    margin-inline: -14px;
+  }
+
+  .nova-app .player-shell {
+    padding: calc(var(--nova-nav-height) + 16px) 0 100px !important;
+  }
+
+  .nova-app .media-hero,
+  .nova-app .series-panel,
+  .nova-app .sources-panel {
+    padding-inline: 16px !important;
+  }
+
+  .nova-app .media-hero {
+    min-height: auto;
+    padding-top: 28px !important;
+  }
+}
+
+html[data-device="tv"] .nova-app .sidebar,
+html[data-device="4k"] .nova-app .sidebar {
+  height: 96px !important;
+}
+
+html[data-device="tv"] .nova-app .main,
+html[data-device="4k"] .nova-app .main {
+  padding-top: 130px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-app * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Nova owns the application shell on every device profile. */
+html body.nova-app .sidebar {
+  inset: 0 0 auto 0 !important;
+  width: 100% !important;
+  height: var(--nova-nav-height) !important;
+  padding: 0 clamp(20px, 3vw, 54px) !important;
+}
+
+html body.nova-app .main,
+html body.nova-app .catalog-main,
+html body.nova-app .direct-main {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  padding: calc(var(--nova-nav-height) + 26px) clamp(20px, 4vw, 72px) 80px !important;
+}
+
+@media (max-width: 760px) {
+  html body.nova-app .sidebar {
+    inset: 0 auto 0 0 !important;
+    width: min(84vw, 320px) !important;
+    height: 100dvh !important;
+    padding: 86px 16px 26px !important;
+  }
+
+  html body.nova-app .main,
+  html body.nova-app .catalog-main,
+  html body.nova-app .direct-main {
+    padding: 78px 14px 104px !important;
+  }
+
+  html body.nova-app.home-body .main {
+    padding-inline: 0 !important;
+  }
+}
+
+html[data-device="tv"] body.nova-app .sidebar,
+html[data-device="4k"] body.nova-app .sidebar {
+  height: 96px !important;
+}
+
+html[data-device="tv"] body.nova-app .main,
+html[data-device="tv"] body.nova-app .catalog-main,
+html[data-device="tv"] body.nova-app .direct-main,
+html[data-device="4k"] body.nova-app .main,
+html[data-device="4k"] body.nova-app .catalog-main,
+html[data-device="4k"] body.nova-app .direct-main {
+  margin-left: 0 !important;
+  padding: 130px clamp(42px, 4vw, 100px) 100px !important;
+}

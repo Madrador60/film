@@ -6,6 +6,7 @@
 
   root.classList.add('ui2-booting');
   root.classList.add('mx-experience');
+  root.classList.add('nova-ready');
   root.dataset.input = 'pointer';
 
   window.addEventListener('load', () => {
