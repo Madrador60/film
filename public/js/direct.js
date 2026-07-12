@@ -50,6 +50,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Enter') playFromInput();
   });
   window.addEventListener('keydown', handleDirectKeyboard);
+  enableHorizontalRail($('directViewTabs'));
+  enableHorizontalRail($('directCategoryTabs'));
 
   renderRecent();
   loadCachedPlaylist();
@@ -82,9 +84,26 @@ function handleDirectViewClick(event) {
 
 function handleDirectKeyboard(event) {
   if (event.target.matches('input,textarea,select')) return;
-  if (event.key === 'ArrowLeft') playRelativeChannel(-1);
-  if (event.key === 'ArrowRight') playRelativeChannel(1);
+  const previousKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'ChannelDown', 'MediaTrackPrevious'];
+  const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', 'ChannelUp', 'MediaTrackNext'];
+  if (previousKeys.includes(event.key)) {
+    event.preventDefault();
+    playRelativeChannel(-1);
+  }
+  if (nextKeys.includes(event.key)) {
+    event.preventDefault();
+    playRelativeChannel(1);
+  }
   if (event.key.toLowerCase() === 'f') enterDirectFullscreen();
+}
+
+function enableHorizontalRail(element) {
+  if (!element) return;
+  element.addEventListener('wheel', (event) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    element.scrollBy({ left: event.deltaY, behavior: 'smooth' });
+  }, { passive: false });
 }
 
 async function playFromInput() {
@@ -365,9 +384,9 @@ function loadCachedChannels() {
   try {
     const data = JSON.parse(localStorage.getItem(DIRECT_CHANNELS_KEY) || '[]');
     if (Array.isArray(data) && data.length) {
-      directChannels = data;
+      directChannels = getFrenchChannels(data);
       renderDirectChannels();
-      setHint(`${data.length} chaînes prêtes depuis le cache local`);
+      setHint(`${directChannels.length} chaînes françaises prêtes depuis le cache local`);
     }
   } catch {}
 }
@@ -384,11 +403,11 @@ async function loadDirectChannels(force = false) {
     const data = await response.json();
     if (!response.ok || !data?.ok) throw new Error(data?.error || 'API Direct indisponible');
 
-    directChannels = Array.isArray(data.channels) ? data.channels : [];
+    directChannels = getFrenchChannels(Array.isArray(data.channels) ? data.channels : []);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
-    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
+    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();
-    setHint(`${directChannels.length} chaînes chargées`);
+    setHint(`${directChannels.length} chaînes françaises chargées`);
     return directChannels;
   } catch (error) {
     console.error(error);
@@ -407,7 +426,8 @@ function renderDirectChannels() {
   const query = String($('directChannelSearch')?.value || '').trim().toLowerCase();
   const normalized = directChannels.map((channel) => ({
     ...channel,
-    category: channel.category || classifyChannel(channel)
+    category: channel.category || classifyChannel(channel),
+    image: getReliableChannelLogo(channel)
   }));
   const favoriteKeys = getDirectFavorites();
   const recentOrder = new Map(getRecent().map((item, index) => [getChannelKey(item), index]));
@@ -513,6 +533,26 @@ function getChannelInitials(value) {
   return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'TV';
 }
 
+function getFrenchChannels(channels) {
+  return (channels || []).filter((channel) => {
+    const code = String(channel?.code || '').toLowerCase();
+    const country = String(channel?.country || '').toLowerCase();
+    return code === 'fr' || country === 'fr' || country.includes('france') || country.includes('français');
+  }).map((channel) => ({ ...channel, image: getReliableChannelLogo(channel) }));
+}
+
+function getReliableChannelLogo(channel) {
+  const name = String(channel?.name || '').toLowerCase();
+  const commons = 'https://commons.wikimedia.org/wiki/Special:Redirect/file/';
+  if (name.includes('canal premier league')) return `${commons}Logo-CanalPlus-PremierLeague.png`;
+  if (name.includes('canal foot')) return `${commons}Foot%2B%20(logo%2C%202011-).svg`;
+  if (name.startsWith('canal')) return `${commons}Canal%20plus%20france%20logo.svg`;
+  if (name.includes('rmc sport 1')) return `${commons}Logo%20RMC%20Sport%201%202018.svg`;
+  if (name.includes('rmc sport 2')) return `${commons}Logo%20RMC%20Sport%202%202018.svg`;
+  if (name.includes('bein')) return `${commons}BeIN_Sports_logo_(2017).png`;
+  return channel?.image || '';
+}
+
 function renderDirectCategoryTabs(channels) {
   const box = $('directCategoryTabs');
   if (!box) return;
@@ -609,9 +649,12 @@ function setCurrentChannel(channel) {
 }
 
 function playRelativeChannel(offset) {
-  if (!currentDirectChannel) return;
   const pool = visibleDirectChannels.length > 1 ? visibleDirectChannels : directChannels;
   if (!pool.length) return;
+  if (!currentDirectChannel) {
+    playChannel(offset < 0 ? pool[pool.length - 1] : pool[0]);
+    return;
+  }
   const currentIndex = pool.findIndex((channel) => channel.url === currentDirectChannel.url);
   const nextIndex = (Math.max(0, currentIndex) + offset + pool.length) % pool.length;
   playChannel(pool[nextIndex]);

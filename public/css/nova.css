@@ -575,6 +575,56 @@ body.nova-app::before {
   background: #111319 !important;
 }
 
+.nova-app .direct-view-tabs,
+.nova-app .direct-category-tabs {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.nova-app .direct-view-tabs::-webkit-scrollbar,
+.nova-app .direct-category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .direct-view-tabs button,
+.nova-app .direct-category-tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.nova-app .direct-channel-logo {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .09) !important;
+  border-radius: 9px !important;
+  background: #f7f8fa !important;
+}
+
+.nova-app .direct-channel-logo img,
+.nova-app .direct-now-logo img {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 5px;
+  object-fit: contain !important;
+  background: #f7f8fa;
+}
+
+.nova-app .direct-channel-tile .direct-channel {
+  min-height: 86px !important;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  background: rgba(255, 255, 255, .028) !important;
+}
+
+.nova-app .direct-channel-tile .direct-channel:hover,
+.nova-app .direct-channel-tile .direct-channel:focus-visible {
+  border-color: rgba(66, 217, 200, .48) !important;
+  background: rgba(66, 217, 200, .07) !important;
+}
+
 .nova-app .episode-btn,
 .nova-app .source-btn {
   border: 0 !important;
