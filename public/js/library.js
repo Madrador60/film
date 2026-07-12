@@ -135,7 +135,7 @@ function createLibraryCard(item, index) {
   });
   card.innerHTML = `
     <div class="media-thumb">
-      ${item.poster ? `<img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title)}" loading="lazy">` : '<div class="no-poster"><i class="fa-solid fa-film"></i></div>'}
+      ${item.poster ? `<img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title)}" loading="lazy" data-media-id="${escapeHtml(item.id)}" data-media-type="${escapeHtml(item.type || 'movie')}" data-image-role="poster">` : '<div class="no-poster"><i class="fa-solid fa-film"></i></div>'}
       <div class="media-fade"></div>
       <div class="media-badges">
         <span>${item.type === 'series' ? 'Série' : 'Film'}</span>

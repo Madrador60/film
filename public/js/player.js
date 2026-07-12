@@ -712,6 +712,7 @@ function normalizeTitleKey(title) {
 function renderPoster(poster, title) {
   const posterEl = $('poster');
   const fallback = $('posterFallback');
+  poster = window.MadradorImages?.sharpUrl(poster, 'poster') || poster;
 
   if (!poster) {
     posterEl.removeAttribute('src');
@@ -721,6 +722,9 @@ function renderPoster(poster, title) {
   }
 
   posterEl.src = poster;
+  posterEl.dataset.mediaId = apiId;
+  posterEl.dataset.mediaType = contentType;
+  posterEl.dataset.imageRole = 'poster';
   posterEl.alt = title;
   posterEl.classList.remove('hidden');
   fallback.classList.add('hidden');
@@ -733,6 +737,7 @@ function renderPoster(poster, title) {
 
 function renderBackdrop(backdrop) {
   if (!backdrop) return;
+  backdrop = window.MadradorImages?.sharpUrl(backdrop, 'backdrop') || backdrop;
   $('backdrop').style.backgroundImage = `url("${cssUrl(backdrop)}")`;
 }
 

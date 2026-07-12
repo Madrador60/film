@@ -897,7 +897,7 @@ function createCard(item, layout, rowIndex, itemIndex) {
 
   card.innerHTML = `
     <div class="media-thumb">
-      ${shouldLoadImage ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(displayTitle)}" loading="${loadingMode}">` : `<div class="no-poster"><i class="fa-solid ${prefs.dataSaver ? 'fa-gauge-high' : 'fa-film'}"></i></div>`}
+      ${shouldLoadImage ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(displayTitle)}" loading="${loadingMode}" data-media-id="${escapeHtml(item.id)}" data-media-type="${escapeHtml(item.type || 'movie')}" data-image-role="${layout === 'land' ? 'land' : 'poster'}">` : `<div class="no-poster"><i class="fa-solid ${prefs.dataSaver ? 'fa-gauge-high' : 'fa-film'}"></i></div>`}
       <div class="media-fade"></div>
       <div class="media-badges">
         <span>${item.type === 'series' ? 'Série' : 'Film'}</span>

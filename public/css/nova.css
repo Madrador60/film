@@ -273,6 +273,25 @@ body.nova-app::before {
   border-radius: var(--nova-radius) !important;
 }
 
+.nova-app .media-thumb img,
+.nova-app .poster-frame img,
+.nova-app .episode-thumb img,
+.nova-app .suggest-cover img {
+  image-rendering: auto;
+  object-fit: cover;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.nova-app img.image-upgraded {
+  animation: nova-image-upgrade .28s ease both;
+}
+
+@keyframes nova-image-upgrade {
+  from { opacity: .72; }
+  to { opacity: 1; }
+}
+
 .nova-app .media-card:hover,
 .nova-app .media-card:focus-visible {
   transform: scale(1.035) !important;
