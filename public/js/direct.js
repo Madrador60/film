@@ -973,7 +973,11 @@ async function loadChannelEpg(channel) {
 }
 
 function formatEpgTime(date) {
-  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris'
+  }).format(date);
 }
 
 function playRelativeChannel(offset) {

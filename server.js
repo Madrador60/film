@@ -75,7 +75,9 @@ const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
 const DIRECT_EPG_URL = 'https://epg.pw/xmltv/epg_FR.xml.gz';
 const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
+const DIRECT_EPG_SCHEDULE_CACHE_DURATION = 15 * 60 * 1000;
 let directEpgCache = { updatedAt: 0, channels: [], programmes: [] };
+const directEpgScheduleCache = new Map();
 
 function normalizeEpgName(value) {
     return String(value || '')
@@ -153,6 +155,36 @@ async function loadFranceEpg(force = false) {
 
     directEpgCache = { updatedAt: Date.now(), channels, programmes };
     return directEpgCache;
+}
+
+async function loadChannelEpgSchedule(channelId, force = false) {
+    const key = String(channelId || '').trim();
+    if (!key) return [];
+    const cached = directEpgScheduleCache.get(key);
+    if (!force && cached && Date.now() - cached.updatedAt < DIRECT_EPG_SCHEDULE_CACHE_DURATION) return cached.items;
+
+    const response = await axios.get(`https://epg.pw/api/epg.json?channel_id=${encodeURIComponent(key)}`, {
+        timeout: 20000,
+        headers: { 'User-Agent': axiosConfig.headers['User-Agent'], Accept: 'application/json' }
+    });
+    const sourceItems = Array.isArray(response.data?.epg_list) ? response.data.epg_list : [];
+    const items = sourceItems.map((item, index) => {
+        const start = new Date(item.start_date);
+        const nextStart = new Date(sourceItems[index + 1]?.start_date);
+        const stop = Number.isNaN(nextStart.getTime()) ? new Date(start.getTime() + 60 * 60 * 1000) : nextStart;
+        if (Number.isNaN(start.getTime())) return null;
+        return {
+            channel: key,
+            start: start.toISOString(),
+            stop: stop.toISOString(),
+            title: String(item.title || 'Programme TV').trim(),
+            subtitle: '',
+            description: String(item.desc || '').trim(),
+            category: ''
+        };
+    }).filter(Boolean);
+    directEpgScheduleCache.set(key, { updatedAt: Date.now(), items });
+    return items;
 }
 
 function normalizeDirectUrl(value) {
@@ -2326,19 +2358,21 @@ app.get('/api/direct/epg', async (req, res) => {
     try {
         const epg = await loadFranceEpg(req.query.refresh === '1');
         const channelIds = findEpgChannelIds(channelName, epg.channels);
+        const channel = epg.channels.find((entry) => entry.id === channelIds[0]);
+        const schedule = channelIds[0]
+            ? await loadChannelEpgSchedule(channelIds[0], req.query.refresh === '1')
+            : [];
         const now = Date.now();
         const horizon = now + 24 * 60 * 60 * 1000;
-        const items = epg.programmes
-            .filter((programme) => channelIds.includes(programme.channel))
+        const items = schedule
             .filter((programme) => new Date(programme.stop).getTime() > now && new Date(programme.start).getTime() < horizon)
             .sort((a, b) => new Date(a.start) - new Date(b.start))
             .slice(0, 8);
-        const channel = epg.channels.find((entry) => entry.id === channelIds[0]);
 
         res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
         res.json({
             ok: true,
-            source: 'epg.pw',
+            source: 'epg.pw/channel-api',
             query: channelName,
             matched: channel ? { id: channel.id, name: channel.names[0] || channelName, icon: channel.icon } : null,
             current: items.find((item) => new Date(item.start).getTime() <= now && new Date(item.stop).getTime() > now) || null,
