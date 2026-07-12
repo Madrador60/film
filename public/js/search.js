@@ -86,9 +86,10 @@ async function runSearch() {
 
   try {
     const data = await cachedFetchJson(`/api/search?q=${encodeURIComponent(q)}`, `search:${q}`, 1000 * 60 * 3);
+    const onlineResults = rankItemsForQuery(normalizeItems(data.items || [], 'movies'), q);
     results = groupSeries(dedupeMediaItems([
       ...localResults,
-      ...normalizeItems(data.items || [], 'movies')
+      ...onlineResults
     ]));
     renderResults();
     renderQuickTerms();
@@ -132,28 +133,38 @@ async function warmSearchCatalog() {
 }
 
 function searchLocalCatalog(query) {
+  if (!normalizeKey(query) || !localCatalog.length) return [];
+  return rankItemsForQuery(localCatalog, query);
+}
+
+function rankItemsForQuery(items, query) {
   const needle = normalizeKey(query);
-  if (!needle || !localCatalog.length) return [];
-  const words = needle.split(/\s+/).filter(Boolean);
-  return localCatalog
-    .map((item) => {
-      const haystack = normalizeKey([
-        item.title,
-        item.originalTitle,
-        item.seriesTitle,
-        item.year,
-        item.quality,
-        item.version
-      ].filter(Boolean).join(' '));
-      const exact = haystack.includes(needle) ? 40 : 0;
-      const hayWords = haystack.split(/\s+/).filter(Boolean);
-      const score = words.reduce((total, word) => {
-        if (haystack.includes(word)) return total + 10;
-        return total + getFuzzyWordScore(word, hayWords);
-      }, exact);
-      return { item, score };
-    })
-    .filter((entry) => entry.score > 0)
+  const words = needle.split(/\s+/).filter((word) => word.length >= 3);
+  return (items || []).map((item) => {
+    const haystack = normalizeKey([
+      item.title,
+      item.originalTitle,
+      item.seriesTitle,
+      item.year,
+      item.quality,
+      item.version
+    ].filter(Boolean).join(' '));
+    const hayWords = haystack.split(/\s+/).filter(Boolean);
+    let matchedWords = 0;
+    const exact = haystack.includes(needle) ? 50 : 0;
+    const score = words.reduce((total, word) => {
+      if (hayWords.some((candidate) => candidate === word || candidate.startsWith(word))) {
+        matchedWords += 1;
+        return total + 12;
+      }
+      const fuzzy = getFuzzyWordScore(word, hayWords);
+      if (fuzzy) matchedWords += 1;
+      return total + fuzzy;
+    }, exact);
+    const minimumWords = words.length <= 1 ? 1 : Math.ceil(words.length / 2);
+    return { item, score, valid: exact > 0 || matchedWords >= minimumWords };
+  })
+    .filter((entry) => entry.valid && entry.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.item);
 }
@@ -280,7 +291,7 @@ function createCard(item, index) {
   bindImageFallback(card);
   card.querySelector('[data-play]').addEventListener('click', (event) => {
     event.stopPropagation();
-    openPlayer(item);
+    openPlayer(item, true);
   });
   card.querySelector('[data-info]').addEventListener('click', (event) => {
     event.stopPropagation();
@@ -379,7 +390,7 @@ async function fetchJson(url) {
 
 function normalizeItems(items, fallbackType) {
   return items.map((item) => {
-    const title = item.title || item.name || 'Sans titre';
+    const title = cleanRepeatedTitle(item.title || item.name || 'Sans titre');
     const season = parseSeasonTitle(title);
     const type = inferType(item, fallbackType, season);
     return {
@@ -456,12 +467,13 @@ function parseSeasonTitle(title) {
 }
 
 function openDetails(item) {
-  openPlayer(item);
+  openPlayer(item, false);
 }
 
-function openPlayer(item) {
+function openPlayer(item, autoplay = false) {
   const query = new URLSearchParams({ id: item.id, type: item.type === 'series' ? 'series' : 'movie' });
   if (item.type === 'series') query.set('seriesTitle', item.seriesTitle || item.title);
+  if (autoplay) query.set('autoplay', '1');
   location.href = `./player.html?${query.toString()}`;
 }
 
@@ -512,6 +524,15 @@ function fixUrl(url) {
   if (!url) return '';
   if (url.startsWith('//')) return location.protocol + url;
   return url;
+}
+
+function cleanRepeatedTitle(value) {
+  const title = String(value || '').replace(/\\'/g, "'").replace(/\s+/g, ' ').trim();
+  if (title.length % 2 === 0) {
+    const half = title.length / 2;
+    if (title.slice(0, half).toLowerCase() === title.slice(half).toLowerCase()) return title.slice(0, half).trim();
+  }
+  return title;
 }
 
 function escapeHtml(str) {

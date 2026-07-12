@@ -165,6 +165,64 @@ body.nova-app::before {
   box-shadow: 0 1px var(--nova-mint) !important;
 }
 
+/* One polished search capsule: no nested square control or split border. */
+.nova-app .topbar .search-area {
+  min-height: 60px !important;
+  padding: 6px !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  border-radius: 999px !important;
+  background: rgba(17, 20, 28, .92) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .30) !important;
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.nova-app .topbar .search-area:focus-within {
+  border-color: rgba(66, 217, 200, .72) !important;
+  box-shadow: 0 0 0 4px rgba(66, 217, 200, .10), 0 22px 60px rgba(0, 0, 0, .38) !important;
+}
+
+.nova-app .topbar .searchbox {
+  width: 100% !important;
+  min-height: 46px !important;
+  padding: 0 4px 0 14px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .topbar .searchbox input {
+  min-width: 0;
+  height: 46px;
+  color: white !important;
+}
+
+.nova-app .topbar #clearSearch {
+  width: 40px !important;
+  height: 40px !important;
+  flex: 0 0 40px !important;
+  margin-right: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, .065) !important;
+  color: var(--nova-muted) !important;
+}
+
+.nova-app .topbar #clearSearch:hover,
+.nova-app .topbar #clearSearch:focus-visible {
+  color: #06110f !important;
+  background: var(--nova-mint) !important;
+}
+
+.nova-app .catalog-search,
+.nova-app .advanced-searchbox {
+  padding-inline: 16px !important;
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(17, 20, 28, .86) !important;
+}
+
 .nova-app .hero,
 .nova-app .home-hero {
   min-height: min(68vh, 720px) !important;

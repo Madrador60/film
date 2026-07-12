@@ -640,7 +640,7 @@ function createCard(item, index) {
   bindImageFallback(card);
   card.querySelector('[data-play]').addEventListener('click', (event) => {
     event.stopPropagation();
-    openPlayer(item);
+    openPlayer(item, true);
   });
   card.querySelector('[data-fav]').addEventListener('click', (event) => {
     event.stopPropagation();
@@ -848,13 +848,14 @@ function getPopularItems(items) {
 }
 
 function getProgressLabel(item) {
-  if (!item?.updatedAt && !item?.episode && !item?.lastSource) return null;
-  const percent = item.episode ? Math.min(94, 20 + (Number(item.episode) * 6)) : 46;
+  if (!item?.playbackStartedAt && !Number(item?.playbackSeconds)) return null;
+  const seconds = Math.max(0, Number(item.playbackSeconds) || 0);
+  const percent = Math.max(2, Math.min(95, Number(item.progressPercent) || 2));
   const parts = [];
   if (item.season) parts.push(`S${item.season}`);
   if (item.episode) parts.push(`E${item.episode}`);
-  if (item.lastSource) parts.push(String(item.lastSource).toUpperCase());
-  return { percent, label: parts.length ? parts.join(' • ') : 'Reprendre' };
+  if (seconds >= 60) parts.push(`${Math.floor(seconds / 60)} min`);
+  return { percent, label: parts.length ? `Reprendre • ${parts.join(' • ')}` : 'Lecture commencée' };
 }
 
 function getLocalDateLabel(item) {
@@ -916,7 +917,7 @@ async function fetchJson(url, ttl = 1000 * 60 * 3) {
 
 function normalizeItems(items, fallbackType) {
   return items.map((item) => {
-    const title = item.title || item.name || 'Sans titre';
+    const title = cleanRepeatedTitle(item.title || item.name || 'Sans titre');
     const season = parseSeasonTitle(title);
     const type = inferType(item, fallbackType, season);
     return {
@@ -975,12 +976,13 @@ function parseSeasonTitle(title) {
 }
 
 function openDetails(item) {
-  openPlayer(item);
+  openPlayer(item, false);
 }
 
-function openPlayer(item) {
+function openPlayer(item, autoplay = false) {
   const query = new URLSearchParams({ id: item.id, type: item.type === 'series' ? 'series' : 'movie' });
   if (item.type === 'series') query.set('seriesTitle', item.seriesTitle || item.title);
+  if (autoplay) query.set('autoplay', '1');
   location.href = `./player.html?${query.toString()}`;
 }
 
@@ -1009,6 +1011,15 @@ function fixUrl(url) {
   if (!url) return '';
   if (url.startsWith('//')) return location.protocol + url;
   return url;
+}
+
+function cleanRepeatedTitle(value) {
+  const title = String(value || '').replace(/\\'/g, "'").replace(/\s+/g, ' ').trim();
+  if (title.length % 2 === 0) {
+    const half = title.length / 2;
+    if (title.slice(0, half).toLowerCase() === title.slice(half).toLowerCase()) return title.slice(0, half).trim();
+  }
+  return title;
 }
 
 function escapeHtml(str) {

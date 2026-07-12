@@ -3,6 +3,7 @@ const id = params.get('id');
 const apiId = getApiId(id);
 const routeType = params.get('type');
 const routeSeriesTitle = params.get('seriesTitle');
+const routeAutoplay = params.get('autoplay') === '1';
 
 let streams = [];
 let selectedIndex = -1;
@@ -19,6 +20,11 @@ let baseSeriesTitle = '';
 let selectedSeriesVersion = 'vf';
 let sourceAttemptId = 0;
 let automaticFallbacks = 0;
+let playbackTimer = null;
+let playbackLastTick = 0;
+let playbackSeconds = 0;
+let playbackContinueItem = null;
+let playbackWasVisible = !document.hidden;
 const SERIES_VERSIONS = ['vf', 'vostfr', 'vo'];
 const SERIES_VERSION_LABELS = { vf: 'VF', vostfr: 'VOSTFR', vo: 'VO' };
 const SERIES_VERSION_VALUES = { VF: 'vf', VOSTFR: 'vostfr', VO: 'vo', 'VF+VOSTFR': 'vf' };
@@ -51,6 +57,12 @@ function bindPlayerUI() {
   });
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeTrailer();
+  });
+  window.addEventListener('beforeunload', () => flushPlaybackProgress(true, playbackWasVisible));
+  document.addEventListener('visibilitychange', () => {
+    flushPlaybackProgress(true, playbackWasVisible);
+    playbackWasVisible = !document.hidden;
+    playbackLastTick = Date.now();
   });
 }
 
@@ -894,7 +906,7 @@ function playSource(index) {
     }
   }
 
-  MadradorStorage.addContinue(continueItem);
+  startPlaybackTracking(continueItem);
   if (prefs.miniPlayerEnabled) {
     MadradorStorage.setMiniPlayer({
       ...continueItem,
@@ -944,7 +956,7 @@ function autoplayPreferredSource() {
   const index = getPreferredSourceIndex();
   const prefs = MadradorStorage.getPrefs();
 
-  if (prefs.autoplay) {
+  if (prefs.autoplay && routeAutoplay) {
     playSource(index);
   } else {
     selectedIndex = index;
@@ -952,6 +964,44 @@ function autoplayPreferredSource() {
     $('openSource').disabled = !streams[index]?.url;
     updateSourceToolState();
   }
+}
+
+function startPlaybackTracking(item) {
+  flushPlaybackProgress(true, playbackWasVisible);
+  const saved = MadradorStorage.continueWatching().find((entry) => {
+    if (String(entry.id) === String(item.id)) return true;
+    return contentType === 'series' && normalizeTitleKey(entry.seriesTitle || entry.title) === normalizeTitleKey(item.seriesTitle || item.title);
+  });
+  playbackContinueItem = {
+    ...item,
+    playbackStartedAt: saved?.playbackStartedAt || Date.now(),
+    playbackSeconds: Number(saved?.playbackSeconds) || 0
+  };
+  playbackSeconds = playbackContinueItem.playbackSeconds;
+  playbackLastTick = Date.now();
+  playbackWasVisible = !document.hidden;
+  window.clearInterval(playbackTimer);
+  MadradorStorage.addContinue({ ...playbackContinueItem, progressPercent: getTrackedPercent(playbackSeconds) });
+  playbackTimer = window.setInterval(() => flushPlaybackProgress(), 15000);
+}
+
+function flushPlaybackProgress(force = false, countElapsed = playbackWasVisible) {
+  if (!playbackContinueItem || !playbackLastTick) return;
+  const now = Date.now();
+  if (countElapsed) playbackSeconds += Math.max(0, Math.round((now - playbackLastTick) / 1000));
+  playbackLastTick = now;
+  if (!force && playbackSeconds < 5) return;
+  MadradorStorage.addContinue({
+    ...playbackContinueItem,
+    playbackSeconds,
+    progressPercent: getTrackedPercent(playbackSeconds),
+    updatedAt: now
+  });
+}
+
+function getTrackedPercent(seconds) {
+  const estimatedDuration = contentType === 'series' ? 2700 : 7200;
+  return Math.max(2, Math.min(95, Math.round((Number(seconds) / estimatedDuration) * 100)));
 }
 
 function getPreferredSourceIndex() {
