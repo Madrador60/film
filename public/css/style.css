@@ -5163,6 +5163,117 @@ html[data-device="tv"] .direct-channel-tile:focus-within {
   contain-intrinsic-size: auto 320px;
 }
 
+.diagnostic-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.diagnostic-summary article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(148,163,184,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+}
+
+.diagnostic-summary article > i {
+  grid-row: 1 / 3;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--cyan);
+  background: rgba(34,211,238,.10);
+}
+
+.diagnostic-summary span,
+.diagnostic-tests small {
+  color: var(--muted);
+}
+
+.diagnostic-summary strong {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostic-summary .is-warn > i {
+  color: #f59e0b;
+  background: rgba(245,158,11,.10);
+}
+
+.diagnostic-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-bottom: 24px;
+}
+
+.diagnostic-section {
+  min-width: 0;
+}
+
+.diagnostic-tests {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.diagnostic-raw {
+  max-height: 360px;
+}
+
+.offline-body {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.offline-page {
+  width: min(560px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.offline-page img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.offline-page > span {
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.offline-page h1,
+.offline-page p {
+  margin: 0;
+}
+
+.offline-page h1 { color: var(--text); }
+.offline-page p { color: var(--muted); line-height: 1.7; }
+
+@media (max-width: 760px) {
+  .diagnostic-summary,
+  .diagnostic-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Premium visual pass */
 :root {
   --premium-line: rgba(165, 180, 252, .18);

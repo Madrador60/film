@@ -8,6 +8,12 @@
   "background_color": "#050713",
   "theme_color": "#3b82f6",
   "orientation": "any",
+  "id": "/",
+  "shortcuts": [
+    { "name": "Direct", "short_name": "Direct", "url": "/direct.html", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] },
+    { "name": "Films", "short_name": "Films", "url": "/catalog.html?type=movies", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] },
+    { "name": "Séries", "short_name": "Séries", "url": "/catalog.html?type=series", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] }
+  ],
   "icons": [
     {
       "src": "./assets/madrador-logo.png",

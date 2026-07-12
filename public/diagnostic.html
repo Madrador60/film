@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050713" />
+  <meta name="application-name" content="Madrador TV" />
+  <title>Diagnostic - Madrador TV</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./assets/madrador-logo.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="home-body diagnostic-body">
+  <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="./index.html"><span class="brand-logo"><img src="./assets/madrador-logo.png" alt=""></span><b>MADRADOR <em>TV</em></b></a>
+    <nav class="side-nav">
+      <a class="nav" href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+      <a class="nav" href="./direct.html"><i class="fa-solid fa-satellite-dish"></i><span>Direct</span></a>
+      <a class="nav" href="./search.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Recherche</span></a>
+      <a class="nav" href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+      <a class="nav" href="./catalog.html?type=series"><i class="fa-solid fa-tv"></i><span>Séries</span></a>
+      <a class="nav" href="./library.html"><i class="fa-solid fa-bookmark"></i><span>Bibliothèque</span></a>
+      <a class="nav" href="./settings.html"><i class="fa-solid fa-gear"></i><span>Paramètres</span></a>
+      <a class="nav active" href="./diagnostic.html"><i class="fa-solid fa-stethoscope"></i><span>Diagnostic</span></a>
+    </nav>
+  </aside>
+  <main class="main catalog-main diagnostic-main">
+    <header class="catalog-hero-head diagnostic-hero">
+      <div><span>Contrôle Madrador</span><h1>Diagnostic</h1><p>Vérifie le navigateur, le stockage, le serveur, les API et les fonctions essentielles.</p></div>
+      <div class="admin-actions">
+        <button class="btn primary" id="diagnosticRun" type="button"><i class="fa-solid fa-play"></i><span>Lancer les tests</span></button>
+        <a class="btn glass" href="./admin.html"><i class="fa-solid fa-chart-simple"></i><span>Admin</span></a>
+      </div>
+    </header>
+    <section class="diagnostic-summary" id="diagnosticSummary" aria-live="polite">
+      <article><i class="fa-solid fa-circle-notch fa-spin"></i><span>État global</span><strong>Analyse...</strong></article>
+      <article><i class="fa-solid fa-server"></i><span>Serveur</span><strong>...</strong></article>
+      <article><i class="fa-solid fa-database"></i><span>Stockage</span><strong>...</strong></article>
+      <article><i class="fa-solid fa-mobile-screen"></i><span>Appareil</span><strong>...</strong></article>
+    </section>
+    <section class="diagnostic-layout">
+      <article class="diagnostic-section">
+        <div class="section-head compact"><div><span>API</span><h2>Services essentiels</h2></div><button class="btn glass" id="diagnosticCopy" type="button"><i class="fa-solid fa-copy"></i><span>Copier</span></button></div>
+        <div class="diagnostic-tests" id="diagnosticTests"></div>
+      </article>
+      <article class="diagnostic-section">
+        <div class="section-head compact"><div><span>Client</span><h2>Navigateur et application</h2></div></div>
+        <div class="about-list" id="diagnosticClient"><span>Chargement...</span></div>
+        <div class="settings-actions"><button class="btn glass" id="diagnosticClearCache" type="button"><i class="fa-solid fa-broom"></i><span>Nettoyer le cache local</span></button></div>
+      </article>
+    </section>
+    <pre class="admin-raw diagnostic-raw" id="diagnosticRaw">Chargement...</pre>
+  </main>
+  <nav class="mobile-bottom-nav">
+    <a href="./index.html"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
+    <a href="./direct.html"><i class="fa-solid fa-satellite-dish"></i><span>Direct</span></a>
+    <a href="./search.html"><i class="fa-solid fa-magnifying-glass"></i><span>Recherche</span></a>
+    <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
+    <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
+  </nav>
+  <div class="toast hidden" id="toast" role="status"></div>
+  <script src="./js/storage.js"></script>
+  <script src="./js/device-profile.js"></script>
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/ui-system.js"></script>
+  <script src="./js/pwa.js"></script>
+  <script src="./js/diagnostic.js"></script>
+</body>
+</html>

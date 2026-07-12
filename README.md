@@ -27,6 +27,12 @@ https://madrador.onrender.com/
 
 Pages principales : accueil, catalogue films/séries, recherche, bibliothèque, lecteur, Direct, paramètres et administration.
 
+## Diagnostic et audit UI
+
+- Diagnostic intégré : `/diagnostic.html`
+- Audit automatisé : `npm run audit:ui`
+- Le workflow GitHub vérifie automatiquement les pages mobile, tablette et desktop.
+
 ## Deploy gratuit sur Render
 
 Render peut heberger un Web Service Node.js gratuitement avec des limites.

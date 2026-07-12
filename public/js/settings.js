@@ -6,11 +6,25 @@ window.addEventListener('DOMContentLoaded', () => {
   renderServerStats();
   renderCatalogStatus();
   renderAppInfo();
+  updateInstallButton();
 });
 
 function renderAppInfo() {
   if ($('appVersion')) $('appVersion').textContent = 'Version interface 2026.07';
   if ($('appOrigin')) $('appOrigin').textContent = `Adresse de l'application : ${location.origin}`;
+}
+
+function updateInstallButton() {
+  const button = $('installPwa');
+  if (!button) return;
+  const installed = window.MadradorPWA?.isInstalled?.();
+  const available = window.MadradorPWA?.canInstall?.();
+  button.disabled = installed || !available;
+  button.innerHTML = installed
+    ? '<i class="fa-solid fa-circle-check"></i><span>Application installée</span>'
+    : available
+      ? '<i class="fa-solid fa-download"></i><span>Installer Madrador TV</span>'
+      : '<i class="fa-solid fa-mobile-screen"></i><span>Installation via le navigateur</span>';
 }
 
 function hydrateSettings() {
@@ -56,6 +70,12 @@ function bindSettings() {
   $('refreshCatalogStatus')?.addEventListener('click', renderCatalogStatus);
   $('warmCatalog')?.addEventListener('click', warmCatalogCache);
   $('pingKeepalive')?.addEventListener('click', pingKeepalive);
+  $('installPwa')?.addEventListener('click', async () => {
+    const installed = await window.MadradorPWA?.install?.();
+    showToast(installed ? 'Installation lancée' : 'Installation annulée');
+    updateInstallButton();
+  });
+  window.addEventListener('madrador:pwa-state', updateInstallButton);
 }
 
 function saveSettings() {
