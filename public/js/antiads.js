@@ -2,17 +2,24 @@
   const prefs = typeof MadradorStorage !== 'undefined' ? MadradorStorage.getPrefs() : {};
   if (prefs.antiPopupEnabled === false) return;
 
-  const POPUP_ALLOW_WINDOW_MS = 900;
+  const POPUP_ALLOW_WINDOW_MS = 1200;
   const SAFE_IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-presentation';
-  let lastTrustedClick = 0;
+  const AD_SELECTORS = [
+    '.adsbygoogle', '[id^="google_ads"]', '[id*="google_ads"]', '[class*="ad-container"]',
+    '[class*="advertisement"]', '[data-ad-slot]', '[data-ad-client]', 'iframe[src*="doubleclick.net"]',
+    'iframe[src*="googlesyndication.com"]', 'iframe[src*="adservice.google"]'
+  ].join(',');
+  let popupAllowanceUntil = 0;
   let toastTimer = null;
 
   function markTrustedClick(event) {
-    if (event.isTrusted) lastTrustedClick = Date.now();
+    if (!event.isTrusted) return;
+    const explicit = event.target.closest?.('[data-allow-popup="true"], #directOpen, #openSource, #trailerExternal');
+    if (explicit) popupAllowanceUntil = Date.now() + POPUP_ALLOW_WINDOW_MS;
   }
 
   function isTrustedWindow() {
-    return Date.now() - lastTrustedClick < POPUP_ALLOW_WINDOW_MS;
+    return Date.now() < popupAllowanceUntil;
   }
 
   function showAntiAdToast(message = 'Popup bloquée') {
@@ -34,7 +41,7 @@
     if (!(iframe instanceof HTMLIFrameElement)) return;
     iframe.setAttribute('sandbox', SAFE_IFRAME_SANDBOX);
     iframe.setAttribute('referrerpolicy', iframe.getAttribute('referrerpolicy') || 'no-referrer');
-    iframe.setAttribute('allow', iframe.getAttribute('allow') || 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    iframe.setAttribute('allow', iframe.getAttribute('allow') || 'fullscreen; autoplay; encrypted-media; picture-in-picture');
   }
 
   function protectExistingIframes() {
@@ -46,6 +53,7 @@
 
     window.open = function guardedOpen(url, target, features) {
       if (isTrustedWindow()) {
+        popupAllowanceUntil = 0;
         return nativeOpen(url, target, features);
       }
 
@@ -60,8 +68,22 @@
       if (!link) return;
 
       if (link.dataset.allowPopup === 'true') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
       link.setAttribute('rel', 'noopener noreferrer');
+      showAntiAdToast('Ouverture externe bloquée');
     }, true);
+  }
+
+  function removeInjectedAds(scope = document) {
+    if (scope instanceof Element && scope.matches(AD_SELECTORS) && !scope.closest('.direct-screen, .screen')) {
+      scope.remove();
+      return;
+    }
+    scope.querySelectorAll?.(AD_SELECTORS).forEach((element) => {
+      if (element.closest('.direct-screen, .screen')) return;
+      element.remove();
+    });
   }
 
   function installIframeObserver() {
@@ -70,6 +92,7 @@
         mutation.addedNodes.forEach((node) => {
           if (node instanceof HTMLIFrameElement) protectIframe(node);
           node.querySelectorAll?.('iframe').forEach(protectIframe);
+          if (node instanceof Element) removeInjectedAds(node);
         });
       });
     });
@@ -89,6 +112,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     protectExistingIframes();
+    removeInjectedAds();
     installPopupGuard();
     installIframeObserver();
   });
