@@ -468,7 +468,7 @@ function renderDirectChannels() {
         ${channels.map((channel) => `
           <article class="direct-channel-tile ${currentDirectChannel?.url === channel.url ? 'is-playing' : ''}">
             <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
-              <span class="direct-channel-logo">
+              <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
                 <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
               </span>
@@ -546,11 +546,19 @@ function getReliableChannelLogo(channel) {
   const commons = 'https://commons.wikimedia.org/wiki/Special:Redirect/file/';
   if (name.includes('canal premier league')) return `${commons}Logo-CanalPlus-PremierLeague.png`;
   if (name.includes('canal foot')) return `${commons}Foot%2B%20(logo%2C%202011-).svg`;
-  if (name.startsWith('canal')) return `${commons}Canal%20plus%20france%20logo.svg`;
+  if (name.startsWith('canal')) return `${commons}CanalPlus.svg`;
   if (name.includes('rmc sport 1')) return `${commons}Logo%20RMC%20Sport%201%202018.svg`;
   if (name.includes('rmc sport 2')) return `${commons}Logo%20RMC%20Sport%202%202018.svg`;
   if (name.includes('bein')) return `${commons}BeIN_Sports_logo_(2017).png`;
   return channel?.image || '';
+}
+
+function getChannelLogoClass(channel) {
+  const name = String(channel?.name || '').toLowerCase();
+  if (name.startsWith('canal')) return 'is-canal';
+  if (name.includes('rmc')) return 'is-rmc';
+  if (name.includes('bein')) return 'is-bein';
+  return '';
 }
 
 function renderDirectCategoryTabs(channels) {
@@ -633,6 +641,7 @@ function setCurrentChannel(channel) {
   currentDirectChannel = { ...channel, name: channel.name || channel.title || getTitleFromUrl(channel.url) };
   const logo = $('directNowLogo');
   if (logo) {
+    logo.className = `direct-now-logo ${getChannelLogoClass(currentDirectChannel)}`.trim();
     logo.innerHTML = `<span>${escapeHtml(getChannelInitials(currentDirectChannel.name))}</span>${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}`;
     bindDirectLogoFallbacks(logo);
   }
