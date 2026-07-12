@@ -1,9 +1,9 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-only';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-livelive24';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
-const ALLOWED_HOSTS = ['cdnlivetv.tv'];
+const ALLOWED_HOSTS = ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com'];
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
@@ -403,6 +403,7 @@ async function loadDirectChannels(force = false) {
 
   try {
     let cdnChannels = [];
+    let liveLiveChannels = [];
     try {
       const response = await fetch('/api/direct/channels', { cache: 'no-store' });
       const data = await response.json();
@@ -416,7 +417,21 @@ async function loadDirectChannels(force = false) {
     } catch (apiError) {
       console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
     }
-    directChannels = mergeGroupedChannels(cdnChannels);
+    try {
+      const response = await fetch('./data/livelive24-chaines-france.json', { cache: force ? 'reload' : 'default' });
+      const data = await response.json();
+      liveLiveChannels = groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
+        name: channel.channel_name,
+        category: channel.category,
+        url: channel.url,
+        logo: channel.image,
+        code: 'fr',
+        country: 'FR'
+      })));
+    } catch (liveError) {
+      console.warn('[DIRECT] LiveLive24 indisponible, CDNLiveTV conservé.', liveError);
+    }
+    directChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();
@@ -556,6 +571,8 @@ function detectProvider(url) {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
     if (hostname === 'cdnlivetv.tv' || hostname.endsWith('.cdnlivetv.tv')) return 'CDNLiveTV';
+    if (hostname === 'livelive24.com' || hostname.endsWith('.livelive24.com')) return 'LiveLive24';
+    if (hostname === 'hesgoaler.com' || hostname.endsWith('.hesgoaler.com')) return 'Hesgoaler';
     return hostname;
   } catch {
     return 'Source inconnue';
@@ -603,7 +620,7 @@ function normalizeChannelCategory(value) {
 function mergeGroupedChannels(...catalogs) {
   const merged = new Map();
   catalogs.flat().forEach((channel) => {
-    const key = String(channel?.name || '').trim().toLocaleLowerCase('fr');
+    const key = getChannelMergeKey(channel?.name);
     if (!key) return;
     if (!merged.has(key)) {
       merged.set(key, { ...channel, sources: [] });
@@ -628,9 +645,17 @@ function mergeGroupedChannels(...catalogs) {
   });
 }
 
+function getChannelMergeKey(name) {
+  return createSlug(name)
+    .replace(/-sports?(?=-|$)/g, '-sport')
+    .replace(/(?:-(?:france|fr|hd))+$/g, '');
+}
+
 function getSourcePriority(source) {
   const provider = String(source?.provider || '').toLowerCase();
   if (provider.includes('cdnlivetv')) return 0;
+  if (provider.includes('livelive24')) return 5;
+  if (provider.includes('hesgoaler')) return 6;
   return 5;
 }
 

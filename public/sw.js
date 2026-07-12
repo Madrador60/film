@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'madrador-shell-2026-07-v21';
+const CACHE_VERSION = 'madrador-shell-2026-07-v22';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   '/offline.html',
   '/manifest.webmanifest',
   '/assets/madrador-logo.png',
+  '/data/livelive24-chaines-france.json',
   '/css/style.css',
   '/css/experience.css',
   '/css/nova.css',
