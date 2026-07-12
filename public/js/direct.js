@@ -340,7 +340,7 @@ function renderDirectPlaylist() {
     button.addEventListener('click', () => {
       const item = directPlaylist.find((entry) => entry.url === button.dataset.playlistUrl);
       if (item) {
-        focusDirectPlayer({ fullscreen: true });
+        focusDirectPlayer();
         playChannel(item);
       }
     });
@@ -383,7 +383,7 @@ function renderRecent() {
       const url = button.dataset.url;
       const item = items.find((entry) => entry.url === url) || {};
       $('directUrl').value = url;
-      focusDirectPlayer({ fullscreen: true });
+      focusDirectPlayer();
       playChannel(item);
     });
   });
@@ -529,7 +529,7 @@ function renderDirectChannels() {
         title: button.dataset.name,
         type: getDirectType(button.dataset.url)
       };
-      focusDirectPlayer({ fullscreen: true });
+      focusDirectPlayer();
       playChannel(channel);
     });
   });
@@ -821,22 +821,9 @@ async function playChannel(channel) {
   refreshDiscoveryAfterHistory();
 }
 
-function focusDirectPlayer({ fullscreen = false } = {}) {
+function focusDirectPlayer() {
   const stage = document.querySelector('.direct-tv-stage');
-  const screen = $('directScreen');
   stage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (!fullscreen || !screen || document.fullscreenElement) return;
-
-  try {
-    const request = screen.requestFullscreen?.({ navigationUI: 'hide' })
-      || screen.webkitRequestFullscreen?.()
-      || screen.msRequestFullscreen?.();
-    if (request?.catch) request.catch(() => {
-      showToast('Appuie sur le bouton plein écran si ton navigateur le bloque.');
-    });
-  } catch {
-    showToast('Appuie sur le bouton plein écran si ton navigateur le bloque.');
-  }
 }
 
 async function playChannelSource(channel, index) {
