@@ -3,7 +3,7 @@ const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:v2';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
-const ALLOWED_HOSTS = ['cartelive.club', 'embedme.click', 'brigittetv.lat'];
+const ALLOWED_HOSTS = ['cartelive.club', 'embedme.click', 'brigittetv.lat', 'cdnlivetv.tv'];
 const CURATED_RAW_CHANNELS = [
   ['Eurosport 1', 'Sport', 'https://cartelive.club/player/1/15', 'eurosport-1-fr.png'],
   ['Eurosport 1', 'Sport', 'https://cartelive.club/player/2/15', 'eurosport-1-fr.png'],
@@ -436,7 +436,22 @@ async function loadDirectChannels(force = false) {
   setChannelsState('Préparation des chaînes françaises...');
 
   try {
-    directChannels = groupChannels(CURATED_RAW_CHANNELS);
+    const curatedChannels = groupChannels(CURATED_RAW_CHANNELS);
+    let cdnChannels = [];
+    try {
+      const response = await fetch('/api/direct/channels', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data?.ok) throw new Error(data?.error || 'API CDNLiveTV indisponible');
+      const frenchApiChannels = getFrenchChannels(Array.isArray(data.channels) ? data.channels : []);
+      cdnChannels = groupChannels(frenchApiChannels.map((channel) => ({
+        ...channel,
+        category: channel.category || classifyChannel(channel),
+        logo: channel.image || getReliableChannelLogo(channel)
+      })));
+    } catch (apiError) {
+      console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
+    }
+    directChannels = mergeGroupedChannels(curatedChannels, cdnChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();
@@ -581,6 +596,7 @@ function detectProvider(url) {
     }
     if (hostname === 'embedme.click') return 'Embedme';
     if (hostname === 'brigittetv.lat') return 'BrigitteTV';
+    if (hostname === 'cdnlivetv.tv' || hostname.endsWith('.cdnlivetv.tv')) return 'CDNLiveTV';
     return hostname;
   } catch {
     return 'Source inconnue';
@@ -590,7 +606,8 @@ function detectProvider(url) {
 function isAllowedSource(url) {
   try {
     const parsed = new URL(url);
-    return parsed.protocol === 'https:' && ALLOWED_HOSTS.includes(parsed.hostname.replace(/^www\./, ''));
+    const hostname = parsed.hostname.replace(/^www\./, '');
+    return parsed.protocol === 'https:' && ALLOWED_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
   } catch {
     return false;
   }
@@ -605,7 +622,7 @@ function groupChannels(rawChannels) {
     const key = name.toLocaleLowerCase('fr');
     if (!grouped.has(key)) {
       grouped.set(key, {
-        id: createSlug(name), name, category: channel.category || 'TV', code: 'fr', country: 'FR',
+        id: createSlug(name), name, category: normalizeChannelCategory(channel.category), code: 'fr', country: 'FR',
         logo: channel.logo || channel.image || '', image: channel.logo || channel.image || '', sources: [], status: 'online'
       });
     }
@@ -615,6 +632,36 @@ function groupChannels(rawChannels) {
     }
   });
   return [...grouped.values()].map((channel) => ({ ...channel, url: channel.sources[0]?.url || '' }));
+}
+
+function normalizeChannelCategory(value) {
+  const category = String(value || 'TV').trim();
+  if (/^sports?$/i.test(category)) return 'Sports';
+  if (/^(france|télévision|television|tv)$/i.test(category)) return 'TV';
+  return category;
+}
+
+function mergeGroupedChannels(...catalogs) {
+  const merged = new Map();
+  catalogs.flat().forEach((channel) => {
+    const key = String(channel?.name || '').trim().toLocaleLowerCase('fr');
+    if (!key) return;
+    if (!merged.has(key)) {
+      merged.set(key, { ...channel, sources: [] });
+    }
+    const target = merged.get(key);
+    if ((!target.logo && channel.logo) || (!target.image && channel.image)) {
+      target.logo = channel.logo || target.logo;
+      target.image = channel.image || target.image;
+    }
+    (channel.sources || []).forEach((source) => {
+      if (isAllowedSource(source.url) && !target.sources.some((item) => item.url === source.url)) {
+        target.sources.push({ ...source, name: `Source ${target.sources.length + 1}` });
+      }
+    });
+    target.url = target.sources[0]?.url || target.url || '';
+  });
+  return [...merged.values()];
 }
 
 function getFrenchChannels(channels) {
@@ -718,7 +765,7 @@ async function playChannel(channel) {
   refreshDiscoveryAfterHistory();
 }
 
-function playChannelSource(channel, index) {
+async function playChannelSource(channel, index) {
   const source = channel?.sources?.[index];
   if (!source || !isAllowedSource(source.url)) {
     showDirectError(channel, 'Cette source est invalide ou non autorisée.');
@@ -729,7 +776,19 @@ function playChannelSource(channel, index) {
   setCurrentChannel(activeChannel);
   renderChannelSources(activeChannel);
   showDirectLoading(`${channel.name} · ${source.name}`);
-  playUrl(source.url, { ...activeChannel, type: 'iframe' });
+  if (isCdnLivePlayerUrl(source.url)) {
+    try {
+      const response = await fetch(`/api/direct/channel-stream?url=${encodeURIComponent(source.url)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data?.ok || !data.url) throw new Error(data?.error || 'Flux CDNLiveTV indisponible');
+      playUrl(data.url, { ...activeChannel, type: 'hls' });
+    } catch (error) {
+      showDirectError(activeChannel, error.message);
+      return;
+    }
+  } else {
+    playUrl(source.url, { ...activeChannel, type: 'iframe' });
+  }
   saveRecent(source.url, activeChannel);
   renderRecent();
 }
