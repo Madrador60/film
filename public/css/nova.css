@@ -8,7 +8,7 @@
   --nova-mint: #42d9c8;
   --nova-coral: #ff6b5f;
   --nova-gold: #f0c56e;
-  --nova-radius: 4px;
+  --nova-radius: 10px;
   --nova-nav-height: 76px;
 }
 
@@ -799,4 +799,229 @@ html[data-device="4k"] body.nova-app .catalog-main,
 html[data-device="4k"] body.nova-app .direct-main {
   margin-left: 0 !important;
   padding: 130px clamp(42px, 4vw, 100px) 100px !important;
+}
+
+/* Final shared finish: one continuous streaming surface on every page. */
+html.nova-ready,
+html.nova-ready body {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+  color-scheme: dark;
+}
+
+.nova-app :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid rgba(66, 217, 200, .92) !important;
+  outline-offset: 3px !important;
+}
+
+.nova-app :is(button, a, input, select) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nova-app .rows,
+.nova-app #rows {
+  display: grid;
+  gap: clamp(30px, 4vw, 58px) !important;
+}
+
+.nova-app .content-row,
+.nova-app .rows > section {
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .section-head,
+.nova-app .row-head {
+  min-height: 38px;
+  margin-bottom: 13px !important;
+  align-items: end !important;
+}
+
+.nova-app .section-head h2,
+.nova-app .row-head h2 {
+  font-size: clamp(19px, 1.7vw, 27px) !important;
+  letter-spacing: 0 !important;
+}
+
+.nova-app .media-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  border-radius: var(--nova-radius) !important;
+  background: #101217 !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .20) !important;
+  transform: translateZ(0);
+}
+
+.nova-app .media-card:hover,
+.nova-app .media-card:focus-visible,
+.nova-app .media-card:focus-within {
+  z-index: 3;
+  border-color: rgba(66, 217, 200, .44) !important;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .42), 0 0 0 1px rgba(66, 217, 200, .16) !important;
+}
+
+.nova-app .media-card img,
+.nova-app .media-card .poster {
+  transition: transform .32s ease, filter .32s ease, opacity .22s ease !important;
+}
+
+.nova-app .media-card:hover img,
+.nova-app .media-card:focus-within img {
+  transform: scale(1.035);
+}
+
+.nova-app :is(.settings-card, .admin-panel, .diagnostic-panel, .library-panel, .direct-tools) {
+  border: 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app :is(.settings-grid, .admin-grid, .diagnostic-grid) {
+  gap: clamp(18px, 2.2vw, 34px) !important;
+}
+
+.nova-app :is(.empty, .api-status) {
+  border: 1px dashed rgba(255, 255, 255, .16) !important;
+  border-radius: var(--nova-radius) !important;
+  background: rgba(255, 255, 255, .025) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .pager {
+  width: fit-content;
+  max-width: 100%;
+  margin: clamp(38px, 5vw, 72px) auto !important;
+  padding: 6px !important;
+  gap: 6px !important;
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(11, 13, 18, .82) !important;
+  backdrop-filter: blur(18px);
+}
+
+.nova-app .pager .btn,
+.nova-app .page-pill {
+  min-height: 42px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+}
+
+.nova-app .pager .btn:not(:disabled):hover,
+.nova-app .pager .btn:not(:disabled):focus-visible {
+  background: rgba(255, 255, 255, .08) !important;
+}
+
+.nova-app .browse-panels {
+  padding-top: clamp(34px, 5vw, 76px) !important;
+  border-top: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .browse-panels article {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .toast,
+.nova-app .mx-network-toast {
+  max-width: min(420px, calc(100vw - 28px));
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(9, 11, 15, .94) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .48) !important;
+  backdrop-filter: blur(22px);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .nova-app :is(button, .btn, .nav, .source-btn, .episode-btn) {
+    min-height: 46px;
+  }
+
+  .nova-app .media-card:hover img {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  html.nova-ready,
+  html.nova-ready body {
+    min-height: 100dvh;
+    background: var(--nova-bg) !important;
+  }
+
+  .nova-app .topbar {
+    width: calc(100% - 28px) !important;
+    margin: 0 14px 18px !important;
+  }
+
+  .nova-app .topbar .search-area {
+    min-height: 54px !important;
+    padding: 4px !important;
+  }
+
+  .nova-app .rows,
+  .nova-app #rows {
+    gap: 34px !important;
+  }
+
+  .nova-app .media-card {
+    border-radius: 9px !important;
+  }
+
+  .nova-app .pager {
+    width: calc(100% - 28px);
+  }
+
+  .nova-app .pager .page-pill {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nova-app .mobile-bottom-nav {
+    right: 10px !important;
+    bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    left: 10px !important;
+    width: auto !important;
+    padding: 6px !important;
+    gap: 2px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .62) !important;
+  }
+
+  .nova-app .mobile-bottom-nav a {
+    min-width: 0 !important;
+    min-height: 54px !important;
+    border-radius: 999px !important;
+  }
+
+  .nova-app .mobile-bottom-nav span {
+    overflow: hidden;
+    font-size: 10px !important;
+    text-overflow: ellipsis;
+  }
+}
+
+html[data-device="tv"] .nova-app :is(a, button, [tabindex]):focus-visible,
+html[data-device="4k"] .nova-app :is(a, button, [tabindex]):focus-visible {
+  outline-width: 5px !important;
+  outline-offset: 5px !important;
+  transform: scale(1.035);
+}
+
+html[data-device="tv"] .nova-app .nav,
+html[data-device="4k"] .nova-app .nav {
+  min-height: 52px !important;
+  padding-inline: 18px !important;
+  font-size: 16px !important;
 }

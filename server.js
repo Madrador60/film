@@ -2027,6 +2027,19 @@ app.get('/api/seasons/:query', async (req, res) => {
 });
 
 // 📄 Détails
+app.get('/api/tmdb/enrich', async (req, res) => {
+    const title = String(req.query.title || '').trim();
+    const type = req.query.type === 'series' || req.query.type === 'tv' ? 'series' : 'movie';
+    const year = String(req.query.year || '').match(/\d{4}/)?.[0] || '';
+
+    if (!title) {
+        return res.status(400).json({ ok: false, error: 'Le titre est requis.', item: null });
+    }
+
+    const item = await fetchTmdbDetails({ title, type, year });
+    return res.json({ ok: true, type, item: item || null });
+});
+
 app.get('/api/tmdb/recommendations/:type/:id', async (req, res) => {
     const type = req.params.type === 'series' || req.params.type === 'tv' ? 'series' : 'movie';
     const items = await fetchTmdbRecommendations(type, req.params.id);

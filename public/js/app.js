@@ -1367,7 +1367,13 @@ function shouldUpgradeHeroImage(item, image) {
 async function enrichHeroSlide(item, query, token) {
   item.heroEnriched = true;
   try {
-    const details = await fetchJson(getItemDetailsEndpoint(item));
+    const request = new URLSearchParams({
+      title: item.seriesTitle || item.title || query || '',
+      type: item.type === 'series' ? 'series' : 'movie'
+    });
+    if (item.year) request.set('year', item.year);
+    const response = await fetchJson(`/api/tmdb/enrich?${request.toString()}`);
+    const details = response?.item || {};
     const nextBackdrop = fixUrl(details.backdrop || '');
     const nextPoster = fixUrl(details.poster || '');
     const nextImage = nextBackdrop || nextPoster;
