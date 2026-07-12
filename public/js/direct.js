@@ -339,7 +339,10 @@ function renderDirectPlaylist() {
   box.querySelectorAll('[data-playlist-url]').forEach((button) => {
     button.addEventListener('click', () => {
       const item = directPlaylist.find((entry) => entry.url === button.dataset.playlistUrl);
-      if (item) playChannel(item);
+      if (item) {
+        focusDirectPlayer({ fullscreen: true });
+        playChannel(item);
+      }
     });
   });
   bindDirectLogoFallbacks(box);
@@ -380,6 +383,7 @@ function renderRecent() {
       const url = button.dataset.url;
       const item = items.find((entry) => entry.url === url) || {};
       $('directUrl').value = url;
+      focusDirectPlayer({ fullscreen: true });
       playChannel(item);
     });
   });
@@ -525,6 +529,7 @@ function renderDirectChannels() {
         title: button.dataset.name,
         type: getDirectType(button.dataset.url)
       };
+      focusDirectPlayer({ fullscreen: true });
       playChannel(channel);
     });
   });
@@ -814,6 +819,24 @@ async function playChannel(channel) {
   saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
   renderRecent();
   refreshDiscoveryAfterHistory();
+}
+
+function focusDirectPlayer({ fullscreen = false } = {}) {
+  const stage = document.querySelector('.direct-tv-stage');
+  const screen = $('directScreen');
+  stage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!fullscreen || !screen || document.fullscreenElement) return;
+
+  try {
+    const request = screen.requestFullscreen?.({ navigationUI: 'hide' })
+      || screen.webkitRequestFullscreen?.()
+      || screen.msRequestFullscreen?.();
+    if (request?.catch) request.catch(() => {
+      showToast('Appuie sur le bouton plein écran si ton navigateur le bloque.');
+    });
+  } catch {
+    showToast('Appuie sur le bouton plein écran si ton navigateur le bloque.');
+  }
 }
 
 async function playChannelSource(channel, index) {
