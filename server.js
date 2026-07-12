@@ -5,7 +5,6 @@ const cors = require('cors');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const zlib = require('zlib');
 
 loadEnvFile();
 
@@ -73,10 +72,10 @@ const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
-const DIRECT_EPG_URL = 'https://epg.pw/xmltv/epg_FR.xml.gz';
+const DIRECT_EPG_DIRECTORY_URL = 'https://epg.pw/areas/fr.html?lang=en';
 const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
 const DIRECT_EPG_SCHEDULE_CACHE_DURATION = 15 * 60 * 1000;
-let directEpgCache = { updatedAt: 0, channels: [], programmes: [] };
+let directEpgCache = { updatedAt: 0, channels: [] };
 const directEpgScheduleCache = new Map();
 
 function normalizeEpgName(value) {
@@ -88,15 +87,6 @@ function normalizeEpgName(value) {
         .replace(/\+/g, ' plus ')
         .replace(/[^a-z0-9]+/g, ' ')
         .trim();
-}
-
-function parseXmltvDate(value) {
-    const match = String(value || '').match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-])(\d{2})(\d{2})/);
-    if (!match) return null;
-    const [, year, month, day, hour, minute, second, sign, tzHour, tzMinute] = match;
-    const offset = `${sign}${tzHour}:${tzMinute}`;
-    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`);
-    return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function findEpgChannelIds(channelName, channels) {
@@ -125,35 +115,24 @@ async function loadFranceEpg(force = false) {
     const fresh = Date.now() - directEpgCache.updatedAt < DIRECT_EPG_CACHE_DURATION;
     if (!force && fresh && directEpgCache.channels.length) return directEpgCache;
 
-    const response = await axios.get(DIRECT_EPG_URL, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-        headers: { 'User-Agent': axiosConfig.headers['User-Agent'], Accept: 'application/gzip,application/xml,text/xml' }
+    const response = await axios.get(DIRECT_EPG_DIRECTORY_URL, {
+        timeout: 20000,
+        headers: { 'User-Agent': axiosConfig.headers['User-Agent'], Accept: 'text/html' }
     });
-    const xml = zlib.gunzipSync(Buffer.from(response.data)).toString('utf8');
-    const $xml = cheerio.load(xml, { xmlMode: true });
-    const channels = $xml('channel').map((_, element) => ({
-        id: $xml(element).attr('id') || '',
-        names: $xml(element).find('display-name').map((__, node) => $xml(node).text().trim()).get().filter(Boolean),
-        icon: $xml(element).find('icon').first().attr('src') || ''
-    })).get().filter((channel) => channel.id);
-    const programmes = $xml('programme').map((_, element) => {
-        const node = $xml(element);
-        const start = parseXmltvDate(node.attr('start'));
-        const stop = parseXmltvDate(node.attr('stop'));
-        if (!start || !stop) return null;
-        return {
-            channel: node.attr('channel') || '',
-            start: start.toISOString(),
-            stop: stop.toISOString(),
-            title: node.find('title').first().text().trim() || 'Programme TV',
-            subtitle: node.find('sub-title').first().text().trim(),
-            description: node.find('desc').first().text().trim(),
-            category: node.find('category').first().text().trim()
-        };
-    }).get().filter(Boolean);
+    const $directory = cheerio.load(response.data);
+    const channels = [];
+    const seen = new Set();
+    $directory('a[href*="/last/"]').each((_, element) => {
+        const href = $directory(element).attr('href') || '';
+        const match = href.match(/\/last\/(\d+)\.html/i);
+        const name = $directory(element).text().replace(/\s+/g, ' ').trim();
+        if (!match || !name || seen.has(match[1])) return;
+        seen.add(match[1]);
+        channels.push({ id: match[1], names: [name], icon: '' });
+    });
+    if (!channels.length) throw new Error('Répertoire EPG France vide');
 
-    directEpgCache = { updatedAt: Date.now(), channels, programmes };
+    directEpgCache = { updatedAt: Date.now(), channels };
     return directEpgCache;
 }
 
