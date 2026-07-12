@@ -499,6 +499,7 @@ function renderDirectChannels() {
               <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
                 ${getChannelBrandMark(channel)}
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
+                ${getChannelLogoVariant(channel) ? `<span class="direct-logo-variant">${escapeHtml(getChannelLogoVariant(channel))}</span>` : ''}
               </span>
               <span class="direct-channel-copy">
                 <b>${escapeHtml(channel.name)}</b>
@@ -670,7 +671,7 @@ function getFrenchChannels(channels) {
 function getReliableChannelLogo(channel) {
   const name = String(channel?.name || '').toLowerCase();
   const commons = 'https://commons.wikimedia.org/wiki/Special:Redirect/file/';
-  if (/canal live\s*\d+/i.test(name)) return '';
+  if (/canal live\s*\d+/i.test(name)) return './logos/canal-plus-fr.png';
   if (/^dazn/.test(name)) return '';
   if (/^rmc sport 1/.test(name)) return './logos/rmc-sport-1-fr.png';
   if (/bein.*(?:sport|sports).*1/.test(name)) return './logos/bein-sports-1-french-fr.png';
@@ -684,13 +685,26 @@ function getReliableChannelLogo(channel) {
   if (/^m6/.test(name)) return './logos/m6-fr.png';
   if (/france\s*4/.test(name)) return './logos/france-4-fr.png';
   if (/equipe/.test(name)) return './logos/lequipe-fr.png';
-  if (name.includes('canal premier league')) return `${commons}Logo-CanalPlus-PremierLeague.png`;
+  if (name.includes('canal premier league')) return './logos/canal-plus-fr.png';
   if (name.includes('canal foot')) return `${commons}Foot%2B%20(logo%2C%202011-).svg`;
-  if (name.startsWith('canal')) return `${commons}CanalPlus.svg`;
+  if (name.startsWith('canal')) return './logos/canal-plus-fr.png';
   if (name.includes('rmc sport 1')) return `${commons}Logo%20RMC%20Sport%201%202018.svg`;
   if (name.includes('rmc sport 2')) return `${commons}Logo%20RMC%20Sport%202%202018.svg`;
   if (name.includes('bein')) return `${commons}BeIN_Sports_logo_(2017).png`;
   return channel?.image || '';
+}
+
+function getChannelLogoVariant(channel) {
+  const name = String(channel?.name || '');
+  const canalLive = name.match(/canal live\s*(\d+)/i);
+  const beinMax = name.match(/bein.*max\s*(\d+)/i);
+  const rmc = name.match(/rmc sport\s*(\d+)/i);
+  if (canalLive) return `LIVE ${canalLive[1]}`;
+  if (beinMax) return `MAX ${beinMax[1]}`;
+  if (rmc) return `SPORT ${rmc[1]}`;
+  if (/motogp/i.test(name)) return 'MOTO GP';
+  if (/formula|\bf1\b/i.test(name)) return 'F1';
+  return '';
 }
 
 function getChannelBrandMark(channel) {
@@ -869,7 +883,7 @@ function setCurrentChannel(channel) {
   const logo = $('directNowLogo');
   if (logo) {
     logo.className = `direct-now-logo ${getChannelLogoClass(currentDirectChannel)}`.trim();
-    logo.innerHTML = `${getChannelBrandMark(currentDirectChannel)}${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}`;
+    logo.innerHTML = `${getChannelBrandMark(currentDirectChannel)}${currentDirectChannel.image ? `<img src="${escapeHtml(currentDirectChannel.image)}" alt="">` : ''}${getChannelLogoVariant(currentDirectChannel) ? `<span class="direct-logo-variant">${escapeHtml(getChannelLogoVariant(currentDirectChannel))}</span>` : ''}`;
     bindDirectLogoFallbacks(logo);
   }
   if ($('directNowTitle')) $('directNowTitle').textContent = currentDirectChannel.name;
