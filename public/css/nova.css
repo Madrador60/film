@@ -781,6 +781,90 @@ body.nova-app::before {
   background: #0d0f14;
 }
 
+.nova-app .direct-epg {
+  padding: 16px 0 4px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.nova-app .direct-epg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px 10px;
+  color: #f8fafc;
+}
+
+.nova-app .direct-epg-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.nova-app .direct-epg-head span i { color: #42d6d0; }
+.nova-app .direct-epg-head small { color: #8fa3bb; }
+
+.nova-app .direct-epg-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding: 2px 4px 10px;
+}
+
+.nova-app .direct-epg-item {
+  position: relative;
+  min-height: 92px;
+  padding: 13px 14px 16px;
+  overflow: hidden;
+  border-left: 2px solid rgba(143,163,187,.25);
+  background: rgba(255,255,255,.035);
+}
+
+.nova-app .direct-epg-item.is-now {
+  border-color: #42d6d0;
+  background: rgba(66,214,208,.09);
+}
+
+.nova-app .direct-epg-item span,
+.nova-app .direct-epg-item small {
+  display: block;
+  color: #8fa3bb;
+  font-size: 12px;
+}
+
+.nova-app .direct-epg-item b {
+  display: block;
+  margin: 5px 0 3px;
+  color: #f8fafc;
+  line-height: 1.25;
+}
+
+.nova-app .direct-epg-item > i {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, #42d6d0 var(--epg-progress), rgba(255,255,255,.09) var(--epg-progress));
+}
+
+.nova-app .direct-epg-message {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 68px;
+  color: #8fa3bb;
+}
+
+@media (max-width: 680px) {
+  .nova-app .direct-epg { padding-top: 12px; }
+  .nova-app .direct-epg-rail { grid-auto-columns: minmax(170px, 72vw); }
+  .nova-app .direct-epg-item { min-height: 86px; }
+}
+
 .nova-app .direct-source-heading {
   display: flex;
   align-items: center;

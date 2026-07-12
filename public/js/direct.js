@@ -14,6 +14,7 @@ let visibleDirectChannels = [];
 let directRenderLimit = DIRECT_BATCH_SIZE;
 let activeHls = null;
 let selectedDirectSourceIndex = 0;
+let directEpgRequestId = 0;
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -897,6 +898,59 @@ function setCurrentChannel(channel) {
     const button = tile.querySelector('[data-url]');
     tile.classList.toggle('is-playing', button?.dataset.channelId === currentDirectChannel.id || button?.dataset.url === currentDirectChannel.url);
   });
+  loadChannelEpg(currentDirectChannel);
+}
+
+async function loadChannelEpg(channel) {
+  const panel = $('directEpg');
+  const rail = $('directEpgRail');
+  const updated = $('directEpgUpdated');
+  if (!panel || !rail) return;
+
+  const requestId = ++directEpgRequestId;
+  panel.hidden = false;
+  panel.classList.add('is-loading');
+  rail.innerHTML = '<div class="direct-epg-message"><i class="fa-solid fa-circle-notch fa-spin"></i> Recherche du programme...</div>';
+  if (updated) updated.textContent = 'EPG France';
+
+  try {
+    const response = await fetch(`/api/direct/epg?channel=${encodeURIComponent(channel.name || '')}`);
+    const data = await response.json().catch(() => ({}));
+    if (requestId !== directEpgRequestId) return;
+    if (!response.ok || !data.ok || !data.items?.length) {
+      rail.innerHTML = '<div class="direct-epg-message">Programme indisponible pour cette chaîne.</div>';
+      return;
+    }
+
+    const now = Date.now();
+    const current = data.current;
+    if (current && $('directNowProgram')) {
+      $('directNowProgram').textContent = `En ce moment · ${current.title}`;
+    }
+    rail.innerHTML = data.items.slice(0, 6).map((item) => {
+      const start = new Date(item.start);
+      const stop = new Date(item.stop);
+      const isNow = start.getTime() <= now && stop.getTime() > now;
+      const duration = Math.max(1, stop.getTime() - start.getTime());
+      const progress = isNow ? Math.min(100, Math.max(0, ((now - start.getTime()) / duration) * 100)) : 0;
+      return `
+        <article class="direct-epg-item ${isNow ? 'is-now' : ''}">
+          <span>${isNow ? 'Maintenant' : formatEpgTime(start)}</span>
+          <b>${escapeHtml(item.title || 'Programme TV')}</b>
+          ${item.category ? `<small>${escapeHtml(item.category)}</small>` : ''}
+          ${isNow ? `<i style="--epg-progress:${progress.toFixed(1)}%"></i>` : ''}
+        </article>`;
+    }).join('');
+    if (updated) updated.textContent = data.matched?.name || 'EPG France';
+  } catch {
+    if (requestId === directEpgRequestId) rail.innerHTML = '<div class="direct-epg-message">Guide TV temporairement indisponible.</div>';
+  } finally {
+    if (requestId === directEpgRequestId) panel.classList.remove('is-loading');
+  }
+}
+
+function formatEpgTime(date) {
+  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function playRelativeChannel(offset) {

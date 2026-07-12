@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const zlib = require('zlib');
 
 loadEnvFile();
 
@@ -72,6 +73,87 @@ const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
+const DIRECT_EPG_URL = 'https://epg.pw/xmltv/epg_FR.xml.gz';
+const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
+let directEpgCache = { updatedAt: 0, channels: [], programmes: [] };
+
+function normalizeEpgName(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\b(france|french|fr|hd|fhd|uhd|tv)\b/g, ' ')
+        .replace(/\+/g, ' plus ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function parseXmltvDate(value) {
+    const match = String(value || '').match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-])(\d{2})(\d{2})/);
+    if (!match) return null;
+    const [, year, month, day, hour, minute, second, sign, tzHour, tzMinute] = match;
+    const offset = `${sign}${tzHour}:${tzMinute}`;
+    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function findEpgChannelIds(channelName, channels) {
+    const wanted = normalizeEpgName(channelName);
+    if (!wanted) return [];
+    const wantedParts = wanted.split(' ').filter(Boolean);
+    return channels
+        .map((channel) => {
+            const names = channel.names.map(normalizeEpgName).filter(Boolean);
+            let score = names.includes(wanted) ? 100 : 0;
+            for (const name of names) {
+                if (name.startsWith(wanted) || wanted.startsWith(name)) score = Math.max(score, 85);
+                const parts = name.split(' ').filter(Boolean);
+                const common = wantedParts.filter((part) => parts.includes(part)).length;
+                score = Math.max(score, common * 20 - Math.abs(parts.length - wantedParts.length) * 3);
+            }
+            return { id: channel.id, score };
+        })
+        .filter((item) => item.score >= 35)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 1)
+        .map((item) => item.id);
+}
+
+async function loadFranceEpg(force = false) {
+    const fresh = Date.now() - directEpgCache.updatedAt < DIRECT_EPG_CACHE_DURATION;
+    if (!force && fresh && directEpgCache.channels.length) return directEpgCache;
+
+    const response = await axios.get(DIRECT_EPG_URL, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+        headers: { 'User-Agent': axiosConfig.headers['User-Agent'], Accept: 'application/gzip,application/xml,text/xml' }
+    });
+    const xml = zlib.gunzipSync(Buffer.from(response.data)).toString('utf8');
+    const $xml = cheerio.load(xml, { xmlMode: true });
+    const channels = $xml('channel').map((_, element) => ({
+        id: $xml(element).attr('id') || '',
+        names: $xml(element).find('display-name').map((__, node) => $xml(node).text().trim()).get().filter(Boolean),
+        icon: $xml(element).find('icon').first().attr('src') || ''
+    })).get().filter((channel) => channel.id);
+    const programmes = $xml('programme').map((_, element) => {
+        const node = $xml(element);
+        const start = parseXmltvDate(node.attr('start'));
+        const stop = parseXmltvDate(node.attr('stop'));
+        if (!start || !stop) return null;
+        return {
+            channel: node.attr('channel') || '',
+            start: start.toISOString(),
+            stop: stop.toISOString(),
+            title: node.find('title').first().text().trim() || 'Programme TV',
+            subtitle: node.find('sub-title').first().text().trim(),
+            description: node.find('desc').first().text().trim(),
+            category: node.find('category').first().text().trim()
+        };
+    }).get().filter(Boolean);
+
+    directEpgCache = { updatedAt: Date.now(), channels, programmes };
+    return directEpgCache;
+}
 
 function normalizeDirectUrl(value) {
     const raw = String(value || '').trim();
@@ -2192,7 +2274,8 @@ app.get('/api/direct/status', (req, res) => {
             'GET /api/direct/playlist?url=https://.../playlist.m3u',
             'POST /api/direct/playlist { filename, content }',
             'GET /api/direct/channel-stream?url=https://...',
-            'GET /api/direct/channels'
+            'GET /api/direct/channels',
+            'GET /api/direct/epg?channel=TF1'
         ]
     });
 });
@@ -2231,6 +2314,41 @@ app.get('/api/direct/channels', async (req, res) => {
             count: 0,
             channels: []
         });
+    }
+});
+
+app.get('/api/direct/epg', async (req, res) => {
+    const channelName = String(req.query.channel || req.query.name || '').trim();
+    if (!channelName) {
+        return res.status(400).json({ ok: false, error: 'Le nom de la chaîne est requis.', items: [] });
+    }
+
+    try {
+        const epg = await loadFranceEpg(req.query.refresh === '1');
+        const channelIds = findEpgChannelIds(channelName, epg.channels);
+        const now = Date.now();
+        const horizon = now + 24 * 60 * 60 * 1000;
+        const items = epg.programmes
+            .filter((programme) => channelIds.includes(programme.channel))
+            .filter((programme) => new Date(programme.stop).getTime() > now && new Date(programme.start).getTime() < horizon)
+            .sort((a, b) => new Date(a.start) - new Date(b.start))
+            .slice(0, 8);
+        const channel = epg.channels.find((entry) => entry.id === channelIds[0]);
+
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
+        res.json({
+            ok: true,
+            source: 'epg.pw',
+            query: channelName,
+            matched: channel ? { id: channel.id, name: channel.names[0] || channelName, icon: channel.icon } : null,
+            current: items.find((item) => new Date(item.start).getTime() <= now && new Date(item.stop).getTime() > now) || null,
+            next: items.find((item) => new Date(item.start).getTime() > now) || null,
+            items,
+            updatedAt: new Date(epg.updatedAt).toISOString()
+        });
+    } catch (error) {
+        console.error('EPG France error:', error.message);
+        res.status(502).json({ ok: false, source: 'epg.pw', query: channelName, current: null, next: null, items: [], error: 'Guide TV temporairement indisponible.' });
     }
 });
 
