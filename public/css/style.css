@@ -4635,6 +4635,257 @@ a {
   }
 }
 
+/* Fluid streaming home: one continuous canvas instead of stacked panels. */
+.home-body {
+  background:
+    radial-gradient(circle at 82% 8%, rgba(86, 71, 190, .17), transparent 30%),
+    linear-gradient(180deg, #040713 0%, #070b18 42%, #050812 100%) !important;
+}
+
+.home-body .main {
+  max-width: none !important;
+  background: transparent !important;
+}
+
+.home-body .topbar {
+  padding: 4px 0 14px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, rgba(4, 7, 19, .96), rgba(4, 7, 19, .72) 72%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.home-body .search-area {
+  width: min(760px, 100%) !important;
+}
+
+.home-body .searchbox {
+  min-height: 48px;
+  border-color: rgba(148, 163, 184, .20) !important;
+  border-radius: 999px !important;
+  background: rgba(10, 15, 31, .76) !important;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(18px);
+}
+
+.home-body .searchbox:focus-within {
+  border-color: rgba(71, 213, 255, .62) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12), 0 14px 38px rgba(0, 0, 0, .22);
+}
+
+.home-body .hero {
+  min-height: clamp(370px, 38vw, 540px) !important;
+  margin: 0 0 28px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background-color: #080d1b;
+  box-shadow: none !important;
+}
+
+.home-body .hero-shade {
+  background:
+    linear-gradient(90deg, rgba(3, 6, 15, .94) 0%, rgba(3, 6, 15, .69) 38%, rgba(3, 6, 15, .15) 73%),
+    linear-gradient(0deg, #070b18 0%, transparent 38%) !important;
+}
+
+.home-body .hero-content {
+  width: min(660px, 78%) !important;
+  align-self: flex-end;
+  padding: clamp(34px, 5vw, 72px) clamp(34px, 5vw, 72px) clamp(46px, 6vw, 82px) !important;
+}
+
+.home-body .hero h1 {
+  max-width: 14ch;
+  font-size: clamp(42px, 5vw, 76px) !important;
+  line-height: 1.02 !important;
+}
+
+.home-body .hero-nav {
+  top: 50% !important;
+  width: 46px !important;
+  height: 46px !important;
+  border: 1px solid rgba(255, 255, 255, .22) !important;
+  background: rgba(3, 7, 18, .62) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .32);
+}
+
+.home-body .hero-prev {
+  left: 16px !important;
+  right: auto !important;
+}
+
+.home-body .hero-next {
+  right: 16px !important;
+  left: auto !important;
+}
+
+.home-body .hero-dots {
+  bottom: 18px !important;
+}
+
+.home-body .rows {
+  display: block !important;
+}
+
+.home-body .content-row,
+.home-body .rows > section {
+  margin: 0 0 28px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.home-body .row-head {
+  margin: 0 0 10px !important;
+  padding: 0 !important;
+}
+
+.home-body .row-head h2 {
+  font-size: clamp(18px, 1.6vw, 24px) !important;
+}
+
+.home-body .row-head h2::before {
+  width: 3px !important;
+  border-radius: 3px;
+}
+
+.home-body .row-see-all {
+  border: 0 !important;
+  background: transparent !important;
+  color: #aab6ce !important;
+  box-shadow: none !important;
+}
+
+.home-body .row-track {
+  gap: 10px !important;
+  padding: 0 48px 8px 0 !important;
+}
+
+.home-body .media-card {
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.home-body .media-thumb,
+.home-body .media-thumb img {
+  border-radius: 6px !important;
+}
+
+.home-body .media-card:hover,
+.home-body .media-card:focus-visible {
+  transform: translateY(-4px) scale(1.025);
+  border: 0 !important;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .46) !important;
+}
+
+.home-body .row-arrow {
+  width: 42px !important;
+  height: 74px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: rgba(3, 7, 18, .66) !important;
+  box-shadow: none !important;
+}
+
+.home-body .api-status {
+  margin: -8px 0 22px !important;
+  padding: 10px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.home-body .pager {
+  margin: 8px 0 34px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .home-body .sidebar {
+    width: 216px !important;
+  }
+
+  .home-body .main {
+    margin-left: 216px !important;
+    padding: 18px 22px 54px !important;
+  }
+
+  .home-body .hero {
+    min-height: clamp(360px, 40vw, 480px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  html[data-device="phone"] .main,
+  html[data-device="phone"] .catalog-main {
+    max-width: 100vw !important;
+    overflow-x: clip !important;
+  }
+
+  html[data-device="phone"] body.home-body .main,
+  .home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .home-body .topbar {
+    padding: max(8px, env(safe-area-inset-top, 0px)) 14px 10px !important;
+  }
+
+  .home-body .hero {
+    min-height: min(72vh, 520px) !important;
+    margin-bottom: 22px !important;
+    border-radius: 0 !important;
+  }
+
+  .home-body .hero-content {
+    width: 100% !important;
+    padding: 82px 20px 54px !important;
+  }
+
+  .home-body .hero h1 {
+    max-width: 12ch;
+    font-size: clamp(36px, 11vw, 52px) !important;
+  }
+
+  .home-body .hero-nav {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .home-body .hero-prev {
+    left: 10px !important;
+  }
+
+  .home-body .hero-next {
+    right: 10px !important;
+  }
+
+  .home-body .content-row,
+  .home-body .rows > section {
+    margin-bottom: 24px !important;
+    padding-left: 14px !important;
+  }
+
+  .home-body .row-head {
+    padding-right: 14px !important;
+  }
+
+  .home-body .row-track {
+    padding-right: 28px !important;
+  }
+
+  .home-body .row-arrow {
+    display: none !important;
+  }
+}
+
 /* Stable dynamic media surfaces */
 .home-body .hero {
   background-image: var(--hero-background, none) !important;
@@ -9770,5 +10021,73 @@ html[data-device="phone"] .mobile-bottom-nav span {
 
   html[data-device="phone"] .mobile-bottom-nav i {
     font-size: 17px !important;
+  }
+}
+
+/* Home authority layer: keep the immersive layout above legacy platform rules. */
+.home-body .hero {
+  min-height: clamp(370px, 38vw, 540px) !important;
+  margin-bottom: 28px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.home-body .hero-prev {
+  left: 16px !important;
+  right: auto !important;
+}
+
+.home-body .hero-next {
+  right: 16px !important;
+  left: auto !important;
+}
+
+.home-body .content-row,
+.home-body .rows > section {
+  margin-bottom: 28px !important;
+  padding-block: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .home-body .hero {
+    min-height: clamp(360px, 40vw, 480px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .home-body .hero {
+    width: 100% !important;
+    min-height: min(72vh, 520px) !important;
+    margin-inline: 0 !important;
+    margin-bottom: 22px !important;
+    border-radius: 0 !important;
+  }
+
+  .home-body .hero-prev {
+    left: 10px !important;
+  }
+
+  .home-body .hero-next {
+    right: 10px !important;
+  }
+
+  .home-body .content-row,
+  .home-body .rows > section {
+    margin-bottom: 24px !important;
+  }
+
+  html[data-device="phone"] .direct-tv-stage .direct-screen,
+  html[data-device="phone"] .direct-nowbar {
+    width: 100% !important;
+    margin-inline: 0 !important;
   }
 }
