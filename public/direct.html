@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css?v=20260712-direct-tv" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260712-polish8" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260712-polish9" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body direct-body nova-app">
@@ -72,6 +72,16 @@
           <button class="direct-control" id="directNextChannel" type="button" title="Chaîne suivante" disabled><i class="fa-solid fa-forward-step"></i></button>
           <button class="direct-control" id="directFullscreen" type="button" title="Plein écran"><i class="fa-solid fa-expand"></i></button>
         </div>
+      </div>
+      <div class="direct-source-switcher hidden" id="directSourceSwitcher" aria-label="Sources de la chaîne">
+        <div class="direct-source-heading">
+          <span>Sources disponibles</span>
+          <div>
+            <button class="btn glass" id="directReloadSource" type="button"><i class="fa-solid fa-rotate-right"></i><span>Recharger</span></button>
+            <button class="btn primary" id="directNextSource" type="button"><span>Source suivante</span><i class="fa-solid fa-forward-step"></i></button>
+          </div>
+        </div>
+        <div class="direct-source-list" id="directSourceList"></div>
       </div>
       <p class="direct-hint" id="directHint">Choisis une chaîne dans le catalogue.</p>
     </section>
@@ -164,6 +174,6 @@
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-  <script src="./js/direct.js?v=20260712-logos2"></script>
+  <script src="./js/direct.js?v=20260712-grouped-sources"></script>
 </body>
 </html>

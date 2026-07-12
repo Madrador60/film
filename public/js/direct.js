@@ -3,6 +3,41 @@ const DIRECT_CHANNELS_KEY = 'madrador:direct:channels';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = window.matchMedia('(max-width: 600px)').matches ? 30 : 60;
+const ALLOWED_HOSTS = ['cartelive.club', 'embedme.click', 'brigittetv.lat'];
+const CURATED_RAW_CHANNELS = [
+  ['Eurosport 1', 'Sport', 'https://cartelive.club/player/1/15', 'eurosport-1-fr.png'],
+  ['Eurosport 1', 'Sport', 'https://cartelive.club/player/2/15', 'eurosport-1-fr.png'],
+  ['Eurosport 2', 'Sport', 'https://cartelive.club/player/1/16', 'eurosport-2-fr.png'],
+  ['Eurosport 2', 'Sport', 'https://cartelive.club/player/2/16', 'eurosport-2-fr.png'],
+  ['France 4', 'TV', 'https://cartelive.club/player/1/30', 'france-4-fr.png'],
+  ['France 4', 'TV', 'https://cartelive.club/player/2/30', 'france-4-fr.png'],
+  ['France TV', 'TV', 'https://cartelive.club/player/1/28', 'France.tv.png'],
+  ['France TV', 'TV', 'https://cartelive.club/player/1/29', 'France.tv.png'],
+  ['CANAL+', 'TV', 'https://cartelive.club/player/1/11', 'canal-plus-fr.png'],
+  ['L\'Équipe', 'TV', 'https://cartelive.club/player/1/19', 'lequipe-fr.png'],
+  ['Automoto', 'TV', 'https://cartelive.club/player/1/23', 'automoto-la-chaine-fr.png'],
+  ['TF1', 'TV', 'https://cartelive.club/player/1/24', 'tf1-fr.png'],
+  ['TMC', 'TV', 'https://cartelive.club/player/1/25', 'tmc-fr.png'],
+  ['CANAL+', 'TV', 'https://cartelive.club/player/2/11', 'canal-plus-fr.png'],
+  ['M6', 'TV', 'https://cartelive.club/player/1/26', 'm6-fr.png'],
+  ['RMC Sport 1', 'Sport', 'https://cartelive.club/player/1/17', 'rmc-sport-1-fr.png'],
+  ['RMC Sport 1', 'Sport', 'https://cartelive.club/player/2/17', 'rmc-sport-1-fr.png'],
+  ['W9', 'TV', 'https://cartelive.club/player/1/27', 'w9-fr.png'],
+  ['Bein Sport 1', 'Sport', 'https://cartelive.club/player/1/1', 'bein-sports-1-french-fr.png'],
+  ['Bein Sport 1', 'Sport', 'https://cartelive.club/player/2/1', 'bein-sports-1-french-fr.png'],
+  ['Bein Sport 2', 'Sport', 'https://cartelive.club/player/1/2', 'bein-sports-2-french-fr.png'],
+  ['Bein Sport 2', 'Sport', 'https://cartelive.club/player/2/2', 'bein-sports-2-french-fr.png'],
+  ['Bein Sport 3', 'Sport', 'https://cartelive.club/player/1/3', 'bein-sports-3-french-fr.png'],
+  ['Bein Sport 3', 'Sport', 'https://cartelive.club/player/2/3', 'bein-sports-3-french-fr.png'],
+  ['Bein Sport 4 Max', 'Sport', 'https://cartelive.club/player/2/4', 'bein-sports-4-max.png'],
+  ['Bein Sport 4 Max', 'Sport', 'https://cartelive.club/player/1/4', 'bein-sports-4-max.png'],
+  ['Canal+ Foot', 'Sport', 'https://cartelive.club/player/1/12', 'canal-plus-foot-fr.png'],
+  ['Canal+ Foot', 'Sport', 'https://cartelive.club/player/2/12', 'canal-plus-foot-fr.png'],
+  ['Canal+ Sport 360', 'Sport', 'https://cartelive.club/player/2/14', 'canal-plus-sport-360-fr.png'],
+  ['Canal+ Sport', 'Sport', 'https://cartelive.club/player/2/13', 'canal-plus-sport-fr.png'],
+  ['Canal+ Sport 360', 'Sport', 'https://cartelive.club/player/1/14', 'canal-plus-sport-360-fr.png'],
+  ['Canal+ Sport', 'Sport', 'https://cartelive.club/player/1/13', 'canal-plus-sport-fr.png']
+].map(([name, category, url, logo]) => ({ name, category, url, logo: `./logos/${logo}` }));
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
@@ -12,6 +47,7 @@ let currentDirectChannel = null;
 let visibleDirectChannels = [];
 let directRenderLimit = DIRECT_BATCH_SIZE;
 let activeHls = null;
+let selectedDirectSourceIndex = 0;
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -31,6 +67,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('directPrevChannel')?.addEventListener('click', () => playRelativeChannel(-1));
   $('directNextChannel')?.addEventListener('click', () => playRelativeChannel(1));
   $('directFullscreen')?.addEventListener('click', enterDirectFullscreen);
+  $('directNextSource')?.addEventListener('click', playNextChannelSource);
+  $('directReloadSource')?.addEventListener('click', reloadCurrentChannelSource);
   $('directViewTabs')?.addEventListener('click', handleDirectViewClick);
   $('directLoadMore')?.addEventListener('click', () => {
     directRenderLimit += DIRECT_BATCH_SIZE;
@@ -240,8 +278,8 @@ function playUrl(url, direct = {}) {
     frame.src = url;
     frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     frame.allowFullscreen = true;
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
-    frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
+    frame.referrerPolicy = 'no-referrer';
+    frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation';
     screen.appendChild(frame);
   }
 
@@ -395,15 +433,10 @@ async function loadDirectChannels(force = false) {
   const button = $('directChannelsReload');
   button?.classList.add('loading');
   if (button) button.disabled = true;
-  setChannelsState('Chargement des chaînes CDNLiveTV...');
+  setChannelsState('Préparation des chaînes françaises...');
 
   try {
-    if (!force) loadCachedChannels();
-    const response = await fetch('/api/direct/channels', { cache: 'no-store' });
-    const data = await response.json();
-    if (!response.ok || !data?.ok) throw new Error(data?.error || 'API Direct indisponible');
-
-    directChannels = getFrenchChannels(Array.isArray(data.channels) ? data.channels : []);
+    directChannels = groupChannels(CURATED_RAW_CHANNELS);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();
@@ -427,7 +460,7 @@ function renderDirectChannels() {
   const normalized = directChannels.map((channel) => ({
     ...channel,
     category: channel.category || classifyChannel(channel),
-    image: getReliableChannelLogo(channel)
+    image: channel.logo || channel.image || getReliableChannelLogo(channel)
   }));
   const favoriteKeys = getDirectFavorites();
   const recentOrder = new Map(getRecent().map((item, index) => [getChannelKey(item), index]));
@@ -466,8 +499,8 @@ function renderDirectChannels() {
       <header><h3>${escapeHtml(category)}</h3><span>${channels.length} chaînes</span></header>
       <div class="direct-channel-grid">
         ${channels.map((channel) => `
-          <article class="direct-channel-tile ${currentDirectChannel?.url === channel.url ? 'is-playing' : ''}">
-            <button class="direct-channel direct-channel-card" type="button" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
+          <article class="direct-channel-tile ${getChannelKey(currentDirectChannel) === getChannelKey(channel) ? 'is-playing' : ''}">
+            <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
               <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
                 <span class="direct-logo-fallback">${escapeHtml(getChannelInitials(channel.name))}</span>
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
@@ -531,6 +564,57 @@ function bindDirectLogoFallbacks(scope) {
 function getChannelInitials(value) {
   const words = String(value || 'TV').trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'TV';
+}
+
+function createSlug(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/['’]/g, '').replace(/\+/g, '-plus').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function detectProvider(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, '');
+    if (hostname === 'cartelive.club') {
+      const match = parsed.pathname.match(/\/player\/(\d+)\//);
+      return match ? `Cartelive ${match[1]}` : 'Cartelive';
+    }
+    if (hostname === 'embedme.click') return 'Embedme';
+    if (hostname === 'brigittetv.lat') return 'BrigitteTV';
+    return hostname;
+  } catch {
+    return 'Source inconnue';
+  }
+}
+
+function isAllowedSource(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && ALLOWED_HOSTS.includes(parsed.hostname.replace(/^www\./, ''));
+  } catch {
+    return false;
+  }
+}
+
+function groupChannels(rawChannels) {
+  const grouped = new Map();
+  (rawChannels || []).forEach((channel) => {
+    const name = String(channel?.name || '').trim();
+    const url = String(channel?.url || '').trim();
+    if (!name || !isAllowedSource(url)) return;
+    const key = name.toLocaleLowerCase('fr');
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: createSlug(name), name, category: channel.category || 'TV', code: 'fr', country: 'FR',
+        logo: channel.logo || channel.image || '', image: channel.logo || channel.image || '', sources: [], status: 'online'
+      });
+    }
+    const item = grouped.get(key);
+    if (!item.sources.some((source) => source.url === url)) {
+      item.sources.push({ name: `Source ${item.sources.length + 1}`, provider: detectProvider(url), url });
+    }
+  });
+  return [...grouped.values()].map((channel) => ({ ...channel, url: channel.sources[0]?.url || '' }));
 }
 
 function getFrenchChannels(channels) {
@@ -601,6 +685,11 @@ function classifyChannel(channel) {
 
 async function playChannel(channel) {
   if (!channel?.url) return;
+  if (Array.isArray(channel.sources) && channel.sources.length) {
+    selectedDirectSourceIndex = 0;
+    playChannelSource(channel, 0);
+    return;
+  }
   setCurrentChannel(channel);
   $('directUrl').value = channel.url;
   const isCdnLive = channel.source === 'cdnlivetv' || isCdnLivePlayerUrl(channel.url);
@@ -629,6 +718,49 @@ async function playChannel(channel) {
   refreshDiscoveryAfterHistory();
 }
 
+function playChannelSource(channel, index) {
+  const source = channel?.sources?.[index];
+  if (!source || !isAllowedSource(source.url)) {
+    showDirectError(channel, 'Cette source est invalide ou non autorisée.');
+    return;
+  }
+  selectedDirectSourceIndex = index;
+  const activeChannel = { ...channel, url: source.url, sourceName: source.name, provider: source.provider };
+  setCurrentChannel(activeChannel);
+  renderChannelSources(activeChannel);
+  showDirectLoading(`${channel.name} · ${source.name}`);
+  playUrl(source.url, { ...activeChannel, type: 'iframe' });
+  saveRecent(source.url, activeChannel);
+  renderRecent();
+}
+
+function renderChannelSources(channel) {
+  const panel = $('directSourceSwitcher');
+  const list = $('directSourceList');
+  const sources = channel?.sources || [];
+  panel?.classList.toggle('hidden', !sources.length);
+  if (!list) return;
+  list.innerHTML = sources.map((source, index) => `
+    <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}">
+      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)}</small>
+    </button>
+  `).join('');
+  list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
+    playChannelSource(channel, Number(button.dataset.sourceIndex));
+  }));
+}
+
+function playNextChannelSource() {
+  const sources = currentDirectChannel?.sources || [];
+  if (!sources.length) return;
+  playChannelSource(currentDirectChannel, (selectedDirectSourceIndex + 1) % sources.length);
+}
+
+function reloadCurrentChannelSource() {
+  if (!currentDirectChannel?.sources?.length) return;
+  playChannelSource(currentDirectChannel, selectedDirectSourceIndex);
+}
+
 function refreshDiscoveryAfterHistory() {
   if (activeDirectView === 'recent') renderDirectChannels();
   else {
@@ -653,7 +785,8 @@ function setCurrentChannel(channel) {
   renderCurrentFavorite();
   document.title = `${currentDirectChannel.name} en direct - Madrador TV`;
   document.querySelectorAll('.direct-channel-tile').forEach((tile) => {
-    tile.classList.toggle('is-playing', tile.querySelector('[data-url]')?.dataset.url === currentDirectChannel.url);
+    const button = tile.querySelector('[data-url]');
+    tile.classList.toggle('is-playing', button?.dataset.channelId === currentDirectChannel.id || button?.dataset.url === currentDirectChannel.url);
   });
 }
 
@@ -664,7 +797,7 @@ function playRelativeChannel(offset) {
     playChannel(offset < 0 ? pool[pool.length - 1] : pool[0]);
     return;
   }
-  const currentIndex = pool.findIndex((channel) => channel.url === currentDirectChannel.url);
+  const currentIndex = pool.findIndex((channel) => getChannelKey(channel) === getChannelKey(currentDirectChannel));
   const nextIndex = (Math.max(0, currentIndex) + offset + pool.length) % pool.length;
   playChannel(pool[nextIndex]);
 }
@@ -691,7 +824,7 @@ function getDirectFavorites() {
 }
 
 function getChannelKey(channel) {
-  return String(channel?.url || channel?.id || '').trim();
+  return String(channel?.id || channel?.url || '').trim();
 }
 
 function toggleCurrentChannelFavorite() {

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'madrador-shell-2026-07-v15';
+const CACHE_VERSION = 'madrador-shell-2026-07-v16';
 const APP_SHELL = [
   '/',
   '/index.html',

@@ -665,6 +665,87 @@ body.nova-app::before {
   background: rgba(66, 217, 200, .07) !important;
 }
 
+.nova-app .direct-source-switcher {
+  padding: 16px clamp(16px, 4vw, 54px) 20px;
+  border-top: 1px solid var(--nova-line);
+  background: #0d0f14;
+}
+
+.nova-app .direct-source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  color: var(--nova-muted);
+  font-size: 13px;
+}
+
+.nova-app .direct-source-heading > div,
+.nova-app .direct-source-list {
+  display: flex;
+  gap: 8px;
+}
+
+.nova-app .direct-source-list {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.nova-app .direct-source-list::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .direct-source-choice {
+  min-width: 130px;
+  min-height: 58px;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 8px 14px;
+  border: 1px solid var(--nova-line);
+  border-radius: 9px;
+  color: var(--nova-text);
+  text-align: left;
+  background: rgba(255, 255, 255, .035);
+  scroll-snap-align: start;
+}
+
+.nova-app .direct-source-choice small {
+  color: var(--nova-muted);
+}
+
+.nova-app .direct-source-choice.active {
+  color: #06110f;
+  border-color: var(--nova-mint);
+  background: var(--nova-mint);
+}
+
+.nova-app .direct-source-choice.active small {
+  color: rgba(6, 17, 15, .72);
+}
+
+@media (max-width: 600px) {
+  .nova-app .direct-source-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nova-app .direct-source-heading > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .nova-app .direct-source-heading .btn {
+    min-width: 0;
+    padding-inline: 9px !important;
+  }
+}
+
 .nova-app .episode-btn,
 .nova-app .source-btn {
   border: 0 !important;
