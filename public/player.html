@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260712" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260712-features" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="player-body nova-app">
@@ -158,6 +158,13 @@
         </div>
       </aside>
     </section>
+
+    <section class="player-recommendations hidden" id="playerRecommendations">
+      <div class="section-head compact">
+        <div><span>Pour continuer</span><h2>Tu pourrais aussi aimer</h2></div>
+      </div>
+      <div class="recommendation-track" id="recommendationTrack"></div>
+    </section>
   </main>
 
   <div class="trailer-modal hidden" id="trailerModal" role="dialog" aria-modal="true" aria-label="Bande-annonce">
@@ -185,13 +192,13 @@
     <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
   </nav>
 
-  <script src="./js/storage.js"></script>
+  <script src="./js/storage.js?v=20260712-features"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260712-hd2"></script>
   <script src="./js/antiads.js"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260712-nova"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/player.js"></script>
+  <script src="./js/player.js?v=20260712-features"></script>
 </body>
 </html>

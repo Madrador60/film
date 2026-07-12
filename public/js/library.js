@@ -76,7 +76,7 @@ function normalizeStoredItems(items, bucket) {
       year: item.year || '',
       type,
       bucket,
-      updatedAt: item.updatedAt || item.time || item.timestamp || '',
+      updatedAt: item.updatedAt || item.savedAt || item.time || item.timestamp || '',
       season: item.season || item.lastSeason || '',
       episode: item.episode || item.lastEpisode || '',
       lastSource: item.lastSource || item.source || ''
@@ -118,7 +118,40 @@ function paintGrid(items) {
     return;
   }
 
+  if (libraryView === 'history') {
+    const groups = groupHistoryByDate(items);
+    groups.forEach((group) => {
+      const heading = document.createElement('h2');
+      heading.className = 'library-date-heading';
+      heading.textContent = group.label;
+      grid.appendChild(heading);
+      group.items.forEach((item, index) => grid.appendChild(createLibraryCard(item, index)));
+    });
+    return;
+  }
+
   items.forEach((item, index) => grid.appendChild(createLibraryCard(item, index)));
+}
+
+function groupHistoryByDate(items) {
+  const order = ['Aujourd’hui', 'Hier', 'Cette semaine', 'Plus ancien'];
+  const groups = new Map(order.map((label) => [label, []]));
+  items.forEach((item) => groups.get(getHistoryDateLabel(item.updatedAt)).push(item));
+  return order.map((label) => ({ label, items: groups.get(label) })).filter((group) => group.items.length);
+}
+
+function getHistoryDateLabel(value) {
+  const date = new Date(Number(value) || value || 0);
+  if (Number.isNaN(date.getTime())) return 'Plus ancien';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  const days = Math.floor((today - target) / 86400000);
+  if (days <= 0) return 'Aujourd’hui';
+  if (days === 1) return 'Hier';
+  if (days < 7) return 'Cette semaine';
+  return 'Plus ancien';
 }
 
 function createLibraryCard(item, index) {

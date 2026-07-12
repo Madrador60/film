@@ -16,6 +16,7 @@ const MadradorStorage = (() => {
     preferredSource: 'vidzy',
     lastSource: '',
     autoplay: true,
+    autoSourceFallback: true,
     resumePlayback: true,
     rememberLastSource: false,
     miniPlayerEnabled: true,

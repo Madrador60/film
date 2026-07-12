@@ -146,12 +146,42 @@ function searchLocalCatalog(query) {
         item.version
       ].filter(Boolean).join(' '));
       const exact = haystack.includes(needle) ? 40 : 0;
-      const score = words.reduce((total, word) => total + (haystack.includes(word) ? 10 : 0), exact);
+      const hayWords = haystack.split(/\s+/).filter(Boolean);
+      const score = words.reduce((total, word) => {
+        if (haystack.includes(word)) return total + 10;
+        return total + getFuzzyWordScore(word, hayWords);
+      }, exact);
       return { item, score };
     })
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.item);
+}
+
+function getFuzzyWordScore(word, candidates) {
+  if (word.length < 4) return 0;
+  const limit = word.length >= 8 ? 2 : 1;
+  return candidates.some((candidate) => Math.abs(candidate.length - word.length) <= limit && levenshtein(word, candidate, limit) <= limit) ? 6 : 0;
+}
+
+function levenshtein(a, b, limit = 2) {
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let rowMin = current[0];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      rowMin = Math.min(rowMin, current[j]);
+    }
+    if (rowMin > limit) return limit + 1;
+    previous = current;
+  }
+  return previous[b.length];
 }
 
 function scheduleInstantSearch() {

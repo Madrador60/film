@@ -298,6 +298,84 @@ body.nova-app::before {
   box-shadow: 0 26px 70px rgba(0, 0, 0, .55) !important;
 }
 
+.nova-app .library-date-heading {
+  grid-column: 1 / -1;
+  margin: 18px 0 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--nova-line);
+  color: var(--nova-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.nova-app .player-recommendations {
+  margin-top: clamp(40px, 6vw, 84px);
+  padding-top: 28px;
+  border-top: 1px solid var(--nova-line);
+}
+
+.nova-app .recommendation-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 340px);
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px 16px;
+  scrollbar-width: none;
+}
+
+.nova-app .recommendation-track::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .recommendation-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--nova-radius);
+  background: #111319;
+  color: white;
+  text-align: left;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.nova-app .recommendation-card:hover,
+.nova-app .recommendation-card:focus-visible {
+  transform: translateY(-4px);
+  background: #171a21;
+}
+
+.nova-app .recommendation-image {
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #090a0e;
+}
+
+.nova-app .recommendation-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nova-app .recommendation-copy {
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.nova-app .recommendation-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .recommendation-copy small {
+  color: var(--nova-muted);
+}
+
 .nova-app .catalog-hero-head,
 .nova-app .settings-hero,
 .nova-app .library-hero,

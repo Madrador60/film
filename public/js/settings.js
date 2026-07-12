@@ -37,7 +37,7 @@ function hydrateSettings() {
     $(id).value = prefs[id];
   });
 
-  ['reduceMotion', 'autoplay', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
+  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
     $(id).checked = Boolean(prefs[id]);
   });
 
@@ -56,7 +56,7 @@ function bindSettings() {
     $(id).addEventListener('change', saveSettings);
   });
 
-  ['reduceMotion', 'autoplay', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
+  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
     $(id).addEventListener('change', saveSettings);
   });
 
@@ -89,6 +89,7 @@ function saveSettings() {
     preferredSource: $('preferredSource').value,
     preferredVersion: $('preferredVersion').value,
     autoplay: $('autoplay').checked,
+    autoSourceFallback: $('autoSourceFallback').checked,
     resumePlayback: $('resumePlayback').checked,
     rememberLastSource: $('rememberLastSource').checked,
     miniPlayerEnabled: $('miniPlayerEnabled').checked,

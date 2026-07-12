@@ -18,6 +18,7 @@ let selectedEpisodeIndex = 0;
 let baseSeriesTitle = '';
 let selectedSeriesVersion = 'vf';
 let sourceAttemptId = 0;
+let automaticFallbacks = 0;
 const SERIES_VERSIONS = ['vf', 'vostfr', 'vo'];
 const SERIES_VERSION_LABELS = { vf: 'VF', vostfr: 'VOSTFR', vo: 'VO' };
 const SERIES_VERSION_VALUES = { VF: 'vf', VOSTFR: 'vostfr', VO: 'vo', 'VF+VOSTFR': 'vf' };
@@ -147,9 +148,64 @@ function renderDetails(details) {
   renderBackdrop(backdrop);
   renderTrailer(details.trailer || details.youtube || '');
   renderFavoriteButton();
+  loadRecommendations(details);
 
   document.body.dataset.layout = contentType;
   document.title = `${title} - Madrador TV`;
+}
+
+async function loadRecommendations(details) {
+  const section = $('playerRecommendations');
+  const track = $('recommendationTrack');
+  const tmdbId = details?.tmdb?.id;
+  if (!section || !track || !tmdbId) return;
+  const type = details.isSeries || contentType === 'series' ? 'series' : 'movie';
+
+  try {
+    const data = await fetchJson(`/api/tmdb/recommendations/${type}/${encodeURIComponent(tmdbId)}`);
+    const items = Array.isArray(data.items) ? data.items.slice(0, 12) : [];
+    if (!items.length) return;
+    track.innerHTML = items.map((item, index) => `
+      <button class="recommendation-card" type="button" data-recommendation="${index}">
+        <span class="recommendation-image">
+          ${item.backdrop || item.poster ? `<img src="${escapeHtml(item.backdrop || item.poster)}" alt="" loading="lazy" data-image-role="land">` : '<i class="fa-solid fa-film"></i>'}
+        </span>
+        <span class="recommendation-copy">
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.year || (type === 'series' ? 'Série' : 'Film'))}${item.rating ? ` • ${Number(item.rating).toFixed(1)}/10` : ''}</small>
+        </span>
+      </button>`).join('');
+    section.classList.remove('hidden');
+    track.querySelectorAll('[data-recommendation]').forEach((button) => {
+      button.addEventListener('click', () => openRecommendation(items[Number(button.dataset.recommendation)]));
+    });
+    window.MadradorImages?.scan(track);
+  } catch (error) {
+    console.warn('Recommandations indisponibles.', error);
+  }
+}
+
+async function openRecommendation(item) {
+  if (!item?.title) return;
+  showPlayerNotice(`Recherche de ${item.title} dans Madrador...`);
+  try {
+    const data = await fetchJson(`/api/search?q=${encodeURIComponent(item.title)}`);
+    const pools = [data.items, data.movies, data.series, data.results]
+      .flatMap((value) => Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : []);
+    const wanted = normalizeTitleKey(item.title);
+    const match = pools.find((candidate) => normalizeTitleKey(candidate.title || candidate.name || '') === wanted)
+      || pools.find((candidate) => normalizeTitleKey(candidate.title || candidate.name || '').includes(wanted));
+    if (!match?.id) {
+      showPlayerNotice('Ce titre recommandé n’est pas encore dans le catalogue.');
+      return;
+    }
+    const isSeries = Boolean(match.isSeries || String(match.type || '').toLowerCase().includes('series'));
+    const params = new URLSearchParams({ id: match.id, type: isSeries ? 'series' : 'movie' });
+    if (isSeries) params.set('seriesTitle', match.seriesTitle || match.title || item.title);
+    location.href = `./player.html?${params.toString()}`;
+  } catch (error) {
+    showPlayerNotice('Recherche de recommandation indisponible.');
+  }
 }
 
 function renderMovieLayout(streamData) {
@@ -776,6 +832,7 @@ function normalizeStreams(list) {
 }
 
 function renderSources() {
+  automaticFallbacks = 0;
   const box = $('sources');
   box.innerHTML = '';
   selectedIndex = -1;
@@ -1028,16 +1085,28 @@ function watchSourceLoad(attemptId) {
   window.clearTimeout(watchSourceLoad.timer);
   watchSourceLoad.timer = window.setTimeout(() => {
     if (attemptId !== sourceAttemptId || selectedIndex < 0 || !$('player').classList.contains('active')) return;
+    const prefs = MadradorStorage.getPrefs();
+    const canFallback = prefs.autoSourceFallback && streams.length > 1 && automaticFallbacks < streams.length - 1;
     renderSourceStatus(
       streams[selectedIndex],
-      'Lecture à vérifier',
-      'Si l’image reste noire ou si une publicité bloque le lecteur, change de source ou ouvre-la dans un nouvel onglet.',
+      canFallback ? 'Source lente, changement automatique' : 'Lecture à vérifier',
+      canFallback
+        ? 'Madrador essaie automatiquement le lecteur suivant.'
+        : 'Si l’image reste noire ou si une publicité bloque le lecteur, change de source ou ouvre-la dans un nouvel onglet.',
       [
         { label: 'Source suivante', icon: 'fa-forward-step', action: () => playRelativeSource(1), disabled: streams.length < 2 },
         { label: 'Ouvrir', icon: 'fa-up-right-from-square', action: () => openCurrentSource(), disabled: !streams[selectedIndex]?.url }
       ]
     );
-    showPlayerNotice('Lecteur à vérifier : essaie Source suivante si besoin.');
+    if (canFallback) {
+      automaticFallbacks += 1;
+      showPlayerNotice('Source lente : passage au lecteur suivant.');
+      window.setTimeout(() => {
+        if (attemptId === sourceAttemptId) playRelativeSource(1);
+      }, 1200);
+    } else {
+      showPlayerNotice('Lecteur à vérifier : essaie Source suivante si besoin.');
+    }
   }, 7000);
 }
 

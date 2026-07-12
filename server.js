@@ -577,6 +577,19 @@ function getTmdbAuthConfig(params = {}) {
     return config;
 }
 
+async function tmdbGet(pathname, params = {}) {
+    try {
+        return await axios.get(`${TMDB_API_BASE}${pathname}`, getTmdbAuthConfig(params));
+    } catch (error) {
+        if (error.response?.status !== 401 || !TMDB_BEARER_TOKEN || !TMDB_API_KEY) throw error;
+        return axios.get(`${TMDB_API_BASE}${pathname}`, {
+            timeout: 10000,
+            params: { language: 'fr-FR', ...params, api_key: TMDB_API_KEY },
+            headers: { Accept: 'application/json' }
+        });
+    }
+}
+
 function getTmdbImage(pathname, size = 'w780') {
     if (!pathname) return '';
     if (String(pathname).startsWith('http')) return pathname;
@@ -634,17 +647,17 @@ async function fetchTmdbDetails({ title, year, type = 'movie' }) {
         if (year && mediaType === 'movie') searchParams.year = year;
         if (year && mediaType === 'tv') searchParams.first_air_date_year = year;
 
-        const search = await axios.get(`${TMDB_API_BASE}/search/${mediaType}`, getTmdbAuthConfig(searchParams));
+        const search = await tmdbGet(`/search/${mediaType}`, searchParams);
         const result = pickTmdbResult(search.data?.results, clean, year);
         if (!result?.id) {
             setCachedFor(cacheKey, null);
             return null;
         }
 
-        const detail = await axios.get(`${TMDB_API_BASE}/${mediaType}/${result.id}`, getTmdbAuthConfig({
+        const detail = await tmdbGet(`/${mediaType}/${result.id}`, {
             append_to_response: 'videos',
             include_image_language: 'fr,en,null'
-        }));
+        });
         const data = detail.data || {};
         const tmdb = {
             tmdbId: data.id,
@@ -666,6 +679,33 @@ async function fetchTmdbDetails({ title, year, type = 'movie' }) {
         console.log(`[TMDB] Enrichissement impossible (${clean}) : ${error.message}`);
         setCachedFor(cacheKey, null);
         return null;
+    }
+}
+
+async function fetchTmdbRecommendations(type, tmdbId) {
+    if (!isTmdbConfigured() || !tmdbId) return [];
+    const mediaType = type === 'series' || type === 'tv' ? 'tv' : 'movie';
+    const cacheKey = `tmdb_recommendations_${mediaType}_${tmdbId}`;
+    const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
+    if (cached) return cached;
+
+    try {
+        const response = await tmdbGet(`/${mediaType}/${tmdbId}/recommendations`, { page: 1 });
+        const items = (response.data?.results || []).slice(0, 18).map((item) => ({
+            tmdbId: item.id,
+            type: mediaType === 'tv' ? 'series' : 'movie',
+            title: item.title || item.name || item.original_title || item.original_name || '',
+            description: item.overview || '',
+            poster: getTmdbImage(item.poster_path, 'w500'),
+            backdrop: getTmdbImage(item.backdrop_path, 'w1280'),
+            year: getTmdbYear(item),
+            rating: item.vote_average || null
+        })).filter((item) => item.title && (item.poster || item.backdrop));
+        setCachedFor(cacheKey, items);
+        return items;
+    } catch (error) {
+        console.log(`[TMDB] Recommandations indisponibles (${mediaType}/${tmdbId}) : ${error.message}`);
+        return [];
     }
 }
 
@@ -1987,6 +2027,12 @@ app.get('/api/seasons/:query', async (req, res) => {
 });
 
 // 📄 Détails
+app.get('/api/tmdb/recommendations/:type/:id', async (req, res) => {
+    const type = req.params.type === 'series' || req.params.type === 'tv' ? 'series' : 'movie';
+    const items = await fetchTmdbRecommendations(type, req.params.id);
+    res.json({ ok: true, type, total: items.length, items });
+});
+
 app.get('/api/details/:id', async (req, res) => {
     try {
         const id = getApiId(req.params.id);
