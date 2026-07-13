@@ -21,6 +21,7 @@ let searchSuggestIndex = -1;
 let searchDebounce = null;
 let backendSuggestToken = 0;
 let keepaliveTimer = null;
+let catalogHydrationAttempts = 0;
 const pendingJsonRequests = new Map();
 let catalogBackgroundTimer = null;
 let heroInteractionStarted = false;
@@ -138,10 +139,10 @@ function bindUI() {
   $('directBtn').addEventListener('click', () => {
     location.href = './direct.html';
   });
-  $('newBtn').addEventListener('click', () => renderNewReleases());
-  $('popularBtn').addEventListener('click', () => renderPopular());
-  $('favoritesBtn').addEventListener('click', () => renderLocalCollection('Ma liste', MadradorStorage.favorites(), $('favoritesBtn')));
-  $('historyBtn').addEventListener('click', () => renderLocalCollection('Historique', MadradorStorage.history(), $('historyBtn')));
+  $('newBtn').addEventListener('click', () => { location.href = './catalog.html?view=new'; });
+  $('popularBtn').addEventListener('click', () => { location.href = './catalog.html?view=popular'; });
+  $('favoritesBtn').addEventListener('click', () => { location.href = './library.html?view=favorites'; });
+  $('historyBtn').addEventListener('click', () => { location.href = './library.html?view=history'; });
   $('settingsBtn').addEventListener('click', () => {
     location.href = './settings.html';
   });
@@ -316,6 +317,12 @@ async function hydrateHomeWithFullCatalog() {
         startHeroCarousel();
       }
     }
+    const complete = moviesData.complete === true && seriesData.complete === true;
+    if (!complete && catalogHydrationAttempts < 20) {
+      catalogHydrationAttempts += 1;
+      window.clearTimeout(catalogBackgroundTimer);
+      catalogBackgroundTimer = window.setTimeout(hydrateHomeWithFullCatalog, 15000);
+    }
   } catch (error) {
     console.warn('Catalogue complet en arrière-plan indisponible.', error);
   }
@@ -480,7 +487,7 @@ function normalizeItems(items, fallbackType) {
       rating: item.rating || item.note || '',
       type,
       seasonNumber: seasonInfo.seasonNumber,
-      seriesTitle: seasonInfo.baseTitle || title
+      seriesTitle: type === 'series' ? (seasonInfo.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
 }
@@ -586,8 +593,8 @@ function renderHomeRows() {
     { title: 'Continuer à regarder', items: continueItems, layout: 'land', variant: 'continue' },
     { title: 'Ma liste', items: favoriteItems, layout: 'poster', variant: 'favorites' },
     { title: 'Films du moment', items: movies.slice(0, 8), layout: 'land' },
-    { title: 'Derniers Films', items: movies.slice(0, 14), layout: 'poster' },
-    { title: 'Dernières Séries', items: series.slice(0, 14), layout: 'poster' },
+    { title: 'Derniers Films', items: movies.slice(0, 10), layout: 'poster' },
+    { title: 'Dernières Séries', items: series.slice(0, 10), layout: 'poster' },
     { title: 'Séries du moment', items: series.slice(0, 8), layout: 'land' },
     { title: 'Action', items: pickEvery(movies, 1, 12), layout: 'poster' },
     { title: 'Manga', items: pickEvery(series, 3, 12), layout: 'poster' },
@@ -618,8 +625,9 @@ function renderHomeRows() {
     { title: 'Populaires', items: pickEvery(series, 9, 12), layout: 'poster' }
   ];
 
-  const rowDefs = (currentTab === 'movies' ? movieRows : currentTab === 'series' ? seriesRows : homeRows)
+  const availableRows = (currentTab === 'movies' ? movieRows : currentTab === 'series' ? seriesRows : homeRows)
     .filter((row) => row.items.length);
+  const rowDefs = currentTab === 'home' ? availableRows.slice(0, 4) : availableRows;
 
   renderRows(rowDefs);
 }
@@ -1006,6 +1014,7 @@ function pickEvery(items, offset, count) {
 }
 
 function openPlayer(item, autoplay = false) {
+  MadradorStorage.rememberMedia(item);
   const query = new URLSearchParams({
     id: item.id,
     type: item.type === 'series' ? 'series' : 'movie'
@@ -1096,7 +1105,7 @@ function normalizeQuickTrailer(value) {
   if (videoId) {
     const origin = encodeURIComponent(location.origin);
     return {
-      embed: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${origin}`,
+      embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${encodeURIComponent(location.href)}`,
       watch: `https://www.youtube.com/watch?v=${videoId}`
     };
   }
@@ -1446,6 +1455,7 @@ function shouldUpgradeHeroImage(item, image) {
 
 async function enrichHeroSlide(item, query, token) {
   item.heroEnriched = true;
+  const startedAt = performance.now();
   try {
     const request = new URLSearchParams({
       title: item.seriesTitle || item.title || query || '',
@@ -1474,6 +1484,7 @@ async function enrichHeroSlide(item, query, token) {
 
     const index = heroItems.findIndex((entry) => String(entry.id) === String(item.id));
     if (index !== -1) heroItems[index] = enriched;
+    if (performance.now() - startedAt > 1500) return;
     currentHeroItem = enriched;
 
     const hero = $('hero');

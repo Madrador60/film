@@ -282,7 +282,7 @@ function createCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
-      <button type="button" class="media-card-open" data-open aria-label="Ouvrir les informations de ${escapeHtml(item.title)}"></button>
+      <button type="button" class="media-card-open" data-open aria-label="Voir ${escapeHtml(item.title)} dans le lecteur"></button>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-play aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-play"></i></button>
         <button type="button" class="media-action" data-info aria-label="Informations sur ${escapeHtml(item.title)}"><i class="fa-solid fa-circle-info"></i></button>
@@ -407,7 +407,7 @@ function normalizeItems(items, fallbackType) {
       year: item.year || '',
       type,
       seasonNumber: season.seasonNumber,
-      seriesTitle: season.baseTitle || title
+      seriesTitle: type === 'series' ? (season.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
 }

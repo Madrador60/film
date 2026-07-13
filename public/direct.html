@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css?v=20260712-direct-tv" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish13" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260714-stability1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body direct-body nova-app">
@@ -93,9 +93,9 @@
       <p class="direct-hint" id="directHint">Choisis une chaîne dans le catalogue.</p>
     </section>
 
-    <section class="direct-tools" id="directTools" hidden>
+    <section class="direct-tools" id="directTools" role="dialog" aria-modal="true" aria-labelledby="directToolsTitle" hidden>
       <div class="direct-tools-head">
-        <div><span>Sources personnelles</span><h2>Ajouter un flux ou une playlist</h2></div>
+        <div><span>Sources personnelles</span><h2 id="directToolsTitle">Ajouter un flux ou une playlist</h2></div>
         <button class="icon-btn" id="directToolsClose" type="button" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="direct-tools-grid">
@@ -172,7 +172,7 @@
 
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="./js/storage.js?v=20260713-polish2"></script>
+  <script src="./js/storage.js?v=20260714-stability1"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260713-stability1"></script>
   <script src="./js/antiads.js?v=20260712-guard2"></script>
@@ -180,6 +180,6 @@
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-  <script src="./js/direct.js?v=20260713-stability1"></script>
+  <script src="./js/direct.js?v=20260714-stability1"></script>
 </body>
 </html>

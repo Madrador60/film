@@ -6,6 +6,7 @@ const MadradorStorage = (() => {
     miniPlayer: 'madrador:mini-player',
     prefs: 'madrador:prefs'
   };
+  const MEDIA_PREFIX = 'madrador:media:';
 
   const DEFAULT_PREFS = {
     theme: 'dark',
@@ -14,6 +15,7 @@ const MadradorStorage = (() => {
     cardStyle: 'cinema',
     reduceMotion: false,
     preferredSource: 'vidzy',
+    playerTimeoutMs: 9000,
     lastSource: '',
     autoplay: true,
     autoSourceFallback: true,
@@ -40,13 +42,14 @@ const MadradorStorage = (() => {
   }
 
   function list(key) {
-    return uniqueMediaList(read(key, []));
+    return uniqueMediaList(read(key, []).map(normalizeMediaItem));
   }
 
   function upsert(key, item, limit = 48) {
     if (!item?.id) return;
-    const identity = mediaIdentity(item);
-    const next = [item, ...list(key).filter((saved) => mediaIdentity(saved) !== identity)].slice(0, limit);
+    const normalized = normalizeMediaItem(item);
+    const identity = mediaIdentity(normalized);
+    const next = [normalized, ...list(key).filter((saved) => mediaIdentity(saved) !== identity)].slice(0, limit);
     write(key, next);
   }
 
@@ -61,17 +64,39 @@ const MadradorStorage = (() => {
   }
 
   function media(details) {
-    return {
+    return normalizeMediaItem({
       id: details.id,
       title: details.title || details.name || 'Sans titre',
+      description: details.description || details.synopsis || details.desc || '',
       poster: details.poster || details.affiche || details.image || '',
       backdrop: details.backdrop || details.cover || '',
       quality: details.quality || 'HD',
       version: details.version || 'VF',
       year: details.year || '',
-      type: details.isSeries ? 'series' : 'movies',
+      type: normalizeMediaType(details),
+      isSeries: normalizeMediaType(details) === 'series',
+      seriesTitle: details.seriesTitle || '',
       savedAt: Date.now()
+    });
+  }
+
+  function normalizeMediaType(item) {
+    const raw = String(item?.type || '').toLowerCase();
+    if (item?.isSeries === true || raw === 'series' || raw === 'serie' || raw === 'tv') return 'series';
+    if (item?.isSeries === false || raw === 'movie' || raw === 'movies' || raw === 'film') return 'movies';
+    return item?.season || item?.episode ? 'series' : 'movies';
+  }
+
+  function normalizeMediaItem(item = {}) {
+    const type = normalizeMediaType(item);
+    const normalized = {
+      ...item,
+      type,
+      isSeries: type === 'series'
     };
+    if (type === 'series') normalized.seriesTitle = item.seriesTitle || stripSeasonTitle(item.title || '');
+    else delete normalized.seriesTitle;
+    return normalized;
   }
 
   function uniqueMediaList(items) {
@@ -85,9 +110,9 @@ const MadradorStorage = (() => {
   }
 
   function mediaIdentity(item) {
-    const type = String(item?.type || '').toLowerCase();
+    const type = normalizeMediaType(item);
     const title = stripSeasonTitle(item?.seriesTitle || item?.title || item?.originalTitle || '');
-    if (type.includes('series') || type.includes('serie') || item?.season || item?.episode || item?.seriesTitle) {
+    if (type === 'series') {
       return `series:${normalizeKey(title)}`;
     }
     return `movie:${item?.id || normalizeKey(item?.title || '')}`;
@@ -142,6 +167,18 @@ const MadradorStorage = (() => {
     document.documentElement.dataset.motion = prefs.reduceMotion ? 'reduced' : 'full';
   }
 
+  function rememberMedia(item) {
+    if (!item?.id) return;
+    write(`${MEDIA_PREFIX}${item.id}`, { ...normalizeMediaItem(item), rememberedAt: Date.now() });
+  }
+
+  function findMedia(id) {
+    const remembered = normalizeMediaItem(read(`${MEDIA_PREFIX}${id}`, {}));
+    if (remembered.id) return remembered;
+    return [...list(KEYS.continue), ...list(KEYS.favorites), ...list(KEYS.history)]
+      .find((item) => String(item.id) === String(id)) || null;
+  }
+
   return {
     KEYS,
     DEFAULT_PREFS,
@@ -149,6 +186,10 @@ const MadradorStorage = (() => {
     setPrefs,
     applyPrefs,
     media,
+    normalizeMediaType,
+    normalizeMediaItem,
+    rememberMedia,
+    findMedia,
     favorites: () => list(KEYS.favorites),
     history: () => list(KEYS.history),
     continueWatching: () => list(KEYS.continue),
@@ -166,7 +207,7 @@ const MadradorStorage = (() => {
     clearCache: () => {
       Object.values(KEYS).forEach(clear);
       Object.keys(localStorage)
-        .filter((key) => key.startsWith('madrador:cache:'))
+        .filter((key) => key.startsWith('madrador:cache:') || key.startsWith(MEDIA_PREFIX))
         .forEach((key) => localStorage.removeItem(key));
       setPrefs(DEFAULT_PREFS);
     }

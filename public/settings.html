@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish13" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260714-stability1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body settings-body nova-app">
@@ -48,7 +48,6 @@
       </div>
       <div class="settings-hero-actions">
         <a href="./index.html" class="btn glass"><i class="fa-solid fa-arrow-left"></i><span>Accueil</span></a>
-        <a href="./admin.html" class="btn glass"><i class="fa-solid fa-chart-simple"></i><span>Admin</span></a>
       </div>
     </section>
 
@@ -150,6 +149,15 @@
             <option value="netu">netu</option>
           </select>
         </label>
+        <label class="setting-row stack">
+          <span>Délai avant la source suivante</span>
+          <select id="playerTimeoutMs">
+            <option value="6000">6 secondes</option>
+            <option value="9000">9 secondes</option>
+            <option value="12000">12 secondes</option>
+            <option value="18000">18 secondes</option>
+          </select>
+        </label>
         <label class="setting-row"><span>Lecture automatique</span><input type="checkbox" id="autoplay"></label>
         <label class="setting-row"><span>Changer de source automatiquement</span><input type="checkbox" id="autoSourceFallback"></label>
         <label class="setting-row"><span>Reprendre la lecture</span><input type="checkbox" id="resumePlayback"></label>
@@ -236,13 +244,13 @@
     <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
     <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
   </nav>
-  <script src="./js/storage.js?v=20260713-polish2"></script>
+  <script src="./js/storage.js?v=20260714-stability1"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260713-stability1"></script>
   <script src="./js/antiads.js?v=20260712-guard2"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/settings.js?v=20260713-polish2"></script>
+  <script src="./js/settings.js?v=20260714-stability1"></script>
 </body>
 </html>

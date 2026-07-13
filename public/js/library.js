@@ -168,11 +168,11 @@ function createLibraryCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
-      <button type="button" class="media-card-open" data-action="info" aria-label="Ouvrir les informations de ${escapeHtml(item.title)}"></button>
+      <button type="button" class="media-card-open" data-action="info" aria-label="Voir ${escapeHtml(item.title)} dans le lecteur"></button>
       <div class="media-actions">
-        <button type="button" class="media-action primary-action" data-action="play" aria-label="Regarder"><i class="fa-solid fa-play"></i></button>
-        <button type="button" class="media-action" data-action="info" aria-label="Fiche"><i class="fa-solid fa-circle-info"></i></button>
-        <button type="button" class="media-action danger-action" data-action="remove" aria-label="Retirer"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="media-action primary-action" data-action="play" aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-play"></i></button>
+        <button type="button" class="media-action" data-action="info" aria-label="Voir ${escapeHtml(item.title)} dans le lecteur"><i class="fa-solid fa-circle-info"></i></button>
+        <button type="button" class="media-action danger-action" data-action="remove" aria-label="Retirer ${escapeHtml(item.title)} de la bibliothèque"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <h3>${escapeHtml(item.title)}</h3>
       <div class="library-card-meta">
@@ -259,9 +259,7 @@ function getBucketLabel(bucket) {
 }
 
 function inferType(item) {
-  const raw = String(item?.type || '').toLowerCase();
-  if (item?.isSeries === true || raw.includes('series') || raw.includes('serie') || item?.seriesTitle || item?.season || item?.episode) return 'series';
-  return 'movies';
+  return MadradorStorage.normalizeMediaType(item);
 }
 
 function openDetails(item) {
@@ -269,6 +267,7 @@ function openDetails(item) {
 }
 
 function openPlayer(item) {
+  MadradorStorage.rememberMedia(item);
   const query = new URLSearchParams({
     id: item.id,
     type: item.type === 'series' ? 'series' : 'movie'

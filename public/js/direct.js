@@ -19,6 +19,9 @@ const directHealthQueue = [];
 const directHealthCache = new Map();
 let directHealthRunning = false;
 let directHealthObserver = null;
+let directPlaybackToken = 0;
+const attemptedDirectSources = new Set();
+const directSourceStates = new Map();
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -207,9 +210,24 @@ async function handleDirectFile(event) {
   }
 }
 
-function playUrl(url, direct = {}) {
+function playUrl(url, direct = {}, lifecycle = {}) {
   const screen = $('directScreen');
   destroyDirectPlayback();
+  const playbackToken = ++directPlaybackToken;
+  const startedAt = Date.now();
+  let settled = false;
+  const ready = () => {
+    if (settled || playbackToken !== directPlaybackToken) return;
+    settled = true;
+    lifecycle.onReady?.(Date.now() - startedAt);
+  };
+  const fail = (message) => {
+    if (settled || playbackToken !== directPlaybackToken) return;
+    settled = true;
+    lifecycle.onFailure?.(message);
+  };
+  const readinessTimer = window.setTimeout(() => fail('Le lecteur ne répond pas dans le délai prévu.'), Number(lifecycle.timeout) || 14000);
+  const clearReadinessTimer = () => window.clearTimeout(readinessTimer);
   const type = direct.type || getDirectType(url);
 
   if (type === 'hls' || type === 'video') {
@@ -226,31 +244,40 @@ function playUrl(url, direct = {}) {
       activeHls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (!data?.fatal) return;
         if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
-          setHint('Flux HLS indisponible. Essaie une autre chaîne ou ouvre la source.');
-          activeHls.startLoad();
+          clearReadinessTimer();
+          fail('Flux HLS indisponible.');
         } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
           activeHls.recoverMediaError();
         } else {
+          clearReadinessTimer();
           destroyActiveHls();
+          fail('Le lecteur HLS a rencontré une erreur fatale.');
         }
       });
       activeHls.loadSource(url);
       activeHls.attachMedia(video);
       activeHls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        clearReadinessTimer();
+        ready();
         video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
       });
     } else {
       video.src = url;
+      video.addEventListener('canplay', () => { clearReadinessTimer(); ready(); }, { once: true });
+      video.addEventListener('error', () => { clearReadinessTimer(); fail('Flux vidéo indisponible.'); }, { once: true });
       video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
     }
   } else {
     const frame = document.createElement('iframe');
     frame.className = 'direct-frame';
     frame.src = url;
+    frame.title = `Direct ${direct.name || direct.title || 'Madrador TV'}`;
     frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     frame.allowFullscreen = true;
     frame.referrerPolicy = 'no-referrer';
     frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation';
+    frame.addEventListener('load', () => { clearReadinessTimer(); ready(); }, { once: true });
+    frame.addEventListener('error', () => { clearReadinessTimer(); fail('Lecteur intégré indisponible.'); }, { once: true });
     screen.appendChild(frame);
   }
 
@@ -260,6 +287,7 @@ function playUrl(url, direct = {}) {
 }
 
 function destroyDirectPlayback() {
+  directPlaybackToken += 1;
   destroyActiveHls();
   const screen = $('directScreen');
   if (!screen) return;
@@ -864,6 +892,7 @@ function classifyChannel(channel) {
 async function playChannel(channel) {
   if (!channel?.url) return;
   if (Array.isArray(channel.sources) && channel.sources.length) {
+    attemptedDirectSources.clear();
     selectedDirectSourceIndex = 0;
     playChannelSource(channel, 0);
     return;
@@ -908,6 +937,8 @@ async function playChannelSource(channel, index) {
     return;
   }
   selectedDirectSourceIndex = index;
+  attemptedDirectSources.add(index);
+  updateDirectSourceState(source.url, 'checking');
   const activeChannel = { ...channel, url: source.url, sourceName: source.name, provider: source.provider };
   setCurrentChannel(activeChannel);
   renderChannelSources(activeChannel);
@@ -917,13 +948,13 @@ async function playChannelSource(channel, index) {
       const response = await fetch(`/api/direct/channel-stream?url=${encodeURIComponent(source.url)}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok || !data?.ok || !data.url) throw new Error(data?.error || 'Flux CDNLiveTV indisponible');
-      playUrl(data.url, { ...activeChannel, type: 'hls' });
+      playUrl(data.url, { ...activeChannel, type: 'hls' }, getDirectSourceLifecycle(channel, source, index));
     } catch (error) {
-      showDirectError(activeChannel, error.message);
+      handleDirectSourceFailure(channel, source, index, error.message);
       return;
     }
   } else {
-    playUrl(source.url, { ...activeChannel, type: 'iframe' });
+    playUrl(source.url, { ...activeChannel, type: 'iframe' }, getDirectSourceLifecycle(channel, source, index));
   }
   saveRecent(source.url, activeChannel);
   renderRecent();
@@ -937,22 +968,60 @@ function renderChannelSources(channel) {
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
     <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}">
-      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)}</small>
+      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)} · ${escapeHtml(getDirectSourceStateLabel(source.url))}</small>
     </button>
   `).join('');
   list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
+    attemptedDirectSources.clear();
     playChannelSource(channel, Number(button.dataset.sourceIndex));
   }));
+}
+
+function getDirectSourceLifecycle(channel, source, index) {
+  return {
+    timeout: 14000,
+    onReady(elapsed) {
+      updateDirectSourceState(source.url, elapsed > 5000 ? 'slow' : 'available');
+      setHint(`Lecture : ${channel.name} · ${source.name} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
+      renderChannelSources({ ...channel, url: source.url });
+    },
+    onFailure(message) {
+      handleDirectSourceFailure(channel, source, index, message);
+    }
+  };
+}
+
+function handleDirectSourceFailure(channel, source, index, message) {
+  updateDirectSourceState(source.url, 'unavailable', message);
+  const nextIndex = (channel.sources || []).findIndex((_item, candidateIndex) => !attemptedDirectSources.has(candidateIndex));
+  if (nextIndex >= 0) {
+    setHint(`${source.name} indisponible. Essai automatique de la source suivante...`);
+    window.setTimeout(() => playChannelSource(channel, nextIndex), 250);
+    return;
+  }
+  showDirectError(channel, `Toutes les sources ont échoué. Dernière erreur : ${message}`);
+  renderChannelSources(channel);
+}
+
+function updateDirectSourceState(url, state, error = '') {
+  directSourceStates.set(url, { state, error, checkedAt: new Date().toISOString() });
+}
+
+function getDirectSourceStateLabel(url) {
+  const state = directSourceStates.get(url)?.state || 'idle';
+  return ({ idle: 'non testée', checking: 'chargement', available: 'prête', slow: 'lente', unavailable: 'indisponible' })[state] || state;
 }
 
 function playNextChannelSource() {
   const sources = currentDirectChannel?.sources || [];
   if (!sources.length) return;
+  attemptedDirectSources.clear();
   playChannelSource(currentDirectChannel, (selectedDirectSourceIndex + 1) % sources.length);
 }
 
 function reloadCurrentChannelSource() {
   if (!currentDirectChannel?.sources?.length) return;
+  attemptedDirectSources.clear();
   playChannelSource(currentDirectChannel, selectedDirectSourceIndex);
 }
 

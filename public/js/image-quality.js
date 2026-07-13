@@ -14,15 +14,17 @@
   function sharpUrl(url, role = 'poster') {
     const value = String(url || '');
     if (!isTmdb(value)) return value;
-    const size = role === 'backdrop' || role === 'land' ? 'w780' : 'w500';
+    const size = role === 'backdrop' ? 'w780' : 'w500';
     return value.replace(/\/t\/p\/[^/]+\//i, `/t/p/${size}/`);
   }
 
   function srcset(url, role = 'poster') {
     if (!isTmdb(url)) return '';
     const base = String(url);
-    const sizes = role === 'backdrop' || role === 'land'
+    const sizes = role === 'backdrop'
       ? [['w500', 500], ['w780', 780]]
+      : role === 'land'
+        ? [['w300', 300], ['w500', 500]]
       : [['w300', 300], ['w500', 500]];
     return sizes.map(([size, width]) => `${base.replace(/\/t\/p\/[^/]+\//i, `/t/p/${size}/`)} ${width}w`).join(', ');
   }
@@ -39,9 +41,11 @@
       const next = sharpUrl(original, role);
       const candidates = srcset(original, role);
       if (candidates) img.srcset = candidates;
-      img.sizes = role === 'backdrop' || role === 'land'
+      img.sizes = role === 'backdrop'
         ? '100vw'
-        : '(max-width: 760px) 50vw, 260px';
+        : role === 'land'
+          ? '(max-width: 760px) 78vw, 360px'
+          : '(max-width: 760px) 50vw, 260px';
       if (next && next !== img.src) img.src = next;
     }
 

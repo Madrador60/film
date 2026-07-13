@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -11,6 +12,7 @@ loadEnvFile();
 const app = express();
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
 const FSTREAM_INFO = 'https://fstream.info/';
 
 // ⚠️ COOKIE ANTI-BOT OBLIGATOIRE
@@ -72,9 +74,19 @@ app.use((req, res, next) => {
     next();
 });
 app.use(cors());
+app.use(compression({ threshold: 1024 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+    if (IS_PRODUCTION && ['/admin.html', '/diagnostic.html'].includes(req.path)) {
+        return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
+    next();
+});
+app.use(express.static(path.join(__dirname, 'public'), {
+    etag: true,
+    maxAge: IS_PRODUCTION ? '1h' : 0
+}));
 
 // Cache simple
 const cache = new Map();
@@ -83,9 +95,9 @@ const catalogBuilds = new Map();
 let fullCatalogBuildRunning = false;
 const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
-const DETAILS_CACHE_DURATION = 10 * 60 * 1000;
-const SOURCES_CACHE_DURATION = 5 * 60 * 1000;
-const EPISODES_CACHE_DURATION = 10 * 60 * 1000;
+const DETAILS_CACHE_DURATION = 6 * 60 * 60 * 1000;
+const SOURCES_CACHE_DURATION = 30 * 60 * 1000;
+const EPISODES_CACHE_DURATION = 2 * 60 * 60 * 1000;
 const DIRECT_HEALTH_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_HEALTH_TIMEOUT = 5000;
 const FULL_CATALOG_PAGE_LIMITS = {
@@ -98,6 +110,7 @@ const CATALOG_BATCH_SIZE = Math.max(1, Math.min(Number(process.env.CATALOG_BATCH
 const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
 const PERSISTENT_DATA_CACHE_DIR = path.join(PERSISTENT_CACHE_DIR, 'data');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
+const CATALOG_CACHE_SCHEMA_VERSION = 2;
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_TOKEN || '';
@@ -563,6 +576,7 @@ function readPersistentCatalog(kind, limit) {
         if (!fs.existsSync(file)) return null;
         const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
         if (!parsed?.savedAt || Date.now() - parsed.savedAt > PERSISTENT_CATALOG_DURATION) return null;
+        if (parsed.schemaVersion !== CATALOG_CACHE_SCHEMA_VERSION || parsed.data?.complete !== true) return null;
         return parsed.data || null;
     } catch (error) {
         console.log(`[CACHE] Lecture cache persistant impossible (${kind}) : ${error.message}`);
@@ -588,7 +602,7 @@ function writePersistentCatalog(kind, limit, data) {
         ensurePersistentCacheDir();
         fs.writeFileSync(
             getPersistentCatalogPath(kind, limit),
-            JSON.stringify({ savedAt: Date.now(), data }, null, 2),
+            JSON.stringify({ schemaVersion: CATALOG_CACHE_SCHEMA_VERSION, savedAt: Date.now(), data }, null, 2),
             'utf8'
         );
     } catch (error) {
@@ -601,7 +615,7 @@ function writePersistentCatalogCheckpoint(kind, limit, data) {
         ensurePersistentCacheDir();
         fs.writeFileSync(
             getPersistentCatalogCheckpointPath(kind, limit),
-            JSON.stringify({ savedAt: Date.now(), data }, null, 2),
+            JSON.stringify({ schemaVersion: CATALOG_CACHE_SCHEMA_VERSION, savedAt: Date.now(), data }, null, 2),
             'utf8'
         );
     } catch (error) {
@@ -1164,7 +1178,7 @@ async function fetchAllCatalogItems(kind, limit) {
                     return { page, items: await scrapeCatalogPage(kind, page) };
                 } catch (error) {
                     console.log(`⚠️ Page ${page} indisponible (${kind}) : ${error.message}`);
-                    return { page, items: [] };
+                    return { page, items: null, error };
                 }
             }));
 
@@ -1172,6 +1186,21 @@ async function fetchAllCatalogItems(kind, limit) {
 
             let newItemsInBatch = 0;
             for (const result of pages) {
+                if (result.error) {
+                    writePersistentCatalogCheckpoint(kind, limit, {
+                        type: kind === 'series' ? 'series' : 'movie',
+                        limit,
+                        page: lastPage,
+                        total: allItems.length,
+                        complete: false,
+                        state: 'error',
+                        error: result.error.message,
+                        startedAt: checkpoint?.startedAt || getCatalogBuildState(kind, limit).startedAt,
+                        updatedAt: new Date().toISOString(),
+                        items: dedupeById(allItems)
+                    });
+                    throw new Error(`Page ${result.page} indisponible: ${result.error.message}`);
+                }
                 lastPage = Math.max(lastPage, result.page);
                 const pageItems = result.items || [];
                 if (!pageItems.length) {
@@ -1196,15 +1225,8 @@ async function fetchAllCatalogItems(kind, limit) {
                 });
 
                 if (newItemsInPage === 0) {
-                    console.log(`🛑 Arrêt ${kind}: page ${result.page} sans nouveau contenu.`);
-                    stopped = true;
-                    break;
+                    console.log(`ℹ️ Page ${result.page} sans nouveau contenu (${kind}), poursuite jusqu'à une vraie page vide.`);
                 }
-            }
-
-            if (!newItemsInBatch) {
-                console.log(`🛑 Arrêt ${kind}: aucune nouveauté dans le lot ${startPage}-${endPage}.`);
-                stopped = true;
             }
 
             writePersistentCatalogCheckpoint(kind, limit, {
@@ -1212,6 +1234,8 @@ async function fetchAllCatalogItems(kind, limit) {
                 limit,
                 page: lastPage,
                 total: allItems.length,
+                complete: false,
+                state: 'building',
                 startedAt: checkpoint?.startedAt || getCatalogBuildState(kind, limit).startedAt,
                 updatedAt: new Date().toISOString(),
                 items: dedupeById(allItems)
@@ -1225,6 +1249,9 @@ async function fetchAllCatalogItems(kind, limit) {
             pagesScraped: lastPage,
             limit,
             generatedAt: new Date().toISOString(),
+            complete: true,
+            state: 'complete',
+            schemaVersion: CATALOG_CACHE_SCHEMA_VERSION,
             items
         };
 
@@ -2321,7 +2348,7 @@ app.get('/api/catalog/status', (req, res) => {
         source: currentBaseUrl,
         cacheItems: cache.size,
         inFlight: Array.from(inFlightCache.keys()),
-        persistentCacheDir: PERSISTENT_CACHE_DIR,
+        persistentCacheDir: IS_PRODUCTION ? undefined : PERSISTENT_CACHE_DIR,
         film: filmState,
         series: serieState,
         ready: filmState.state === 'ready' && serieState.state === 'ready',
@@ -2338,12 +2365,22 @@ app.get('/api/catalog/snapshot', (req, res) => {
     const maxItems = Math.max(0, Math.min(Number(req.query.maxItems) || allItems.length, 50000));
     const items = allItems.slice(0, maxItems);
     const state = getCatalogBuildState(kind, limit);
+    const completeSnapshot = Boolean(complete);
+    const snapshotState = completeSnapshot
+        ? 'complete'
+        : allItems.length
+            ? (state.state === 'error' ? 'error' : 'partial')
+            : (state.state === 'building' ? 'loading' : state.state === 'error' ? 'error' : 'empty');
 
     res.set('Cache-Control', 'no-store, max-age=0');
     res.json({
         ok: true,
         type: kind === 'series' ? 'series' : 'movie',
-        complete: Boolean(complete),
+        complete: completeSnapshot,
+        partial: !completeSnapshot && allItems.length > 0,
+        temporary: !completeSnapshot,
+        state: snapshotState,
+        source: completeSnapshot ? 'persistent-complete' : allItems.length ? 'persistent-checkpoint' : 'none',
         total: allItems.length,
         returned: items.length,
         page: checkpoint?.page || checkpoint?.pagesScraped || state.page || 0,

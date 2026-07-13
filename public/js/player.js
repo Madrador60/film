@@ -26,6 +26,7 @@ let playbackSeconds = 0;
 let playbackContinueItem = null;
 let playbackWasVisible = !document.hidden;
 let sourceLaunchLocked = false;
+let cinemaScrollY = 0;
 const attemptedSourceIndexes = new Set();
 const pendingJsonRequests = new Map();
 const SERIES_VERSIONS = ['vf', 'vostfr', 'vo'];
@@ -59,7 +60,9 @@ function bindPlayerUI() {
     if (event.target === $('trailerModal')) closeTrailer();
   });
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeTrailer();
+    if (event.key !== 'Escape') return;
+    if (!$('trailerModal').classList.contains('hidden')) closeTrailer();
+    if (document.body.classList.contains('cinema-mode')) setCinemaMode(false);
   });
   window.addEventListener('beforeunload', () => flushPlaybackProgress(true, playbackWasVisible));
   document.addEventListener('visibilitychange', () => {
@@ -75,13 +78,19 @@ function bindPlayerFrame(frame) {
 }
 
 function toggleCinemaMode() {
-  document.body.classList.toggle('cinema-mode');
-  const active = document.body.classList.contains('cinema-mode');
+  setCinemaMode(!document.body.classList.contains('cinema-mode'));
+}
+
+function setCinemaMode(active) {
+  if (active) cinemaScrollY = window.scrollY;
+  document.body.classList.toggle('cinema-mode', active);
   $('cinemaMode').classList.toggle('is-favorite', active);
   $('cinemaMode').innerHTML = active
-    ? '<i class="fa-solid fa-compress"></i><span>Quitter cinéma</span>'
+    ? '<i class="fa-solid fa-compress"></i><span>Quitter le mode cinéma</span>'
     : '<i class="fa-solid fa-expand"></i><span>Mode cinéma</span>';
-  $('screen').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('cinemaMode').setAttribute('aria-pressed', String(active));
+  if (active) $('screen').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  else window.scrollTo({ top: cinemaScrollY, behavior: 'smooth' });
 }
 
 async function enterFullscreen() {
@@ -106,7 +115,13 @@ async function loadPlayer() {
       movieSourcesPromise
     ]);
 
-    currentDetails = details || {};
+    const remembered = MadradorStorage.findMedia(id) || {};
+    currentDetails = {
+      ...remembered,
+      ...(details || {}),
+      description: details?.description || details?.synopsis || remembered.description || '',
+      year: details?.year || remembered.year || ''
+    };
     contentType = detectContentType(currentDetails, {});
 
     renderDetails(currentDetails);
@@ -560,6 +575,8 @@ function updateEpisodeNowPanel(season = seasons[selectedSeasonIndex], episode = 
     : 'Épisode suivant';
   $('episodeNowNext').innerHTML = `<i class="fa-solid fa-forward"></i><span>${escapeHtml(label)}</span>`;
   $('nextEpisode').innerHTML = `<i class="fa-solid fa-forward"></i><span>${escapeHtml(label)}</span>`;
+  $('episodeNowNext').setAttribute('aria-label', disabled ? 'Aucun épisode suivant' : `${label} depuis le panneau de l'épisode`);
+  $('nextEpisode').setAttribute('aria-label', disabled ? 'Aucun épisode suivant' : `${label} depuis les commandes du lecteur`);
 }
 
 function getNextEpisodeTarget() {
@@ -1317,7 +1334,7 @@ function normalizeTrailerUrl(url) {
 
 function getYoutubeTrailerUrls(videoId) {
   return {
-    embed: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`,
+    embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}&widget_referrer=${encodeURIComponent(location.href)}`,
     watch: `https://www.youtube.com/watch?v=${videoId}`
   };
 }

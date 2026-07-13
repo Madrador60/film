@@ -18,6 +18,9 @@ let catalogSuggestToken = 0;
 let catalogSuggestionItems = [];
 let catalogViewMode = localStorage.getItem('madrador:catalog-view') || 'grid';
 const pendingJsonRequests = new Map();
+let catalogSnapshotComplete = false;
+let catalogHydrationAttempts = 0;
+let catalogHydrationTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -170,7 +173,6 @@ function bindCatalog() {
     hideCatalogApiStatus();
     loadCatalog();
   });
-  window.addEventListener('scroll', handleInfiniteCatalogScroll, { passive: true });
 }
 
 async function loadCatalog() {
@@ -178,6 +180,8 @@ async function loadCatalog() {
   hideCatalogApiStatus();
   setLoading(true);
   isCatalogLoading = true;
+  window.clearTimeout(catalogHydrationTimer);
+  catalogHydrationAttempts = 0;
 
   try {
     const q = $('catalogSearch').value.trim();
@@ -218,6 +222,10 @@ async function hydrateCatalogInBackground(query) {
       catalogItems = items;
       visibleCatalogItems = nextVisible;
       renderCatalog();
+    }
+    if (!catalogSnapshotComplete && catalogHydrationAttempts < 30) {
+      catalogHydrationAttempts += 1;
+      catalogHydrationTimer = window.setTimeout(() => hydrateCatalogInBackground(''), 10000);
     }
   } catch (error) {
     console.warn('Catalogue large indisponible en arrière-plan.', error);
@@ -276,6 +284,7 @@ async function fetchCatalogSnapshots() {
     }
     return data;
   }));
+  catalogSnapshotComplete = snapshots.every((data) => data?.complete === true);
   const raw = snapshots.flatMap((data) => data?.items || []);
   if (!raw.length) return fetchCatalogPages(CATALOG_FAST_LIMIT);
   const normalized = normalizeItems(raw, catalogType === 'series' ? 'series' : 'movies');
@@ -637,7 +646,7 @@ function createCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
-      <button type="button" class="media-card-open" data-open aria-label="Ouvrir les informations de ${escapeHtml(displayTitle)}"></button>
+      <button type="button" class="media-card-open" data-open aria-label="Voir ${escapeHtml(displayTitle)} dans le lecteur"></button>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-play aria-label="Regarder ${escapeHtml(displayTitle)}"><i class="fa-solid fa-play"></i></button>
         <button type="button" class="media-action" data-fav aria-label="Ajouter ou retirer ${escapeHtml(displayTitle)} de Ma liste"><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
@@ -964,7 +973,7 @@ function normalizeItems(items, fallbackType) {
       year: item.year || '',
       type,
       seasonNumber: season.seasonNumber,
-      seriesTitle: season.baseTitle || title
+      seriesTitle: type === 'series' ? (season.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
 }

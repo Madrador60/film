@@ -32,7 +32,7 @@ function hydrateSettings() {
     input.checked = input.value === prefs.theme;
   });
 
-  ['accent', 'density', 'cardStyle', 'preferredSource', 'preferredVersion'].forEach((id) => {
+  ['accent', 'density', 'cardStyle', 'preferredSource', 'preferredVersion', 'playerTimeoutMs'].forEach((id) => {
     $(id).value = prefs[id];
   });
 
@@ -55,7 +55,7 @@ function bindSettings() {
     });
   });
 
-  ['accent', 'density', 'cardStyle', 'preferredSource', 'preferredVersion'].forEach((id) => {
+  ['accent', 'density', 'cardStyle', 'preferredSource', 'preferredVersion', 'playerTimeoutMs'].forEach((id) => {
     $(id).addEventListener('change', saveSettings);
   });
 
@@ -89,6 +89,7 @@ function saveSettings() {
     cardStyle: $('cardStyle').value,
     reduceMotion: $('reduceMotion').checked,
     preferredSource: $('preferredSource').value,
+    playerTimeoutMs: Number($('playerTimeoutMs').value) || 9000,
     preferredVersion: $('preferredVersion').value,
     autoplay: $('autoplay').checked,
     autoSourceFallback: $('autoSourceFallback').checked,
