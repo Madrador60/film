@@ -1094,8 +1094,9 @@ function normalizeQuickTrailer(value) {
   const idMatch = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
   const videoId = idMatch?.[1] || (/^[A-Za-z0-9_-]{6,}$/.test(raw) ? raw : '');
   if (videoId) {
+    const origin = encodeURIComponent(location.origin);
     return {
-      embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`,
+      embed: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${origin}`,
       watch: `https://www.youtube.com/watch?v=${videoId}`
     };
   }

@@ -849,8 +849,20 @@ function pickTmdbResult(results = [], title = '', year = '') {
 
 function getTmdbVideoUrl(videos = {}) {
     const results = Array.isArray(videos.results) ? videos.results : [];
-    const video = results.find((item) => item.site === 'YouTube' && item.type === 'Trailer')
-        || results.find((item) => item.site === 'YouTube');
+    const video = results
+        .filter((item) => item.site === 'YouTube' && item.key)
+        .map((item, index) => {
+            const name = String(item.name || '');
+            let score = 0;
+            if (item.type === 'Trailer') score += 100;
+            else if (item.type === 'Teaser') score += 35;
+            if (item.official) score += 20;
+            // Prefer a French dub over VOST when TMDB exposes both versions.
+            if (/\bVF\b|fran[cç]ais/i.test(name)) score += 30;
+            if (/VOST/i.test(name)) score -= 5;
+            return { item, score, index };
+        })
+        .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.item;
     return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : '';
 }
 
@@ -957,14 +969,17 @@ async function enrichDetailsWithTmdb(details = {}, type = 'movie') {
         synopsis: details.synopsis && details.synopsis.length > 40 ? details.synopsis : (tmdb.description || details.synopsis || ''),
         poster: shouldReplaceImage(details.poster) ? (tmdb.poster || details.poster || '') : details.poster,
         backdrop: shouldReplaceImage(details.backdrop) ? (tmdb.backdrop || details.backdrop || details.poster || '') : details.backdrop,
-        trailer: details.trailer || tmdb.trailer || '',
+        // TMDB metadata is curated and lets us prefer the official VF trailer
+        // when the scraped page exposes a VOST link that blocks embedding.
+        trailer: tmdb.trailer || details.trailer || '',
         year: details.year || tmdb.year || '',
         genres: Array.isArray(details.genres) && details.genres.length ? details.genres : (tmdb.genres || []),
         tmdb: {
             id: tmdb.tmdbId,
             type: tmdb.tmdbType,
             url: tmdb.tmdbUrl,
-            voteAverage: tmdb.voteAverage
+            voteAverage: tmdb.voteAverage,
+            enrichmentVersion: 2
         }
     };
 }
@@ -1837,7 +1852,7 @@ async function getFilmApiData(id) {
 }
 
 function scheduleTmdbEnrichment(cacheKey, item, type) {
-    if (!isTmdbConfigured() || !item || item.tmdb || inFlightCache.has(`${cacheKey}_tmdb`)) return;
+    if (!isTmdbConfigured() || !item || item.tmdb?.enrichmentVersion === 2 || inFlightCache.has(`${cacheKey}_tmdb`)) return;
     const taskKey = `${cacheKey}_tmdb`;
     const task = enrichDetailsWithTmdb(item, type)
         .then((enriched) => {
