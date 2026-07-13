@@ -794,6 +794,30 @@ body.nova-app::before {
   background: rgba(66, 217, 200, .07) !important;
 }
 
+.source-runtime-meta {
+  display: inline-flex;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.source-runtime-meta[data-state="ready"] { color: #4ade80; }
+.source-runtime-meta[data-state="error"] { color: #fb7185; }
+
+.nova-app .direct-health-label {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .direct-channel[data-health="available"] .direct-health-label { color: #4ade80; }
+.nova-app .direct-channel[data-health="slow"] .direct-health-label { color: #fbbf24; }
+.nova-app .direct-channel[data-health="unavailable"] .direct-health-label { color: #fb7185; }
+
 .nova-app .direct-source-switcher {
   padding: 16px clamp(16px, 4vw, 54px) 20px;
   border-top: 1px solid var(--nova-line);

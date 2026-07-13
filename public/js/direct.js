@@ -15,6 +15,10 @@ let directRenderLimit = DIRECT_BATCH_SIZE;
 let activeHls = null;
 let selectedDirectSourceIndex = 0;
 let directEpgRequestId = 0;
+const directHealthQueue = [];
+const directHealthCache = new Map();
+let directHealthRunning = false;
+let directHealthObserver = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -55,6 +59,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Enter') playFromInput();
   });
   window.addEventListener('keydown', handleDirectKeyboard);
+  window.addEventListener('pagehide', destroyDirectPlayback);
   enableHorizontalRail($('directViewTabs'));
   enableHorizontalRail($('directCategoryTabs'));
 
@@ -204,8 +209,7 @@ async function handleDirectFile(event) {
 
 function playUrl(url, direct = {}) {
   const screen = $('directScreen');
-  destroyActiveHls();
-  screen.innerHTML = '';
+  destroyDirectPlayback();
   const type = direct.type || getDirectType(url);
 
   if (type === 'hls' || type === 'video') {
@@ -253,6 +257,21 @@ function playUrl(url, direct = {}) {
   setHint(`Lecture : ${direct.name || direct.title || getTitleFromUrl(url)}`);
   if (!currentDirectChannel || currentDirectChannel.url !== direct.url) setCurrentChannel({ ...direct, url });
   showToast('Direct lancé');
+}
+
+function destroyDirectPlayback() {
+  destroyActiveHls();
+  const screen = $('directScreen');
+  if (!screen) return;
+  screen.querySelectorAll('video').forEach((video) => {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  });
+  screen.querySelectorAll('iframe').forEach((frame) => {
+    frame.src = 'about:blank';
+  });
+  screen.replaceChildren();
 }
 
 async function loadDirectPlaylist(payload) {
@@ -500,7 +519,7 @@ function renderDirectChannels() {
       <div class="direct-channel-grid">
         ${channels.map((channel) => `
           <article class="direct-channel-tile ${getChannelKey(currentDirectChannel) === getChannelKey(channel) ? 'is-playing' : ''}">
-            <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}">
+            <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}" data-health-url="${escapeHtml(channel.url)}">
               <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
                 ${getChannelBrandMark(channel)}
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
@@ -508,7 +527,7 @@ function renderDirectChannels() {
               </span>
               <span class="direct-channel-copy">
                 <b>${escapeHtml(channel.name)}</b>
-                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i>${escapeHtml(channel.country || channel.code || 'TV')}</small>
+                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span><em class="direct-health-label">À vérifier</em></small>
               </span>
               <i class="fa-solid fa-play"></i>
             </button>
@@ -540,6 +559,62 @@ function renderDirectChannels() {
     });
   });
   bindDirectLogoFallbacks(box);
+  observeDirectHealth(box);
+}
+
+function observeDirectHealth(box) {
+  directHealthObserver?.disconnect();
+  directHealthQueue.length = 0;
+  directHealthObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      directHealthObserver.unobserve(entry.target);
+      enqueueDirectHealth(entry.target);
+    });
+  }, { rootMargin: '120px' });
+  box.querySelectorAll('[data-health-url]').forEach((card) => directHealthObserver.observe(card));
+}
+
+function enqueueDirectHealth(card) {
+  const url = card.dataset.healthUrl;
+  if (!url) return;
+  if (directHealthCache.has(url)) {
+    paintDirectHealth(card, directHealthCache.get(url));
+    return;
+  }
+  if (!directHealthQueue.some((entry) => entry.url === url)) directHealthQueue.push({ url, card });
+  runDirectHealthQueue();
+}
+
+async function runDirectHealthQueue() {
+  if (directHealthRunning || !directHealthQueue.length) return;
+  directHealthRunning = true;
+  const { url, card } = directHealthQueue.shift();
+  try {
+    const response = await fetch(`/api/direct/health?url=${encodeURIComponent(url)}`, { cache: 'no-store' });
+    const health = await response.json();
+    directHealthCache.set(url, health);
+    paintDirectHealth(card, health);
+  } catch {
+    paintDirectHealth(card, { state: 'unavailable', checkedAt: new Date().toISOString() });
+  } finally {
+    window.setTimeout(() => {
+      directHealthRunning = false;
+      runDirectHealthQueue();
+    }, 700);
+  }
+}
+
+function paintDirectHealth(card, health) {
+  if (!card?.isConnected) return;
+  const labels = { available: 'Fonctionnelle', slow: 'Lente', unavailable: 'Indisponible' };
+  const state = health?.state || 'unavailable';
+  card.dataset.health = state;
+  const label = card.querySelector('.direct-health-label');
+  if (label) {
+    label.textContent = labels[state] || 'À vérifier';
+    label.title = health?.checkedAt ? `Dernière vérification : ${new Date(health.checkedAt).toLocaleString('fr-FR')}` : '';
+  }
 }
 
 function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {

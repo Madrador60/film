@@ -19,6 +19,9 @@ let searchSuggestIndex = -1;
 let searchDebounce = null;
 let backendSuggestToken = 0;
 let keepaliveTimer = null;
+const pendingJsonRequests = new Map();
+let catalogBackgroundTimer = null;
+let heroInteractionStarted = false;
 
 const $ = (id) => document.getElementById(id);
 const rows = $('rows');
@@ -43,7 +46,15 @@ window.addEventListener('DOMContentLoaded', () => {
   bindUI();
   startKeepalivePing();
   loadHome();
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((eventName) => {
+    window.addEventListener(eventName, enableHeroAutoplay, { once: true, passive: true });
+  });
 });
+
+function enableHeroAutoplay() {
+  heroInteractionStarted = true;
+  resumeHeroCarousel();
+}
 
 function startKeepalivePing() {
   if (keepaliveTimer) return;
@@ -236,8 +247,7 @@ async function loadHome() {
     renderHomeRows();
     updatePager();
     startHeroCarousel();
-    startCatalogCacheBuild();
-    hydrateHomeWithFullCatalog();
+    scheduleCatalogBackgroundWork();
   } catch (err) {
     console.error(err);
     renderRows([]);
@@ -254,38 +264,32 @@ async function loadHome() {
 
 async function startCatalogCacheBuild() {
   try {
+    const status = await fetchJson('/api/catalog/status?limit=all', { timeout: 6000, retries: 0 });
+    if (status?.ready || [status?.film?.state, status?.series?.state].includes('building')) return;
     await fetch('/api/cache/build?limit=all', { method: 'POST' });
-    pollCatalogStatus();
   } catch (error) {
     console.warn('Construction cache catalogue indisponible.', error);
   }
 }
 
-async function pollCatalogStatus() {
-  try {
-    const status = await fetchJson('/api/catalog/status?limit=all');
-    const film = status.film || {};
-    const series = status.series || {};
-    const building = [film.state, series.state].includes('building');
-    if (building) {
-      showApiStatus(
-        'Catalogue complet en préparation',
-        `Films ${film.total || 0} • Séries ${series.total || 0}. L'accueil reste utilisable pendant le chargement.`
-      );
-      window.setTimeout(pollCatalogStatus, 8000);
-      return;
-    }
-    hideApiStatus();
-  } catch (error) {
-    console.warn('Statut catalogue indisponible.', error);
+function scheduleCatalogBackgroundWork() {
+  window.clearTimeout(catalogBackgroundTimer);
+  const run = () => {
+    startCatalogCacheBuild();
+    hydrateHomeWithFullCatalog();
+  };
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(run, { timeout: 15000 });
+  } else {
+    catalogBackgroundTimer = window.setTimeout(run, 10000);
   }
 }
 
 async function hydrateHomeWithFullCatalog() {
   try {
     const [moviesData, seriesData] = await Promise.all([
-      fetchCatalogAll('movies', 80),
-      fetchCatalogAll('series', 80)
+      fetchCatalogSnapshot('movie'),
+      fetchCatalogSnapshot('series')
     ]);
 
     const nextMovies = normalizeItems(moviesData.items || [], 'movies')
@@ -308,6 +312,12 @@ async function hydrateHomeWithFullCatalog() {
   } catch (error) {
     console.warn('Catalogue complet en arrière-plan indisponible.', error);
   }
+}
+
+async function fetchCatalogSnapshot(type) {
+  const data = await fetchJson(`/api/catalog/snapshot?type=${type}&limit=all&maxItems=240`, { timeout: 8000, retries: 1 });
+  if (data?.items?.length) return data;
+  return fetchCatalogAll(type === 'series' ? 'series' : 'movies', 8);
 }
 
 async function search() {
@@ -379,10 +389,30 @@ function searchLocalCatalog(query, mode = 'all') {
     .map((entry) => entry.item);
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur ${res.status}`);
-  return res.json();
+async function fetchJson(url, options = {}) {
+  if (pendingJsonRequests.has(url)) return pendingJsonRequests.get(url);
+  const timeout = Number(options.timeout) || 10000;
+  const retries = Math.max(0, Number(options.retries ?? 1));
+  const task = (async () => {
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), timeout);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        return await res.json();
+      } catch (error) {
+        lastError = error.name === 'AbortError' ? new Error('Délai de chargement dépassé') : error;
+        if (attempt < retries) await new Promise((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+    throw lastError;
+  })().finally(() => pendingJsonRequests.delete(url));
+  pendingJsonRequests.set(url, task);
+  return task;
 }
 
 async function fetchHomeCatalog(limit = 8) {
@@ -1422,7 +1452,7 @@ function getHeroBackground(image) {
 function getHighResHeroImage(image) {
   const url = String(image || '');
   if (!url.includes('image.tmdb.org')) return url;
-  return url.replace(/\/t\/p\/[^/]+\//, '/t/p/original/');
+  return url.replace(/\/t\/p\/[^/]+\//, '/t/p/w780/');
 }
 
 function setHeroImageMode(hero, image, isPosterFallback) {
@@ -1461,7 +1491,7 @@ function startHeroCarousel(query = '') {
 
 function resumeHeroCarousel(query = '') {
   stopHeroCarousel();
-  if (heroItems.length < 2 || document.hidden) return;
+  if (!heroInteractionStarted || heroItems.length < 2 || document.hidden) return;
   heroTimer = window.setInterval(() => changeHero(1, query), 10000);
 }
 

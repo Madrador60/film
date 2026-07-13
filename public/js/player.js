@@ -25,6 +25,9 @@ let playbackLastTick = 0;
 let playbackSeconds = 0;
 let playbackContinueItem = null;
 let playbackWasVisible = !document.hidden;
+let sourceLaunchLocked = false;
+const attemptedSourceIndexes = new Set();
+const pendingJsonRequests = new Map();
 const SERIES_VERSIONS = ['vf', 'vostfr', 'vo'];
 const SERIES_VERSION_LABELS = { vf: 'VF', vostfr: 'VOSTFR', vo: 'VO' };
 const SERIES_VERSION_VALUES = { VF: 'vf', VOSTFR: 'vostfr', VO: 'vo', 'VF+VOSTFR': 'vf' };
@@ -50,7 +53,7 @@ function bindPlayerUI() {
   $('copySource').addEventListener('click', copyCurrentSource);
   $('nextEpisode').addEventListener('click', playNextEpisode);
   $('episodeNowNext')?.addEventListener('click', playNextEpisode);
-  $('player').addEventListener('load', handlePlayerLoad);
+  bindPlayerFrame($('player'));
   $('closeTrailer').addEventListener('click', closeTrailer);
   $('trailerModal').addEventListener('click', (event) => {
     if (event.target === $('trailerModal')) closeTrailer();
@@ -64,6 +67,11 @@ function bindPlayerUI() {
     playbackWasVisible = !document.hidden;
     playbackLastTick = Date.now();
   });
+}
+
+function bindPlayerFrame(frame) {
+  frame.addEventListener('load', handlePlayerLoad);
+  frame.addEventListener('error', () => handleSourceFailure('Le lecteur n’a pas pu être chargé.'));
 }
 
 function toggleCinemaMode() {
@@ -90,7 +98,13 @@ async function loadPlayer() {
   if (!id) return setError('Aucun identifiant fourni.');
 
   try {
-    const details = await fetchJson(getInitialDetailsEndpoint());
+    const movieSourcesPromise = routeType === 'series'
+      ? null
+      : fetchMovieSources(apiId);
+    const [details, prefetchedSources] = await Promise.all([
+      fetchJson(getInitialDetailsEndpoint(), { timeout: 9000, retries: 1 }),
+      movieSourcesPromise
+    ]);
 
     currentDetails = details || {};
     contentType = detectContentType(currentDetails, {});
@@ -101,16 +115,13 @@ async function loadPlayer() {
       currentStreamData = {};
       await renderSeriesLayout(currentDetails);
     } else {
-      const streamData = await fetchJson(`/api/film/${encodeURIComponent(apiId)}/sources`).catch((err) => {
-        console.warn('Sources initiales indisponibles.', err);
-        return fetchJson(`/api/stream/${encodeURIComponent(apiId)}`).catch(() => ({ sources: [], links: [] }));
-      });
+      const streamData = prefetchedSources || await fetchMovieSources(apiId);
       currentStreamData = streamData || {};
       renderMovieLayout(currentStreamData);
     }
   } catch (err) {
     console.error(err);
-    setError('Impossible de charger la page lecteur.');
+    setError(err.message || 'Impossible de charger la page lecteur.');
   }
 }
 
@@ -120,10 +131,36 @@ function getInitialDetailsEndpoint() {
     : `/api/film/${encodeURIComponent(apiId)}`;
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur ${res.status}`);
-  return res.json();
+async function fetchMovieSources(mediaId) {
+  return fetchJson(`/api/film/${encodeURIComponent(mediaId)}/sources`, { timeout: 9000, retries: 1 }).catch((err) => {
+    console.warn('Sources initiales indisponibles.', err);
+    return fetchJson(`/api/stream/${encodeURIComponent(mediaId)}`, { timeout: 9000, retries: 0 }).catch(() => ({ sources: [], links: [] }));
+  });
+}
+
+async function fetchJson(url, options = {}) {
+  if (pendingJsonRequests.has(url)) return pendingJsonRequests.get(url);
+  const task = (async () => {
+    const retries = Math.max(0, Number(options.retries ?? 1));
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), Number(options.timeout) || 10000);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        return await res.json();
+      } catch (error) {
+        lastError = error.name === 'AbortError' ? new Error('Délai de chargement dépassé') : error;
+        if (attempt < retries) await new Promise((resolve) => window.setTimeout(resolve, 400 * (attempt + 1)));
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+    throw lastError;
+  })().finally(() => pendingJsonRequests.delete(url));
+  pendingJsonRequests.set(url, task);
+  return task;
 }
 
 function detectContentType(details, streamData) {
@@ -838,6 +875,7 @@ function normalizeStreams(list) {
     name: source.name || source.provider || `Lecteur ${index + 1}`,
     url: fixUrl(source.url || source.src || ''),
     quality: source.quality || source.lang || 'HD',
+    lang: String(source.lang || source.quality || '').toUpperCase(),
     provider: normalizeProvider(source.provider || source.name || '')
   })).filter((source) => source.url)
     .sort((a, b) => getProviderRank(a) - getProviderRank(b));
@@ -845,6 +883,7 @@ function normalizeStreams(list) {
 
 function renderSources() {
   automaticFallbacks = 0;
+  attemptedSourceIndexes.clear();
   const box = $('sources');
   box.innerHTML = '';
   selectedIndex = -1;
@@ -876,13 +915,20 @@ function renderSources() {
 }
 
 function playSource(index) {
-  if (!streams[index]) return;
+  if (!streams[index] || sourceLaunchLocked) return;
+  sourceLaunchLocked = true;
+  window.setTimeout(() => { sourceLaunchLocked = false; }, 450);
 
   selectedIndex = index;
-  const attemptId = ++sourceAttemptId;
+  attemptedSourceIndexes.add(index);
   const prefs = MadradorStorage.getPrefs();
-  $('player').src = streams[index].url;
-  $('player').classList.add('active');
+  destroyPlayerFrame(false);
+  const attemptId = ++sourceAttemptId;
+  window.requestAnimationFrame(() => {
+    if (attemptId !== sourceAttemptId) return;
+    $('player').src = streams[index].url;
+    $('player').classList.add('active');
+  });
   $('placeholder').classList.add('hidden');
   $('openSource').disabled = false;
   $('copySource').disabled = false;
@@ -932,10 +978,7 @@ function playSource(index) {
 }
 
 function resetPlayerFrame() {
-  sourceAttemptId++;
-  window.clearTimeout(watchSourceLoad.timer);
-  $('player').src = '';
-  $('player').classList.remove('active');
+  destroyPlayerFrame(true);
   $('placeholder').classList.remove('hidden');
   $('openSource').disabled = true;
   if (streams.length) {
@@ -944,10 +987,46 @@ function resetPlayerFrame() {
   updateSourceToolState();
 }
 
+function destroyPlayerFrame(clearSelection = false) {
+  sourceAttemptId += 1;
+  window.clearTimeout(watchSourceLoad.timer);
+  const oldFrame = $('player');
+  const frame = oldFrame.cloneNode(false);
+  frame.classList.remove('active');
+  frame.removeAttribute('src');
+  oldFrame.src = 'about:blank';
+  oldFrame.replaceWith(frame);
+  bindPlayerFrame(frame);
+  if (clearSelection) selectedIndex = -1;
+}
+
 function handlePlayerLoad() {
   window.clearTimeout(watchSourceLoad.timer);
   if (selectedIndex < 0 || !$('player').classList.contains('active')) return;
-  renderSourceStatus(streams[selectedIndex], 'Lecteur chargé', getSourceHelpText(streams[selectedIndex]));
+  renderSourceStatus(streams[selectedIndex], 'Lecteur prêt', getSourceHelpText(streams[selectedIndex]), [], 'ready');
+}
+
+function handleSourceFailure(message) {
+  if (selectedIndex < 0) return;
+  window.clearTimeout(watchSourceLoad.timer);
+  const next = findNextUntriedSource();
+  if (next >= 0 && MadradorStorage.getPrefs().autoSourceFallback) {
+    renderSourceStatus(streams[selectedIndex], 'Source indisponible', `${message} Passage à la source suivante.`, [], 'error');
+    window.setTimeout(() => playSource(next), 700);
+    return;
+  }
+  renderSourceStatus(streams[selectedIndex], 'Toutes les sources ont échoué', message, [
+    { label: 'Réessayer', icon: 'fa-rotate-right', action: () => playSource(selectedIndex) },
+    { label: 'Ouvrir', icon: 'fa-up-right-from-square', action: openCurrentSource }
+  ], 'error');
+}
+
+function findNextUntriedSource() {
+  for (let offset = 1; offset <= streams.length; offset += 1) {
+    const index = (selectedIndex + offset) % streams.length;
+    if (!attemptedSourceIndexes.has(index)) return index;
+  }
+  return -1;
 }
 
 function autoplayPreferredSource() {
@@ -1095,7 +1174,7 @@ function showPlayerNotice(message) {
   showPlayerNotice.timer = window.setTimeout(() => notice.classList.add('hidden'), 1700);
 }
 
-function renderSourceStatus(source, title, message, actions = []) {
+function renderSourceStatus(source, title, message, actions = [], state = 'idle') {
   const box = $('sourceStatus');
   if (!box) return;
   const provider = source?.provider || normalizeProvider(source?.name || '');
@@ -1108,6 +1187,7 @@ function renderSourceStatus(source, title, message, actions = []) {
     <i class="fa-solid ${icon}"></i>
     <div>
       <strong>${escapeHtml(title)}${source?.name ? ` • ${escapeHtml(source.name)}` : ''}</strong>
+      <small class="source-runtime-meta" data-state="${escapeHtml(state)}">${source ? `${escapeHtml(source.lang || source.quality || 'AUTO')} • tentative ${Math.max(1, attemptedSourceIndexes.size)}/${Math.max(1, streams.length)}` : 'Aucune tentative'}</small>
       <p>${escapeHtml(message)}</p>
       ${actions.length ? `
         <div class="source-status-actions">
@@ -1136,7 +1216,8 @@ function watchSourceLoad(attemptId) {
   watchSourceLoad.timer = window.setTimeout(() => {
     if (attemptId !== sourceAttemptId || selectedIndex < 0 || !$('player').classList.contains('active')) return;
     const prefs = MadradorStorage.getPrefs();
-    const canFallback = prefs.autoSourceFallback && streams.length > 1 && automaticFallbacks < streams.length - 1;
+    const nextIndex = findNextUntriedSource();
+    const canFallback = prefs.autoSourceFallback && nextIndex >= 0 && automaticFallbacks < streams.length - 1;
     renderSourceStatus(
       streams[selectedIndex],
       canFallback ? 'Source lente, changement automatique' : 'Lecture à vérifier',
@@ -1152,12 +1233,12 @@ function watchSourceLoad(attemptId) {
       automaticFallbacks += 1;
       showPlayerNotice('Source lente : passage au lecteur suivant.');
       window.setTimeout(() => {
-        if (attemptId === sourceAttemptId) playRelativeSource(1);
+        if (attemptId === sourceAttemptId) playSource(nextIndex);
       }, 1200);
     } else {
       showPlayerNotice('Lecteur à vérifier : essaie Source suivante si besoin.');
     }
-  }, 7000);
+  }, Math.max(5000, Math.min(30000, Number(MadradorStorage.getPrefs().playerTimeoutMs) || 9000)));
 }
 
 function toggleFavorite() {
@@ -1245,7 +1326,9 @@ function setError(msg) {
   $('title').textContent = 'Erreur';
   $('desc').textContent = msg;
   $('seriesPanel').classList.add('hidden');
-  $('sources').innerHTML = `<div class="source-empty">${escapeHtml(msg)}</div>`;
+  resetPlayerFrame();
+  $('sources').innerHTML = `<div class="source-empty"><span>${escapeHtml(msg)}</span><button class="status-action" id="retryPlayerLoad" type="button"><i class="fa-solid fa-rotate-right"></i> Réessayer</button></div>`;
+  $('retryPlayerLoad')?.addEventListener('click', loadPlayer);
   $('sourceCount').textContent = '0';
   $('playFirst').disabled = true;
 }

@@ -17,6 +17,7 @@ let catalogSuggestIndex = -1;
 let catalogSuggestToken = 0;
 let catalogSuggestionItems = [];
 let catalogViewMode = localStorage.getItem('madrador:catalog-view') || 'grid';
+const pendingJsonRequests = new Map();
 
 const $ = (id) => document.getElementById(id);
 
@@ -209,7 +210,7 @@ async function hydrateCatalogInBackground(query) {
 
   try {
     const before = visibleCatalogItems.length;
-    let items = await fetchCatalogPages(CATALOG_ALL_LIMIT, true);
+    let items = await fetchCatalogSnapshots();
     items = applyFilters(items);
     items = sortItems(items);
     const nextVisible = dedupeMediaItems(items);
@@ -256,7 +257,7 @@ async function fetchCatalogPages(limit = CATALOG_FAST_LIMIT, forceRefresh = fals
 
 async function searchCatalog(query) {
   const q = normalizeKey(query);
-  const localItems = await fetchCatalogPages(CATALOG_ALL_LIMIT);
+  const localItems = await fetchCatalogSnapshots().catch(() => fetchCatalogPages(CATALOG_FAST_LIMIT));
   const localMatches = localItems.filter((item) => normalizeKey(`${item.title || ''} ${item.originalTitle || ''} ${item.year || ''} ${item.version || ''} ${item.quality || ''}`).includes(q));
   if (localMatches.length) return localMatches;
 
@@ -264,6 +265,21 @@ async function searchCatalog(query) {
   const normalized = normalizeItems(data.items || [], 'movies');
   const filtered = catalogType === 'all' ? normalized : normalized.filter((item) => item.type === catalogType);
   return groupSeries(filtered);
+}
+
+async function fetchCatalogSnapshots() {
+  const types = catalogType === 'all' ? ['movie', 'series'] : [catalogType === 'series' ? 'series' : 'movie'];
+  const snapshots = await Promise.all(types.map(async (type) => {
+    const data = await fetchJson(`/api/catalog/snapshot?type=${type}&limit=all`, { ttl: 15000, timeout: 8000, retries: 1 });
+    if (!data?.complete && ['idle', 'error'].includes(data?.status?.state)) {
+      fetch(`/api/cache/build?target=${type}&limit=all`, { method: 'POST' }).catch(() => {});
+    }
+    return data;
+  }));
+  const raw = snapshots.flatMap((data) => data?.items || []);
+  if (!raw.length) return fetchCatalogPages(CATALOG_FAST_LIMIT);
+  const normalized = normalizeItems(raw, catalogType === 'series' ? 'series' : 'movies');
+  return catalogType === 'all' ? groupSeries(normalized) : groupSeries(normalized.filter((item) => item.type === catalogType));
 }
 
 function applyFilters(items) {
@@ -896,7 +912,9 @@ function removeLocalItem(id) {
   loadCatalog();
 }
 
-async function fetchJson(url, ttl = 1000 * 60 * 3) {
+async function fetchJson(url, options = 1000 * 60 * 3) {
+  const config = typeof options === 'number' ? { ttl: options } : options;
+  const ttl = Number(config.ttl) || 1000 * 60 * 3;
   const cacheKey = `madrador:cache:${url}`;
   try {
     const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
@@ -904,11 +922,30 @@ async function fetchJson(url, ttl = 1000 * 60 * 3) {
   } catch (err) {
     localStorage.removeItem(cacheKey);
   }
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur ${res.status}`);
-  const data = await res.json();
-  localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data }));
-  return data;
+  if (pendingJsonRequests.has(url)) return pendingJsonRequests.get(url);
+  const task = (async () => {
+    const retries = Math.max(0, Number(config.retries ?? 1));
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), Number(config.timeout) || 12000);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        const data = await res.json();
+        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data }));
+        return data;
+      } catch (error) {
+        lastError = error.name === 'AbortError' ? new Error('Délai de chargement dépassé') : error;
+        if (attempt < retries) await new Promise((resolve) => window.setTimeout(resolve, 400 * (attempt + 1)));
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+    throw lastError;
+  })().finally(() => pendingJsonRequests.delete(url));
+  pendingJsonRequests.set(url, task);
+  return task;
 }
 
 function normalizeItems(items, fallbackType) {

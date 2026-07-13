@@ -26,6 +26,16 @@ const axiosConfig = {
     maxRedirects: 5
 };
 
+axios.interceptors.response.use(undefined, async (error) => {
+    const config = error.config;
+    if (!config || String(config.method || 'get').toLowerCase() !== 'get') return Promise.reject(error);
+    const status = error.response?.status || 0;
+    if ((config.__madradorRetry || 0) >= 1 || (status > 0 && status < 500 && status !== 429)) return Promise.reject(error);
+    config.__madradorRetry = (config.__madradorRetry || 0) + 1;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return axios.request(config);
+});
+
 // URLs FrenchStream (peut changer, essaie ces variants)
 const BASE_URLS = [
     'https://fs24.lol',
@@ -75,6 +85,9 @@ const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
 const DETAILS_CACHE_DURATION = 10 * 60 * 1000;
 const SOURCES_CACHE_DURATION = 5 * 60 * 1000;
+const EPISODES_CACHE_DURATION = 10 * 60 * 1000;
+const DIRECT_HEALTH_CACHE_DURATION = 10 * 60 * 1000;
+const DIRECT_HEALTH_TIMEOUT = 5000;
 const FULL_CATALOG_PAGE_LIMITS = {
     movie: 1312,
     series: 691
@@ -83,6 +96,7 @@ const DEFAULT_ALL_PAGE_LIMIT = FULL_CATALOG_PAGE_LIMITS.movie;
 const MAX_ALL_PAGE_LIMIT = Math.max(FULL_CATALOG_PAGE_LIMITS.movie, FULL_CATALOG_PAGE_LIMITS.series);
 const CATALOG_BATCH_SIZE = Math.max(1, Math.min(Number(process.env.CATALOG_BATCH_SIZE) || 2, 4));
 const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
+const PERSISTENT_DATA_CACHE_DIR = path.join(PERSISTENT_CACHE_DIR, 'data');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -202,6 +216,48 @@ function normalizeDirectUrl(value) {
     } catch {
         return '';
     }
+}
+
+function isAllowedDirectHealthUrl(value) {
+    const normalized = normalizeDirectUrl(value);
+    if (!normalized) return false;
+    const hostname = new URL(normalized).hostname.toLowerCase();
+    return ['cdnlivetv.tv', 'livelive24.com'].some((host) => hostname === host || hostname.endsWith(`.${host}`));
+}
+
+async function checkDirectHealth(value) {
+    const url = normalizeDirectUrl(value);
+    if (!url || !isAllowedDirectHealthUrl(url)) throw new Error('Source Direct non autorisée pour la vérification.');
+    const key = `direct_health_${url}`;
+    return getOrCreateCached(key, DIRECT_HEALTH_CACHE_DURATION, async () => {
+        const startedAt = Date.now();
+        try {
+            const response = await axios.get(url, {
+                ...axiosConfig,
+                timeout: DIRECT_HEALTH_TIMEOUT,
+                responseType: 'stream',
+                validateStatus: (status) => status >= 200 && status < 500
+            });
+            response.data?.destroy?.();
+            const latency = Date.now() - startedAt;
+            const available = response.status < 400;
+            return {
+                ok: available,
+                state: available ? (latency > 2500 ? 'slow' : 'available') : 'unavailable',
+                latency,
+                status: response.status,
+                checkedAt: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                ok: false,
+                state: error.code === 'ECONNABORTED' ? 'slow' : 'unavailable',
+                latency: Date.now() - startedAt,
+                status: error.response?.status || 0,
+                checkedAt: new Date().toISOString()
+            };
+        }
+    });
 }
 
 function extractDirectUrlFromText(value) {
@@ -553,6 +609,32 @@ function writePersistentCatalogCheckpoint(kind, limit, data) {
     }
 }
 
+function getPersistentDataPath(key) {
+    const safeKey = String(key).replace(/[^a-z0-9_.-]+/gi, '_').slice(0, 180);
+    return path.join(PERSISTENT_DATA_CACHE_DIR, `${safeKey}.json`);
+}
+
+function readPersistentData(key, duration) {
+    try {
+        const file = getPersistentDataPath(key);
+        if (!fs.existsSync(file)) return null;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (!parsed?.savedAt || Date.now() - parsed.savedAt > duration) return null;
+        return parsed.data ?? null;
+    } catch {
+        return null;
+    }
+}
+
+function writePersistentData(key, data) {
+    try {
+        fs.mkdirSync(PERSISTENT_DATA_CACHE_DIR, { recursive: true });
+        fs.writeFileSync(getPersistentDataPath(key), JSON.stringify({ savedAt: Date.now(), data }), 'utf8');
+    } catch (error) {
+        console.log(`[CACHE] Écriture donnée impossible (${key}) : ${error.message}`);
+    }
+}
+
 function clearPersistentCatalogCheckpoint(kind, limit) {
     try {
         const file = getPersistentCatalogCheckpointPath(kind, limit);
@@ -608,6 +690,33 @@ function setCached(key, data) {
 
 function setCachedFor(key, data) {
     cache.set(key, { data, time: Date.now() });
+}
+
+async function getOrCreateCached(key, duration, loader, options = {}) {
+    const cached = getCachedFor(key, duration);
+    if (cached !== null) return cached;
+    if (options.persistent) {
+        const persisted = readPersistentData(key, duration);
+        if (persisted !== null) {
+            setCachedFor(key, persisted);
+            return persisted;
+        }
+    }
+    if (inFlightCache.has(key)) return inFlightCache.get(key);
+
+    const task = Promise.resolve()
+        .then(loader)
+        .then((data) => {
+            if (data !== undefined && data !== null) {
+                setCachedFor(key, data);
+                if (options.persistent) writePersistentData(key, data);
+            }
+            return data;
+        })
+        .finally(() => inFlightCache.delete(key));
+
+    inFlightCache.set(key, task);
+    return task;
 }
 
 function getApiId(value) {
@@ -781,7 +890,7 @@ async function fetchTmdbDetails({ title, year, type = 'movie' }) {
             title: data.title || data.name || result.title || result.name || clean,
             description: data.overview || result.overview || '',
             poster: getTmdbImage(data.poster_path || result.poster_path, 'w500'),
-            backdrop: getTmdbImage(data.backdrop_path || result.backdrop_path, 'w1280'),
+            backdrop: getTmdbImage(data.backdrop_path || result.backdrop_path, 'w780'),
             year: getTmdbYear(data) || getTmdbYear(result) || '',
             genres: Array.isArray(data.genres) ? data.genres.map((genre) => genre.name).filter(Boolean) : [],
             trailer: getTmdbVideoUrl(data.videos),
@@ -812,7 +921,7 @@ async function fetchTmdbRecommendations(type, tmdbId) {
             title: item.title || item.name || item.original_title || item.original_name || '',
             description: item.overview || '',
             poster: getTmdbImage(item.poster_path, 'w500'),
-            backdrop: getTmdbImage(item.backdrop_path, 'w1280'),
+            backdrop: getTmdbImage(item.backdrop_path, 'w780'),
             year: getTmdbYear(item),
             rating: item.vote_average || null
         })).filter((item) => item.title && (item.poster || item.backdrop));
@@ -1192,19 +1301,17 @@ function normalizeSeriesEpisodes(seriesData) {
 
 async function fetchSeriesEpisodeData(id) {
     const cacheKey = `series_episode_data_${id}`;
-    const cached = getCached(cacheKey);
-    if (cached) return cached;
-
-    const paths = [
+    return getOrCreateCached(cacheKey, EPISODES_CACHE_DURATION, async () => {
+      const paths = [
+        `/ep-data.php?id=${id}&format=js`,
         `/static/series/${id}.js`,
         `/css/sr_${id}.css`,
         `/font/sr_${id}.woff2`,
         `/assets/poster_${id}.json`,
-        `/data/eps_${id}.txt`,
-        `/ep-data.php?id=${id}&format=js`
-    ];
+        `/data/eps_${id}.txt`
+      ];
 
-    for (const path of paths) {
+      for (const path of paths) {
         try {
             const response = await axios.get(`${currentBaseUrl}${path}`, axiosConfig);
             let data = response.data;
@@ -1213,15 +1320,15 @@ async function fetchSeriesEpisodeData(id) {
             }
 
             if (data && typeof data === 'object' && !data.error) {
-                setCached(cacheKey, data);
                 return data;
             }
         } catch (error) {
             console.log(`⚠️ Episodes indisponibles via ${path}: ${error.message}`);
         }
-    }
+      }
 
-    return null;
+      return null;
+    }, { persistent: true });
 }
 
 // 📺 Episodes séries
@@ -1366,31 +1473,27 @@ async function getAllFilms(limit = 50) {
 async function getFilmDetails(id, includeSources = false) {
     const apiId = getApiId(id);
     const cacheKey = `film_details_${apiId}`;
-    const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
-    if (cached && (!isTmdbConfigured() || cached.tmdb) && (!includeSources || cached.sources)) return cached;
+    const film = await getOrCreateCached(cacheKey, DETAILS_CACHE_DURATION, async () => {
+        const details = await scrapeDetails(apiId);
+        return {
+            ...details,
+            id: apiId,
+            type: 'movie',
+            isSeries: false,
+            sources: details.sources || []
+        };
+    }, { persistent: true });
 
-    const details = await enrichDetailsWithTmdb(await scrapeDetails(apiId), 'movie');
-    const film = {
-        ...details,
-        id: apiId,
-        type: 'movie',
-        isSeries: false,
-        sources: includeSources ? (await getFilmSources(apiId)).sources : (details.sources || [])
-    };
-
-    setCachedFor(cacheKey, film);
-    return film;
+    scheduleTmdbEnrichment(cacheKey, film, 'movie');
+    if (!includeSources) return film;
+    const sourceResult = await getFilmSources(apiId);
+    return { ...film, sources: sourceResult.sources || [] };
 }
 
 async function getFilmSources(id) {
     const apiId = getApiId(id);
     const cacheKey = `sources_${apiId}`;
-    const cached = getCachedFor(cacheKey, SOURCES_CACHE_DURATION);
-    if (cached) return cached;
-
-    const result = await scrapeFilmSources(apiId, false);
-    setCachedFor(cacheKey, result);
-    return result;
+    return getOrCreateCached(cacheKey, SOURCES_CACHE_DURATION, () => scrapeFilmSources(apiId, false), { persistent: true });
 }
 
 // =====================================================
@@ -1549,42 +1652,39 @@ function startCatalogCacheBuild({ filmLimit, serieLimit, target = 'all' }) {
 async function getSerieDetails(id, includeEpisodes = false) {
     const apiId = getApiId(id);
     const cacheKey = `serie_details_${apiId}`;
-    const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
-    if (cached && (!isTmdbConfigured() || cached.tmdb) && (!includeEpisodes || cached.episodes)) return cached;
+    const serie = await getOrCreateCached(cacheKey, DETAILS_CACHE_DURATION, async () => {
+        const details = await scrapeDetails(apiId);
+        const parsed = parseSeasonTitle(details.title);
+        return {
+            ...details,
+            id: apiId,
+            type: 'series',
+            isSeries: true,
+            baseTitle: parsed.baseTitle || details.title,
+            season: parsed.season,
+            episodes: details.episodes || []
+        };
+    }, { persistent: true });
 
-    const details = await enrichDetailsWithTmdb(await scrapeDetails(apiId), 'series');
-    const parsed = parseSeasonTitle(details.title);
-    const serie = {
-        ...details,
-        id: apiId,
-        type: 'series',
-        isSeries: true,
-        baseTitle: parsed.baseTitle || details.title,
-        season: parsed.season,
-        episodes: includeEpisodes ? normalizeSeriesEpisodes(await getSerieEpisodeData(apiId)) : (details.episodes || [])
-    };
-
-    setCachedFor(cacheKey, serie);
-    return serie;
+    scheduleTmdbEnrichment(cacheKey, serie, 'series');
+    if (!includeEpisodes) return serie;
+    const episodeData = await getSerieEpisodeData(apiId);
+    return { ...serie, episodes: normalizeSeriesEpisodes(episodeData) };
 }
 
 async function getSerieEpisodeData(id) {
     const apiId = getApiId(id);
     const cacheKey = `serie_episodes_${apiId}`;
-    const cached = getCachedFor(cacheKey, DETAILS_CACHE_DURATION);
-    if (cached) return cached;
-
-    const data = await fetchSeriesEpisodeData(apiId);
-    const result = {
-        id: apiId,
-        vf: data?.vf || {},
-        vostfr: data?.vostfr || {},
-        vo: data?.vo || {},
-        info: data?.info || {}
-    };
-
-    setCachedFor(cacheKey, result);
-    return result;
+    return getOrCreateCached(cacheKey, EPISODES_CACHE_DURATION, async () => {
+        const data = await fetchSeriesEpisodeData(apiId);
+        return {
+            id: apiId,
+            vf: data?.vf || {},
+            vostfr: data?.vostfr || {},
+            vo: data?.vo || {},
+            info: data?.info || {}
+        };
+    }, { persistent: true });
 }
 
 async function getSerieEpisodes(id) {
@@ -1675,16 +1775,11 @@ async function scrapeDetails(id) {
     const url = `${currentBaseUrl}/index.php?newsid=${apiId}`;
     console.log(`[SCRAPING] Détails: ${url}`);
 
-    const response = await axios.get(url, axiosConfig);
+    const [response, apiData] = await Promise.all([
+        axios.get(url, axiosConfig),
+        getFilmApiData(apiId)
+    ]);
     const $ = cheerio.load(response.data);
-
-    const apiUrl = `${currentBaseUrl}/engine/ajax/film_api.php?id=${apiId}`;
-    const apiResponse = await axios.get(apiUrl, axiosConfig);
-
-    let apiData = apiResponse.data;
-    if (typeof apiData === 'string') {
-        apiData = JSON.parse(apiData);
-    }
 
     const cleanTitle =
         $('#film-data').attr('data-title') ||
@@ -1732,16 +1827,32 @@ async function scrapeDetails(id) {
     return details;
 }
 
+async function getFilmApiData(id) {
+    const apiId = getApiId(id);
+    return getOrCreateCached(`film_api_raw_${apiId}`, SOURCES_CACHE_DURATION, async () => {
+        const url = `${currentBaseUrl}/engine/ajax/film_api.php?id=${apiId}`;
+        const response = await axios.get(url, axiosConfig);
+        return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    }, { persistent: true });
+}
+
+function scheduleTmdbEnrichment(cacheKey, item, type) {
+    if (!isTmdbConfigured() || !item || item.tmdb || inFlightCache.has(`${cacheKey}_tmdb`)) return;
+    const taskKey = `${cacheKey}_tmdb`;
+    const task = enrichDetailsWithTmdb(item, type)
+        .then((enriched) => {
+            setCachedFor(cacheKey, enriched);
+            writePersistentData(cacheKey, enriched);
+        })
+        .catch((error) => console.log(`[TMDB] Enrichissement différé impossible: ${error.message}`))
+        .finally(() => inFlightCache.delete(taskKey));
+    inFlightCache.set(taskKey, task);
+}
+
 async function scrapeFilmSources(id, allowSeriesFallback = true) {
     const apiId = getApiId(id);
-    const url = `${currentBaseUrl}/engine/ajax/film_api.php?id=${apiId}`;
-    console.log(`[SCRAPING] Stream: ${url}`);
-
-    const response = await axios.get(url, axiosConfig);
-    let data = response.data;
-    if (typeof data === 'string') {
-        data = JSON.parse(data);
-    }
+    console.log(`[SCRAPING] Stream: ${apiId}`);
+    const data = await getFilmApiData(apiId);
 
     const sources = [];
     let episodes = [];
@@ -1853,7 +1964,7 @@ app.get('/api/film/:id/sources', async (req, res) => {
 
 app.get('/api/film/:id', async (req, res) => {
     try {
-        res.json(await getFilmDetails(req.params.id, true));
+        res.json(await getFilmDetails(req.params.id, req.query.sources === '1'));
     } catch (error) {
         console.error('[ERROR API FILM DETAILS]', error.message);
         res.status(500).json({ id: getApiId(req.params.id), type: 'movie', error: error.message });
@@ -1951,7 +2062,7 @@ app.get('/api/serie/:id/seasons', async (req, res) => {
 
 app.get('/api/serie/:id', async (req, res) => {
     try {
-        res.json(await getSerieDetails(req.params.id, true));
+        res.json(await getSerieDetails(req.params.id, req.query.episodes === '1'));
     } catch (error) {
         console.error('[ERROR API SERIE DETAILS]', error.message);
         res.status(500).json({ id: getApiId(req.params.id), type: 'series', error: error.message });
@@ -2203,6 +2314,29 @@ app.get('/api/catalog/status', (req, res) => {
     });
 });
 
+app.get('/api/catalog/snapshot', (req, res) => {
+    const kind = String(req.query.type || req.query.kind || '').toLowerCase().startsWith('serie') ? 'series' : 'movie';
+    const limit = getAllPageLimit(req.query.limit || 'all', kind);
+    const complete = readPersistentCatalog(kind, limit);
+    const checkpoint = complete || readPersistentCatalogCheckpoint(kind, limit);
+    const allItems = Array.isArray(checkpoint?.items) ? checkpoint.items : [];
+    const maxItems = Math.max(0, Math.min(Number(req.query.maxItems) || allItems.length, 50000));
+    const items = allItems.slice(0, maxItems);
+    const state = getCatalogBuildState(kind, limit);
+
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({
+        ok: true,
+        type: kind === 'series' ? 'series' : 'movie',
+        complete: Boolean(complete),
+        total: allItems.length,
+        returned: items.length,
+        page: checkpoint?.page || checkpoint?.pagesScraped || state.page || 0,
+        items,
+        status: state
+    });
+});
+
 app.post('/api/cache/build', async (req, res) => {
     const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
     const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
@@ -2307,10 +2441,20 @@ app.get('/api/direct/status', (req, res) => {
             'GET /api/direct/playlist?url=https://.../playlist.m3u',
             'POST /api/direct/playlist { filename, content }',
             'GET /api/direct/channel-stream?url=https://...',
+            'GET /api/direct/health?url=https://...',
             'GET /api/direct/channels',
             'GET /api/direct/epg?channel=TF1'
         ]
     });
+});
+
+app.get('/api/direct/health', async (req, res) => {
+    try {
+        res.set('Cache-Control', 'private, max-age=60');
+        res.json(await checkDirectHealth(req.query.url));
+    } catch (error) {
+        res.status(400).json({ ok: false, state: 'unavailable', error: error.message, checkedAt: new Date().toISOString() });
+    }
 });
 
 app.get('/api/direct/channels', async (req, res) => {

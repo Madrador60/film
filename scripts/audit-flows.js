@@ -40,6 +40,15 @@ async function expectApi(path, expectedStatus = 200) {
   }
 }
 
+async function expectCatalogSnapshot() {
+  const response = await fetch(`${BASE_URL}/api/catalog/snapshot?type=movie&limit=all&maxItems=5`);
+  if (!response.ok) throw new Error(`/api/catalog/snapshot: HTTP ${response.status}`);
+  const data = await response.json();
+  if (data.ok !== true || !Array.isArray(data.items) || data.items.length > 5 || data.returned !== data.items.length) {
+    throw new Error('/api/catalog/snapshot: format progressif invalide');
+  }
+}
+
 async function run() {
   const server = spawn(process.execPath, ['server.js'], {
     cwd: process.cwd(),
@@ -62,6 +71,7 @@ async function run() {
       ['/page-inconnue', 404]
     ];
     for (const [path, status] of apiChecks) await expectApi(path, status);
+    await expectCatalogSnapshot();
 
     browser = await chromium.launch({
       headless: true,

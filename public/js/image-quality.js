@@ -14,7 +14,7 @@
   function sharpUrl(url, role = 'poster') {
     const value = String(url || '');
     if (!isTmdb(value)) return value;
-    const size = role === 'backdrop' || role === 'land' ? 'w1280' : 'w780';
+    const size = role === 'backdrop' || role === 'land' ? 'w780' : 'w500';
     return value.replace(/\/t\/p\/[^/]+\//i, `/t/p/${size}/`);
   }
 
@@ -22,8 +22,8 @@
     if (!isTmdb(url)) return '';
     const base = String(url);
     const sizes = role === 'backdrop' || role === 'land'
-      ? [['w1280', 1280], ['original', 1920]]
-      : [['w500', 500], ['w780', 780], ['original', 1000]];
+      ? [['w500', 500], ['w780', 780]]
+      : [['w300', 300], ['w500', 500]];
     return sizes.map(([size, width]) => `${base.replace(/\/t\/p\/[^/]+\//i, `/t/p/${size}/`)} ${width}w`).join(', ');
   }
 
