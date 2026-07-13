@@ -66,6 +66,11 @@
 .quick-trailer-card {
   width: min(980px, calc(100vw - 32px));
   padding: 58px 18px 18px;
+  aspect-ratio: auto !important;
+}
+
+#quickTrailerModal {
+  z-index: 180 !important;
 }
 
 .quick-trailer-card iframe {
@@ -80,6 +85,13 @@
 .quick-trailer-card .close-modal {
   top: 10px !important;
   right: 10px !important;
+}
+
+.quick-trailer-card .trailer-external {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  margin-top: 14px;
 }
 
 .nova-app .browse-panels {
