@@ -612,13 +612,6 @@ function createCard(item, index) {
   const dateLabel = getLocalDateLabel(item);
   card.className = 'media-card media-card-poster';
   card.style.animationDelay = `${Math.min(index * 18, 420)}ms`;
-  card.tabIndex = 0;
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `Ouvrir ${displayTitle}`);
-  card.addEventListener('click', () => openDetails(item));
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') openDetails(item);
-  });
   card.innerHTML = `
     <div class="media-thumb">
       ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(displayTitle)}" loading="lazy" data-media-id="${escapeHtml(item.id)}" data-media-type="${escapeHtml(item.type || 'movie')}" data-image-role="poster">` : '<div class="no-poster"><i class="fa-solid fa-film"></i></div>'}
@@ -628,16 +621,18 @@ function createCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
+      <button type="button" class="media-card-open" data-open aria-label="Ouvrir les informations de ${escapeHtml(displayTitle)}"></button>
       <div class="media-actions">
-        <button type="button" class="media-action primary-action" data-play><i class="fa-solid fa-play"></i></button>
-        <button type="button" class="media-action" data-fav><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
-        ${isLocalView() ? '<button type="button" class="media-action" data-local-remove="' + escapeHtml(item.id) + '"><i class="fa-solid fa-xmark"></i></button>' : ''}
+        <button type="button" class="media-action primary-action" data-play aria-label="Regarder ${escapeHtml(displayTitle)}"><i class="fa-solid fa-play"></i></button>
+        <button type="button" class="media-action" data-fav aria-label="Ajouter ou retirer ${escapeHtml(displayTitle)} de Ma liste"><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
+        ${isLocalView() ? '<button type="button" class="media-action" data-local-remove="' + escapeHtml(item.id) + '" aria-label="Retirer ' + escapeHtml(displayTitle) + '"><i class="fa-solid fa-xmark"></i></button>' : ''}
       </div>
       <h3>${escapeHtml(displayTitle)}</h3>
       ${dateLabel ? `<div class="local-date">${escapeHtml(dateLabel)}</div>` : ''}
       ${progress ? `<div class="watch-progress"><span style="width:${progress.percent}%"></span><small>${escapeHtml(progress.label)}</small></div>` : ''}
     </div>`;
   bindImageFallback(card);
+  card.querySelector('[data-open]').addEventListener('click', () => openDetails(item));
   card.querySelector('[data-play]').addEventListener('click', (event) => {
     event.stopPropagation();
     openPlayer(item, true);
@@ -660,6 +655,7 @@ function getDisplayTitle(item) {
 }
 
 function clearLocalView() {
+  if (!window.confirm('Vider cette liste ? Cette action est définitive.')) return;
   if (catalogView === 'favorites') MadradorStorage.clearFavorites();
   if (catalogView === 'history') MadradorStorage.clearHistory();
   loadCatalog();

@@ -92,6 +92,25 @@ body.nova-app::before {
   }
 }
 
+@media (min-width: 761px) and (max-width: 1380px) {
+  .nova-app .sidebar {
+    padding-inline: clamp(14px, 2vw, 28px) !important;
+    gap: clamp(10px, 1.5vw, 24px) !important;
+  }
+
+  .nova-app .brand b {
+    display: none;
+  }
+
+  .nova-app .side-nav {
+    padding-inline: 0 !important;
+  }
+
+  .nova-app .nav {
+    padding-inline: 10px !important;
+  }
+}
+
 .nova-app .side-nav::-webkit-scrollbar {
   display: none;
 }
@@ -1320,6 +1339,42 @@ html.nova-ready body {
 .nova-app .media-card img,
 .nova-app .media-card .poster {
   transition: transform .32s ease, filter .32s ease, opacity .22s ease !important;
+}
+
+.nova-app .media-card-open {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nova-app .media-card-open:focus-visible {
+  outline: 3px solid var(--nova-mint) !important;
+  outline-offset: -4px !important;
+}
+
+.nova-app .media-card :is(.media-badges, .media-actions, h3, .watch-progress, .local-date, .library-card-meta) {
+  z-index: 2;
+}
+
+.nova-app .media-card :is(.media-badges, h3, .watch-progress, .local-date, .library-card-meta) {
+  pointer-events: none;
+}
+
+.nova-app .media-card .media-actions {
+  z-index: 3;
+}
+
+.nova-app .media-card:focus-within .media-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .nova-app .media-card:hover img,

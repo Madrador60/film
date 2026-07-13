@@ -161,6 +161,12 @@ function bindUI() {
   });
   $('heroPrev').addEventListener('click', () => changeHero(-1));
   $('heroNext').addEventListener('click', () => changeHero(1));
+  $('hero').addEventListener('pointerenter', stopHeroCarousel);
+  $('hero').addEventListener('pointerleave', resumeHeroCarousel);
+  $('hero').addEventListener('focusin', stopHeroCarousel);
+  $('hero').addEventListener('focusout', (event) => {
+    if (!$('hero').contains(event.relatedTarget)) resumeHeroCarousel();
+  });
   $('quickClose').addEventListener('click', closeQuickDetails);
   $('quickModal').addEventListener('click', (event) => {
     if (event.target === $('quickModal')) closeQuickDetails();
@@ -887,13 +893,6 @@ function createCard(item, layout, rowIndex, itemIndex) {
 
   card.className = `media-card ${layout === 'land' ? 'media-card-land' : 'media-card-poster'}`;
   card.style.animationDelay = `${Math.min((rowIndex * 35) + (itemIndex * 18), 520)}ms`;
-  card.onclick = () => openDetailsPage(item);
-  card.tabIndex = 0;
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `Ouvrir ${displayTitle}`);
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') openDetailsPage(item);
-  });
 
   card.innerHTML = `
     <div class="media-thumb">
@@ -904,6 +903,7 @@ function createCard(item, layout, rowIndex, itemIndex) {
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
         <span>${escapeHtml(item.quality || 'HD')}</span>
       </div>
+      <button type="button" class="media-card-open" data-action="info" aria-label="Ouvrir les informations de ${escapeHtml(displayTitle)}"></button>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-action="play" title="Regarder" aria-label="Regarder"><i class="fa-solid fa-play"></i></button>
         <button type="button" class="media-action" data-action="info" title="En savoir plus" aria-label="En savoir plus"><i class="fa-solid fa-circle-info"></i></button>
@@ -1456,11 +1456,13 @@ function startHeroCarousel(query = '') {
   heroIndex = 0;
   updateHero(heroItems[heroIndex], query);
 
-  if (heroItems.length < 2) return;
+  resumeHeroCarousel(query);
+}
 
-  heroTimer = window.setInterval(() => {
-    changeHero(1, query);
-  }, 10000);
+function resumeHeroCarousel(query = '') {
+  stopHeroCarousel();
+  if (heroItems.length < 2 || document.hidden) return;
+  heroTimer = window.setInterval(() => changeHero(1, query), 10000);
 }
 
 function changeHero(direction, query = '') {

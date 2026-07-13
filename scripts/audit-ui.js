@@ -89,12 +89,34 @@ async function run() {
           errors.push(error.message);
         }
 
-        const metrics = await page.evaluate(() => ({
-          width: document.body.scrollWidth,
-          viewport: innerWidth,
-          textLength: (document.body.innerText || '').trim().length
-        }));
-        if (status !== 200 || metrics.width > metrics.viewport + 2 || metrics.textLength < 20 || errors.length) {
+        const metrics = await page.evaluate(() => {
+          const ids = Array.from(document.querySelectorAll('[id]')).map((element) => element.id);
+          const duplicateIds = ids.filter((id, index) => id && ids.indexOf(id) !== index);
+          const nestedInteractive = document.querySelectorAll(
+            'button button,button a[href],a[href] button,a[href] a[href],[role="button"] button,[role="button"] a[href]'
+          ).length;
+          const unnamedButtons = Array.from(document.querySelectorAll('button')).filter((button) => {
+            const name = button.getAttribute('aria-label') || button.getAttribute('title') || button.textContent.trim();
+            return !name;
+          }).length;
+          return {
+            width: document.body.scrollWidth,
+            viewport: innerWidth,
+            textLength: (document.body.innerText || '').trim().length,
+            duplicateIds: [...new Set(duplicateIds)],
+            nestedInteractive,
+            unnamedButtons
+          };
+        });
+        if (
+          status !== 200 ||
+          metrics.width > metrics.viewport + 2 ||
+          metrics.textLength < 20 ||
+          metrics.duplicateIds.length ||
+          metrics.nestedInteractive ||
+          metrics.unnamedButtons ||
+          errors.length
+        ) {
           issues.push({ profile, target, status, ...metrics, errors: [...new Set(errors)] });
         }
         await page.close();

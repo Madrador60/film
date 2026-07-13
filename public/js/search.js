@@ -7,6 +7,7 @@ let instantTimer = null;
 let lastSearchTerm = '';
 let localCatalog = [];
 let lastFilteredItems = [];
+let activeSearchController = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -83,9 +84,12 @@ async function runSearch() {
   hideSearchApiStatus();
   setLoading(true);
   const localResults = searchLocalCatalog(q);
+  activeSearchController?.abort();
+  const controller = new AbortController();
+  activeSearchController = controller;
 
   try {
-    const data = await cachedFetchJson(`/api/search?q=${encodeURIComponent(q)}`, `search:${q}`, 1000 * 60 * 3);
+    const data = await cachedFetchJson(`/api/search?q=${encodeURIComponent(q)}`, `search:${q}`, 1000 * 60 * 3, controller.signal);
     const onlineResults = rankItemsForQuery(normalizeItems(data.items || [], 'movies'), q);
     results = groupSeries(dedupeMediaItems([
       ...localResults,
@@ -97,6 +101,7 @@ async function runSearch() {
     url.searchParams.set('q', q);
     history.replaceState(null, '', url);
   } catch (err) {
+    if (err.name === 'AbortError') return;
     console.error(err);
     results = groupSeries(localResults);
     if (results.length) {
@@ -111,7 +116,10 @@ async function runSearch() {
         : 'Impossible de joindre /api/search pour le moment. Vérifie le serveur local puis réessaie.'
     );
   } finally {
-    setLoading(false);
+    if (activeSearchController === controller) {
+      activeSearchController = null;
+      setLoading(false);
+    }
   }
 }
 
@@ -265,13 +273,6 @@ function createCard(item, index) {
   const image = item.poster || item.backdrop;
   card.className = 'media-card media-card-poster';
   card.style.animationDelay = `${Math.min(index * 16, 420)}ms`;
-  card.tabIndex = 0;
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `Ouvrir ${item.title}`);
-  card.addEventListener('click', () => openDetails(item));
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') openDetails(item);
-  });
   card.innerHTML = `
     <div class="media-thumb">
       ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" data-media-id="${escapeHtml(item.id)}" data-media-type="${escapeHtml(item.type || 'movie')}" data-image-role="poster">` : '<div class="no-poster"><i class="fa-solid fa-film"></i></div>'}
@@ -281,14 +282,16 @@ function createCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
+      <button type="button" class="media-card-open" data-open aria-label="Ouvrir les informations de ${escapeHtml(item.title)}"></button>
       <div class="media-actions">
-        <button type="button" class="media-action primary-action" data-play><i class="fa-solid fa-play"></i></button>
-        <button type="button" class="media-action" data-info><i class="fa-solid fa-circle-info"></i></button>
-        <button type="button" class="media-action" data-fav><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
+        <button type="button" class="media-action primary-action" data-play aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-play"></i></button>
+        <button type="button" class="media-action" data-info aria-label="Informations sur ${escapeHtml(item.title)}"><i class="fa-solid fa-circle-info"></i></button>
+        <button type="button" class="media-action" data-fav aria-label="Ajouter ou retirer ${escapeHtml(item.title)} de Ma liste"><i class="${MadradorStorage.isFavorite(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>
       </div>
       <h3>${escapeHtml(item.title)}</h3>
     </div>`;
   bindImageFallback(card);
+  card.querySelector('[data-open]').addEventListener('click', () => openDetails(item));
   card.querySelector('[data-play]').addEventListener('click', (event) => {
     event.stopPropagation();
     openPlayer(item, true);
@@ -369,7 +372,7 @@ function syncTypeTabs() {
   });
 }
 
-async function cachedFetchJson(url, cacheKey, ttl) {
+async function cachedFetchJson(url, cacheKey, ttl, signal) {
   const key = `madrador:cache:${cacheKey}`;
   try {
     const cached = JSON.parse(localStorage.getItem(key) || 'null');
@@ -377,13 +380,13 @@ async function cachedFetchJson(url, cacheKey, ttl) {
   } catch (err) {
     localStorage.removeItem(key);
   }
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, signal);
   localStorage.setItem(key, JSON.stringify({ time: Date.now(), data }));
   return data;
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url);
+async function fetchJson(url, signal) {
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
 }

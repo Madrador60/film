@@ -40,6 +40,19 @@
       root.dataset.input = 'keyboard';
     }
     trapActiveDialog(event);
+    if (event.key === '/' && !isTypingTarget(event.target)) {
+      const search = document.querySelector('#search, #advancedQuery, #catalogSearch, #directSearch');
+      if (search) {
+        event.preventDefault();
+        search.focus();
+        search.select?.();
+      }
+    }
+    if ((event.key === 'BrowserBack' || (event.key === 'Backspace' && !isTypingTarget(event.target))) && history.length > 1) {
+      event.preventDefault();
+      history.back();
+      return;
+    }
     if (event.key !== 'Escape') return;
     document.getElementById('sidebar')?.classList.remove('open');
     document.querySelector('.quick-modal:not(.hidden) .quick-close')?.click();
@@ -47,10 +60,27 @@
   });
 
   enhanceImages();
+  enhanceControls();
   watchDynamicCards();
   setActiveSidebarLink();
   installNetworkFeedback();
   secureExternalLinks();
+
+  function isTypingTarget(target) {
+    return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"]'));
+  }
+
+  function enhanceControls(scope = document) {
+    scope.querySelectorAll('button:not([type])').forEach((button) => {
+      button.type = 'button';
+    });
+    scope.querySelectorAll('#sidebar .nav').forEach((link) => {
+      const label = link.querySelector('span')?.textContent?.trim() || link.textContent.trim();
+      if (!label) return;
+      if (!link.getAttribute('aria-label')) link.setAttribute('aria-label', label);
+      if (!link.getAttribute('title')) link.setAttribute('title', label);
+    });
+  }
 
   function pulse(element, event) {
     const rect = element.getBoundingClientRect();
@@ -88,6 +118,7 @@
         mutation.addedNodes.forEach((node) => {
           if (!(node instanceof Element)) return;
           enhanceImages(node);
+          enhanceControls(node);
           node.querySelectorAll?.('.media-card,.settings-card,.admin-panel,.episode-card,.source-btn').forEach((card) => {
             card.classList.add('ui2-enter');
             window.setTimeout(() => card.classList.remove('ui2-enter'), 420);

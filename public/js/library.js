@@ -159,13 +159,6 @@ function createLibraryCard(item, index) {
   const label = getBucketLabel(item.bucket);
   card.className = 'media-card media-card-poster library-card';
   card.style.animationDelay = `${Math.min(index * 18, 440)}ms`;
-  card.tabIndex = 0;
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `Ouvrir ${item.title}`);
-  card.addEventListener('click', () => openDetails(item));
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') openDetails(item);
-  });
   card.innerHTML = `
     <div class="media-thumb">
       ${item.poster ? `<img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title)}" loading="lazy" data-media-id="${escapeHtml(item.id)}" data-media-type="${escapeHtml(item.type || 'movie')}" data-image-role="poster">` : '<div class="no-poster"><i class="fa-solid fa-film"></i></div>'}
@@ -175,6 +168,7 @@ function createLibraryCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
+      <button type="button" class="media-card-open" data-action="info" aria-label="Ouvrir les informations de ${escapeHtml(item.title)}"></button>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-action="play" aria-label="Regarder"><i class="fa-solid fa-play"></i></button>
         <button type="button" class="media-action" data-action="info" aria-label="Fiche"><i class="fa-solid fa-circle-info"></i></button>
@@ -192,9 +186,11 @@ function createLibraryCard(item, index) {
     event.stopPropagation();
     openPlayer(item);
   });
-  card.querySelector('[data-action="info"]').addEventListener('click', (event) => {
-    event.stopPropagation();
-    openDetails(item);
+  card.querySelectorAll('[data-action="info"]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openDetails(item);
+    });
   });
   card.querySelector('[data-action="remove"]').addEventListener('click', (event) => {
     event.stopPropagation();

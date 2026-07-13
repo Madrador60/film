@@ -111,7 +111,16 @@ function clearLocal(type) {
     mini: () => MadradorStorage.clearMiniPlayer()
   };
 
-  actions[type]?.();
+  if (!actions[type]) return;
+  const labels = {
+    cache: 'le cache local',
+    history: 'tout l’historique',
+    favorites: 'tous les favoris',
+    continue: 'toutes les reprises de lecture',
+    mini: 'le mini-lecteur mémorisé'
+  };
+  if (!window.confirm(`Supprimer ${labels[type]} ? Cette action est définitive.`)) return;
+  actions[type]();
   hydrateSettings();
   MadradorStorage.applyPrefs();
   renderLocalStats();
