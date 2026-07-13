@@ -5,11 +5,321 @@
   --nova-text: #f5f7fa;
   --nova-muted: #9299a8;
   --nova-line: rgba(255, 255, 255, .11);
-  --nova-mint: #42d9c8;
-  --nova-coral: #ff6b5f;
+  --nova-mint: #6675ff;
+  --nova-coral: #9b5cff;
   --nova-gold: #f0c56e;
   --nova-radius: 10px;
   --nova-nav-height: 76px;
+}
+
+/* Final interaction polish: stable carousel controls and richer detail/filter surfaces. */
+.nova-app .row-track-wrap {
+  position: relative;
+  min-width: 0;
+  contain: layout paint;
+}
+
+.nova-app .row-arrow,
+.nova-app .row-arrow:hover,
+.nova-app .row-arrow:active,
+.nova-app .row-arrow:focus,
+.nova-app .row-arrow:focus-visible {
+  top: 50% !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+  transition: opacity .18s ease, border-color .18s ease, background-color .18s ease !important;
+}
+
+.nova-app .row-arrow-left {
+  left: 6px !important;
+  right: auto !important;
+}
+
+.nova-app .row-arrow-right {
+  right: 6px !important;
+  left: auto !important;
+}
+
+.nova-app .row-arrow:disabled {
+  opacity: .22;
+  pointer-events: none;
+}
+
+#quickClose {
+  top: 18px !important;
+  right: 18px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+}
+
+#quickClose i {
+  margin: 0 !important;
+  line-height: 1;
+}
+
+.quick-trailer-card {
+  width: min(980px, calc(100vw - 32px));
+  padding: 58px 18px 18px;
+}
+
+.quick-trailer-card iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: 0;
+  border-radius: 12px;
+  background: #000;
+}
+
+.quick-trailer-card .close-modal {
+  top: 10px !important;
+  right: 10px !important;
+}
+
+.nova-app .browse-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(18px, 2vw, 28px);
+  padding-block: 28px 12px;
+  border-top: 1px solid rgba(148, 163, 184, .12);
+}
+
+.nova-app .browse-panels article {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nova-app .browse-panels h3 {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.nova-app .browse-panels h3 i {
+  margin-right: 8px;
+  color: var(--nova-mint);
+}
+
+.nova-app .filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nova-app .filter-list button {
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, .15);
+  border-radius: 999px;
+  color: #dce5fa;
+  background: rgba(255, 255, 255, .035);
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.nova-app .filter-list button i {
+  color: var(--nova-mint);
+  transition: transform .18s ease;
+}
+
+.nova-app .filter-list button:hover,
+.nova-app .filter-list button:focus-visible {
+  color: white;
+  border-color: color-mix(in srgb, var(--nova-mint) 65%, transparent);
+  background: color-mix(in srgb, var(--nova-mint) 14%, transparent);
+}
+
+.nova-app .filter-list button:hover i,
+.nova-app .filter-list button:focus-visible i {
+  transform: translateX(2px);
+}
+
+.mini-player {
+  display: none !important;
+}
+
+.theme-candy::before {
+  background: linear-gradient(135deg, #ff4fa3, #c45cff, #ff9bd1);
+}
+
+.theme-emerald::before {
+  background: linear-gradient(135deg, #1f9c91, #49d2bd, #79ead8);
+}
+
+.settings-preview .media-thumb > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.about-madrador {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.about-madrador img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.about-madrador strong {
+  display: block;
+  margin-bottom: 5px;
+  color: white;
+  font-size: 20px;
+}
+
+.about-madrador p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.about-features {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 18px;
+}
+
+.about-features span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dce5fa;
+}
+
+.about-features i {
+  width: 20px;
+  color: var(--nova-mint);
+  text-align: center;
+}
+
+.about-version {
+  display: block;
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .nova-app .browse-panels {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .nova-app .filter-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 2px 8px;
+    scrollbar-width: none;
+  }
+
+  .nova-app .filter-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nova-app .filter-list button {
+    flex: 0 0 auto;
+  }
+
+  .quick-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Unified palettes: the Nova layer follows the selected Madrador theme. */
+html[data-theme="dark"] {
+  --bg: #050713;
+  --bg-soft: #080b1b;
+  --panel: #0b1020;
+  --panel2: #111827;
+  --primary: #3b82f6;
+  --secondary: #8b5cf6;
+  --cyan: #4cc9ff;
+  --mx-bg: #040612;
+  --mx-bg-soft: #080b1c;
+  --mx-blue: #3b82f6;
+  --mx-violet: #8b5cf6;
+  --mx-cyan: #4cc9ff;
+  --nova-bg: #060817;
+  --nova-panel: #0d1227;
+  --nova-panel-soft: rgba(13, 18, 39, .80);
+  --nova-mint: #6675ff;
+  --nova-coral: #a855f7;
+}
+
+html[data-theme="candy"] {
+  --bg: #120716;
+  --bg-soft: #1d0a22;
+  --panel: #210e2a;
+  --panel2: #301337;
+  --primary: #ff4fa3;
+  --secondary: #c45cff;
+  --cyan: #ff9bd1;
+  --mx-bg: #100512;
+  --mx-bg-soft: #1c091f;
+  --mx-blue: #ff4fa3;
+  --mx-violet: #c45cff;
+  --mx-cyan: #ff9bd1;
+  --nova-bg: #100512;
+  --nova-panel: #210e2a;
+  --nova-panel-soft: rgba(33, 14, 42, .82);
+  --nova-mint: #ff4fa3;
+  --nova-coral: #ff9bd1;
+  --line: rgba(255, 155, 209, .20);
+  --line-strong: rgba(255, 79, 163, .48);
+}
+
+html[data-theme="emerald"] {
+  --bg: #03100f;
+  --bg-soft: #071917;
+  --panel: #0a211e;
+  --panel2: #10302c;
+  --primary: #1f9c91;
+  --secondary: #49d2bd;
+  --cyan: #79ead8;
+  --mx-bg: #020e0d;
+  --mx-bg-soft: #071917;
+  --mx-blue: #1f9c91;
+  --mx-violet: #49d2bd;
+  --mx-cyan: #79ead8;
+  --nova-bg: #020e0d;
+  --nova-panel: #0a211e;
+  --nova-panel-soft: rgba(10, 33, 30, .82);
+  --nova-mint: #1f9c91;
+  --nova-coral: #79ead8;
+  --line: rgba(121, 234, 216, .18);
+  --line-strong: rgba(31, 156, 145, .52);
+}
+
+html[data-theme="candy"] body.nova-app {
+  background-image: radial-gradient(circle at 78% -14%, rgba(255,79,163,.18), transparent 38%), linear-gradient(180deg, #100512, #1b0820 54%, #100512) !important;
+}
+
+html[data-theme="emerald"] body.nova-app {
+  background-image: radial-gradient(circle at 78% -14%, rgba(31,156,145,.20), transparent 38%), linear-gradient(180deg, #020e0d, #071917 54%, #020e0d) !important;
 }
 
 html.nova-ready,

@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish12" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish13" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body settings-body nova-app">
@@ -104,9 +104,10 @@
       <article class="settings-card">
         <h2>Apparence</h2>
         <div class="theme-grid" id="themeGrid">
-          <label class="theme-option theme-dark"><input type="radio" name="theme" value="dark"><span>Nuit bleue</span></label>
+          <label class="theme-option theme-dark"><input type="radio" name="theme" value="dark"><span>Bleu &amp; violet</span></label>
+          <label class="theme-option theme-candy"><input type="radio" name="theme" value="candy"><span>Rose bonbon</span></label>
+          <label class="theme-option theme-emerald"><input type="radio" name="theme" value="emerald"><span>Vert Madrador</span></label>
           <label class="theme-option theme-oled"><input type="radio" name="theme" value="oled"><span>OLED</span></label>
-          <label class="theme-option theme-nebula"><input type="radio" name="theme" value="nebula"><span>Nébuleuse</span></label>
           <label class="theme-option theme-cinema"><input type="radio" name="theme" value="cinema"><span>Cinéma</span></label>
         </div>
         <label class="setting-row stack">
@@ -153,7 +154,6 @@
         <label class="setting-row"><span>Changer de source automatiquement</span><input type="checkbox" id="autoSourceFallback"></label>
         <label class="setting-row"><span>Reprendre la lecture</span><input type="checkbox" id="resumePlayback"></label>
         <label class="setting-row"><span>Mémoriser la dernière source</span><input type="checkbox" id="rememberLastSource"></label>
-        <label class="setting-row"><span>Mini lecteur flottant</span><input type="checkbox" id="miniPlayerEnabled"></label>
         <label class="setting-row"><span>Anti-popup / anti-pub</span><input type="checkbox" id="antiPopupEnabled"></label>
       </article>
 
@@ -181,7 +181,6 @@
         <button class="btn glass full-width" data-clear="history"><i class="fa-solid fa-clock-rotate-left"></i> Effacer l'historique</button>
         <button class="btn glass full-width" data-clear="favorites"><i class="fa-solid fa-heart-crack"></i> Effacer les favoris</button>
         <button class="btn glass full-width" data-clear="continue"><i class="fa-solid fa-list-check"></i> Effacer continuer à regarder</button>
-        <button class="btn glass full-width" data-clear="mini"><i class="fa-solid fa-window-minimize"></i> Effacer le mini lecteur</button>
         <button class="btn glass full-width" id="exportData" type="button"><i class="fa-solid fa-file-export"></i> Exporter les données locales</button>
         <label class="btn glass full-width import-label">
           <i class="fa-solid fa-file-import"></i> Importer les données locales
@@ -194,7 +193,7 @@
         <div class="settings-preview">
           <div class="media-card media-card-poster">
             <div class="media-thumb">
-              <div class="no-poster"><i class="fa-solid fa-film"></i></div>
+              <img id="previewPoster" src="./assets/madrador-logo.png" alt="Aperçu Madrador TV" loading="lazy">
               <div class="media-fade"></div>
               <div class="media-badges"><span id="previewType">Film</span><span id="previewQuality">HD</span></div>
               <h3 id="previewTitle">Madrador Preview</h3>
@@ -211,26 +210,20 @@
 
       <article class="settings-card">
         <h2>À propos</h2>
-        <div class="about-list">
-          <span>Madrador TV</span>
-          <span id="appVersion">Version interface 2026.07</span>
-          <span id="appOrigin">Adresse de l'application : chargement...</span>
+        <div class="about-madrador">
+          <img src="./assets/madrador-logo.png" alt="Logo Madrador TV">
+          <div>
+            <strong>Madrador TV</strong>
+            <p>Une expérience cinéma personnelle pour retrouver tes films, tes séries et tes chaînes préférées dans une interface unique.</p>
+          </div>
         </div>
+        <div class="about-features">
+          <span><i class="fa-solid fa-shield-halved"></i> Sans compte obligatoire</span>
+          <span><i class="fa-solid fa-mobile-screen"></i> Mobile, PC et TV</span>
+          <span><i class="fa-solid fa-lock"></i> Préférences stockées localement</span>
+        </div>
+        <small class="about-version" id="appVersion">Madrador TV • Édition 2026</small>
         <button class="btn primary full-width" id="installPwa" type="button" disabled><i class="fa-solid fa-download"></i><span>Installation via le navigateur</span></button>
-      </article>
-
-      <article class="settings-card">
-        <h2>Serveur local</h2>
-        <div class="about-list" id="serverStats">
-          <span>Domaine actif : chargement...</span>
-          <span>Cache serveur : ...</span>
-          <span>Uptime : ...</span>
-        </div>
-        <div class="settings-actions">
-          <button class="btn glass full-width" id="pingKeepalive" type="button"><i class="fa-solid fa-signal"></i><span>Tester keepalive</span></button>
-          <a class="btn glass full-width" href="./admin.html"><i class="fa-solid fa-chart-simple"></i><span>Ouvrir admin</span></a>
-          <a class="btn glass full-width" href="./diagnostic.html"><i class="fa-solid fa-stethoscope"></i><span>Ouvrir diagnostic</span></a>
-        </div>
       </article>
     </section>
   </main>
@@ -243,14 +236,13 @@
     <a href="./catalog.html?type=movies"><i class="fa-solid fa-film"></i><span>Films</span></a>
     <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
   </nav>
-  <script src="./js/storage.js?v=20260712-features"></script>
+  <script src="./js/storage.js?v=20260713-polish2"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260713-stability1"></script>
   <script src="./js/antiads.js?v=20260712-guard2"></script>
-  <script src="./js/mini-player.js?v=20260713-stability1"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/settings.js?v=20260712-features"></script>
+  <script src="./js/settings.js?v=20260713-polish2"></script>
 </body>
 </html>

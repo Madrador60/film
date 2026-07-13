@@ -13,6 +13,8 @@ let heroItems = [];
 let currentHeroItem = null;
 let heroDetailsToken = 0;
 let quickItem = null;
+let quickTrailerEmbed = '';
+let quickTrailerWatch = '';
 let toastTimer = null;
 let searchMode = 'all';
 let searchSuggestIndex = -1;
@@ -192,6 +194,11 @@ function bindUI() {
     if (!quickItem) return;
     toggleFavoriteItem(quickItem);
     renderQuickFavorite();
+  });
+  $('quickTrailer').addEventListener('click', openQuickTrailer);
+  $('quickTrailerClose').addEventListener('click', closeQuickTrailer);
+  $('quickTrailerModal').addEventListener('click', (event) => {
+    if (event.target === $('quickTrailerModal')) closeQuickTrailer();
   });
   $('mobileMenu').addEventListener('click', () => $('sidebar').classList.toggle('open'));
   $('search').addEventListener('keydown', (event) => {
@@ -638,12 +645,21 @@ function renderRows(rowDefs) {
     const track = section.querySelector('.row-track');
     dedupeMediaItems(row.items).forEach((item, itemIndex) => track.appendChild(createCard(item, row.layout, rowIndex, itemIndex)));
 
-    section.querySelector('.row-arrow-left').addEventListener('click', () => {
+    const leftArrow = section.querySelector('.row-arrow-left');
+    const rightArrow = section.querySelector('.row-arrow-right');
+    const updateArrows = () => {
+      const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+      leftArrow.disabled = track.scrollLeft <= 4;
+      rightArrow.disabled = track.scrollLeft >= maxScroll - 4;
+    };
+    leftArrow.addEventListener('click', () => {
       track.scrollBy({ left: -Math.max(track.clientWidth * 0.86, 320), behavior: 'smooth' });
     });
-    section.querySelector('.row-arrow-right').addEventListener('click', () => {
+    rightArrow.addEventListener('click', () => {
       track.scrollBy({ left: Math.max(track.clientWidth * 0.86, 320), behavior: 'smooth' });
     });
+    track.addEventListener('scroll', updateArrows, { passive: true });
+    requestAnimationFrame(updateArrows);
     section.querySelector('.see-all').addEventListener('click', () => {
       renderFullCollection(row.title, row.items, row.layout);
     });
@@ -1036,6 +1052,7 @@ function getItemDetailsEndpoint(item) {
 }
 
 function closeQuickDetails() {
+  closeQuickTrailer();
   $('quickModal').classList.add('hidden');
   document.body.classList.remove('modal-open');
   quickItem = null;
@@ -1064,7 +1081,39 @@ function renderQuickShell(item, details = {}) {
   $('quickMeta').innerHTML = meta.map((value) => `<span>${escapeHtml(value)}</span>`).join('');
   $('quickDesc').textContent = desc;
   $('quickGenres').innerHTML = genres.map((genre) => `<span>${escapeHtml(genre)}</span>`).join('');
+  const trailer = normalizeQuickTrailer(details.trailer || details.youtube || item.trailer || '');
+  quickTrailerEmbed = trailer.embed;
+  quickTrailerWatch = trailer.watch;
+  $('quickTrailer').classList.toggle('hidden', !quickTrailerEmbed);
   renderQuickFavorite();
+}
+
+function normalizeQuickTrailer(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return { embed: '', watch: '' };
+  const idMatch = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
+  const videoId = idMatch?.[1] || (/^[A-Za-z0-9_-]{6,}$/.test(raw) ? raw : '');
+  if (videoId) {
+    return {
+      embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`,
+      watch: `https://www.youtube.com/watch?v=${videoId}`
+    };
+  }
+  if (/^https?:\/\//i.test(raw)) return { embed: raw, watch: raw };
+  return { embed: '', watch: '' };
+}
+
+function openQuickTrailer() {
+  if (!quickTrailerEmbed) return;
+  $('quickTrailerFrame').src = quickTrailerEmbed;
+  $('quickTrailerExternal').href = quickTrailerWatch || quickTrailerEmbed;
+  $('quickTrailerModal').classList.remove('hidden');
+}
+
+function closeQuickTrailer() {
+  if (!$('quickTrailerModal')) return;
+  $('quickTrailerFrame').src = 'about:blank';
+  $('quickTrailerModal').classList.add('hidden');
 }
 
 function normalizeDetailItem(item, details) {
@@ -1565,6 +1614,19 @@ function openFilteredCatalog(label, group) {
     } else {
       url.searchParams.set('q', value);
     }
+  } else if (group === 'themeFilters') {
+    const themeGenres = {
+      animation: 'Animation',
+      'super heros': 'Action',
+      famille: 'Famille',
+      epouvante: 'Horreur',
+      manga: 'Animation',
+      guerre: 'Guerre',
+      suspense: 'Thriller'
+    };
+    const mappedGenre = themeGenres[normalizeKey(value)];
+    if (mappedGenre) url.searchParams.set('genre', mappedGenre);
+    else url.searchParams.set('q', value);
   } else {
     url.searchParams.set('q', value);
   }

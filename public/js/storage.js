@@ -19,7 +19,7 @@ const MadradorStorage = (() => {
     autoSourceFallback: true,
     resumePlayback: true,
     rememberLastSource: false,
-    miniPlayerEnabled: true,
+    miniPlayerEnabled: false,
     antiPopupEnabled: true,
     preferredVersion: 'VF',
     preloadPosters: true,
@@ -114,6 +114,13 @@ const MadradorStorage = (() => {
 
   function getPrefs() {
     const saved = read(KEYS.prefs, {});
+    if (Number(saved.paletteVersion || 0) < 2) {
+      saved.theme = 'dark';
+      saved.accent = 'violet';
+      saved.miniPlayerEnabled = false;
+      saved.paletteVersion = 2;
+      write(KEYS.prefs, saved);
+    }
     if (saved.preferredSource === 'premium' && !saved.vidzyDefaultApplied) {
       saved.preferredSource = 'vidzy';
       saved.vidzyDefaultApplied = true;

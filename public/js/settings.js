@@ -3,15 +3,14 @@ const $ = (id) => document.getElementById(id);
 window.addEventListener('DOMContentLoaded', () => {
   hydrateSettings();
   bindSettings();
-  renderServerStats();
   renderCatalogStatus();
   renderAppInfo();
+  hydratePreviewArtwork();
   updateInstallButton();
 });
 
 function renderAppInfo() {
-  if ($('appVersion')) $('appVersion').textContent = 'Version interface 2026.07';
-  if ($('appOrigin')) $('appOrigin').textContent = `Adresse de l'application : ${location.origin}`;
+  if ($('appVersion')) $('appVersion').textContent = 'Madrador TV • Édition 2026';
 }
 
 function updateInstallButton() {
@@ -37,8 +36,8 @@ function hydrateSettings() {
     $(id).value = prefs[id];
   });
 
-  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
-    $(id).checked = Boolean(prefs[id]);
+  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
+    if ($(id)) $(id).checked = Boolean(prefs[id]);
   });
 
   renderLocalStats();
@@ -49,15 +48,19 @@ function bindSettings() {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
 
   document.querySelectorAll('input[name="theme"]').forEach((input) => {
-    input.addEventListener('change', saveSettings);
+    input.addEventListener('change', () => {
+      const recommendedAccent = { dark: 'violet', candy: 'pink', emerald: 'green' }[input.value];
+      if (recommendedAccent) $('accent').value = recommendedAccent;
+      saveSettings();
+    });
   });
 
   ['accent', 'density', 'cardStyle', 'preferredSource', 'preferredVersion'].forEach((id) => {
     $(id).addEventListener('change', saveSettings);
   });
 
-  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'miniPlayerEnabled', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
-    $(id).addEventListener('change', saveSettings);
+  ['reduceMotion', 'autoplay', 'autoSourceFallback', 'resumePlayback', 'rememberLastSource', 'antiPopupEnabled', 'preloadPosters', 'dataSaver'].forEach((id) => {
+    $(id)?.addEventListener('change', saveSettings);
   });
 
   document.querySelectorAll('[data-clear]').forEach((button) => {
@@ -69,7 +72,6 @@ function bindSettings() {
   $('importData').addEventListener('change', importLocalData);
   $('refreshCatalogStatus')?.addEventListener('click', renderCatalogStatus);
   $('warmCatalog')?.addEventListener('click', warmCatalogCache);
-  $('pingKeepalive')?.addEventListener('click', pingKeepalive);
   $('installPwa')?.addEventListener('click', async () => {
     const installed = await window.MadradorPWA?.install?.();
     showToast(installed ? 'Installation lancée' : 'Installation annulée');
@@ -92,7 +94,7 @@ function saveSettings() {
     autoSourceFallback: $('autoSourceFallback').checked,
     resumePlayback: $('resumePlayback').checked,
     rememberLastSource: $('rememberLastSource').checked,
-    miniPlayerEnabled: $('miniPlayerEnabled').checked,
+    miniPlayerEnabled: false,
     antiPopupEnabled: $('antiPopupEnabled').checked,
     preloadPosters: $('preloadPosters').checked,
     dataSaver: $('dataSaver').checked
@@ -143,7 +145,9 @@ function resetAppearance() {
 function renderSettingsPreview(prefs = MadradorStorage.getPrefs()) {
   const labels = {
     theme: {
-      dark: 'Nuit bleue',
+      dark: 'Bleu & violet',
+      candy: 'Rose bonbon',
+      emerald: 'Vert Madrador',
       oled: 'OLED',
       nebula: 'Nébuleuse',
       cinema: 'Cinéma'
@@ -176,6 +180,26 @@ function renderSettingsPreview(prefs = MadradorStorage.getPrefs()) {
     prefs.antiPopupEnabled ? 'Anti-popup actif' : 'Anti-popup désactivé',
     prefs.reduceMotion ? 'Animations réduites' : 'Animations fluides'
   ].map((label) => `<span>${escapeHtml(label)}</span>`).join('');
+}
+
+async function hydratePreviewArtwork() {
+  const preview = $('previewPoster');
+  if (!preview) return;
+  try {
+    const response = await fetch('/api/catalog/bootstrap?limit=4', { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const movies = Array.isArray(data.movies) ? data.movies : (data.movies?.items || []);
+    const series = Array.isArray(data.series) ? data.series : (data.series?.items || []);
+    const item = [...movies, ...series].find((entry) => entry?.poster || entry?.backdrop);
+    const image = item?.poster || item?.backdrop;
+    if (!image) return;
+    preview.src = String(image).replace('/original/', '/w300/').replace('/w1280/', '/w300/').replace('/w780/', '/w300/');
+    preview.alt = item.title ? `Aperçu de ${item.title}` : 'Aperçu Madrador TV';
+    $('previewTitle').textContent = item.title || 'Madrador Preview';
+  } catch (error) {
+    preview.src = './assets/madrador-logo.png';
+  }
 }
 
 function exportLocalData() {

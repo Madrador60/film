@@ -19,7 +19,7 @@
   <link rel="apple-touch-icon" href="./assets/madrador-logo.png" />
   <link rel="stylesheet" href="./css/style.css?v=20260712-fluid-home" />
   <link rel="stylesheet" href="./css/experience.css?v=20260712" />
-  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish12" />
+  <link rel="stylesheet" href="./css/nova.css?v=20260713-polish13" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="home-body nova-app">
@@ -145,11 +145,20 @@
           <div class="quick-genres" id="quickGenres"></div>
           <div class="quick-actions">
             <button class="btn primary big" id="quickWatch" type="button"><i class="fa-solid fa-play"></i><span>Regarder</span></button>
+            <button class="btn glass big hidden" id="quickTrailer" type="button"><i class="fa-brands fa-youtube"></i><span>Bande-annonce</span></button>
             <button class="btn glass big" id="quickFullDetails" type="button"><i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir le lecteur</span></button>
             <button class="btn glass big" id="quickFavorite" type="button"><i class="fa-regular fa-heart"></i><span>Ma liste</span></button>
           </div>
         </article>
       </div>
+    </div>
+  </div>
+
+  <div class="trailer-modal hidden" id="quickTrailerModal" role="dialog" aria-modal="true" aria-label="Bande-annonce">
+    <div class="trailer-card quick-trailer-card">
+      <button class="icon-btn close-modal" id="quickTrailerClose" type="button" aria-label="Fermer la bande-annonce"><i class="fa-solid fa-xmark"></i></button>
+      <iframe id="quickTrailerFrame" title="Bande-annonce" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      <a class="btn glass trailer-external" id="quickTrailerExternal" data-allow-popup="true" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-youtube"></i><span>Ouvrir sur YouTube</span></a>
     </div>
   </div>
 
@@ -163,14 +172,13 @@
     <a href="./settings.html"><i class="fa-solid fa-gear"></i><span>Réglages</span></a>
   </nav>
 
-  <script src="./js/storage.js"></script>
+  <script src="./js/storage.js?v=20260713-polish2"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260713-stability1"></script>
   <script src="./js/antiads.js?v=20260712-guard2"></script>
-  <script src="./js/mini-player.js?v=20260713-stability1"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/app.js?v=20260713-stability1"></script>
+  <script src="./js/app.js?v=20260713-polish2"></script>
 </body>
 </html>
