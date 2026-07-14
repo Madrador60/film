@@ -945,18 +945,18 @@ body.nova-app::before {
   display: grid !important;
   place-items: center !important;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .09) !important;
-  border-radius: 9px !important;
-  background: #f7f8fa !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 10px !important;
+  background: #000 !important;
 }
 
 .nova-app .direct-channel-logo img,
 .nova-app .direct-now-logo img {
   width: 100% !important;
   height: 100% !important;
-  padding: 3px;
+  padding: 6px;
   object-fit: contain !important;
-  background: #f7f8fa;
+  background: transparent !important;
 }
 
 .nova-app .direct-brand-mark {
@@ -970,6 +970,11 @@ body.nova-app::before {
   color: #111827;
   line-height: 1;
   text-align: center;
+}
+/* Cache le logo texte de secours quand l'image est bien chargée */
+.nova-app .direct-channel-logo:has(> img.ui2-img-loaded) .direct-brand-mark,
+.nova-app .direct-now-logo:has(> img.ui2-img-loaded) .direct-brand-mark {
+  display: none !important;
 }
 
 .nova-app .direct-brand-mark strong {
