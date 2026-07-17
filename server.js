@@ -6,6 +6,7 @@ const compression = require('compression');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { createIptvOrgService } = require('./services/iptvOrgService');
 
 loadEnvFile();
 
@@ -136,6 +137,17 @@ const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
+const IPTV_ORG_URL = 'https://iptv-org.github.io/iptv/languages/fra.m3u';
+const IPTV_ORG_CACHE_DURATION = 8 * 60 * 60 * 1000;
+const IPTV_ORG_PUBLIC_REFRESH_COOLDOWN = 15 * 60 * 1000;
+const iptvOrgService = createIptvOrgService({
+    axios,
+    remoteUrl: IPTV_ORG_URL,
+    maxAge: IPTV_ORG_CACHE_DURATION,
+    timeout: 20000,
+    cacheFile: path.join(PERSISTENT_DATA_CACHE_DIR, 'iptv-org-fra.json'),
+    fallbackFile: path.join(__dirname, 'data', 'iptv-org-fra-fallback.json')
+});
 const DIRECT_EPG_DIRECTORY_URL = 'https://epg.pw/areas/fr.html?lang=en';
 const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
 const DIRECT_EPG_SCHEDULE_CACHE_DURATION = 15 * 60 * 1000;
@@ -250,14 +262,15 @@ function isAllowedDirectHealthUrl(value) {
     const normalized = normalizeDirectUrl(value);
     if (!normalized) return false;
     const hostname = new URL(normalized).hostname.toLowerCase();
-    return ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com'].some((host) => hostname === host || hostname.endsWith(`.${host}`));
+    return ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com'].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ||
+        iptvOrgService.hasSourceUrl(normalized);
 }
 
 async function checkDirectHealth(value) {
     const url = normalizeDirectUrl(value);
     if (!url || !isAllowedDirectHealthUrl(url)) throw new Error('Source Direct non autorisée pour la vérification.');
     const key = `direct_health_${url}`;
-    return getOrCreateCached(key, DIRECT_HEALTH_CACHE_DURATION, async () => {
+    const result = await getOrCreateCached(key, DIRECT_HEALTH_CACHE_DURATION, async () => {
         const startedAt = Date.now();
         try {
             const response = await axios.get(url, {
@@ -286,6 +299,8 @@ async function checkDirectHealth(value) {
             };
         }
     });
+    iptvOrgService.markSourceStatus(url, result);
+    return result;
 }
 
 function extractDirectUrlFromText(value) {
@@ -2527,11 +2542,79 @@ app.post('/api/direct/playlist', async (req, res) => {
     }
 });
 
+app.get('/api/direct/iptv-org/status', async (_req, res) => {
+    try {
+        await iptvOrgService.getSnapshot();
+        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+        res.json(iptvOrgService.status());
+    } catch (error) {
+        res.status(503).json({ ...iptvOrgService.status(), ok: false, error: error.message });
+    }
+});
+
+app.get('/api/direct/iptv-org/channels', async (req, res) => {
+    try {
+        const snapshot = await iptvOrgService.getSnapshot();
+        const query = String(req.query.q || '').trim().toLocaleLowerCase('fr');
+        const category = String(req.query.category || '').trim().toLocaleLowerCase('fr');
+        const country = String(req.query.country || '').trim().toLowerCase();
+        const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
+        const limit = Math.max(1, Math.min(Number.parseInt(req.query.limit, 10) || 250, 500));
+        let channels = snapshot.channels || [];
+
+        if (query) {
+            channels = channels.filter((channel) => (
+                `${channel.name} ${channel.tvgId} ${channel.country} ${channel.category}`.toLocaleLowerCase('fr').includes(query)
+            ));
+        }
+        if (category) channels = channels.filter((channel) => channel.category.toLocaleLowerCase('fr') === category);
+        if (country) channels = channels.filter((channel) => String(channel.country || '').toLowerCase() === country);
+
+        const total = channels.length;
+        const page = channels.slice(offset, offset + limit);
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+        res.json({
+            ok: true,
+            source: 'iptv-org',
+            name: snapshot.name,
+            updatedAt: snapshot.updatedAt,
+            stale: Boolean(snapshot.stale),
+            total,
+            count: page.length,
+            offset,
+            limit,
+            hasMore: offset + page.length < total,
+            channels: page
+        });
+    } catch (error) {
+        res.status(503).json({ ok: false, source: 'iptv-org', total: 0, count: 0, channels: [], error: error.message });
+    }
+});
+
+app.post('/api/direct/iptv-org/refresh', async (req, res) => {
+    const bearer = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const providedToken = String(req.get('x-admin-token') || bearer || '');
+    const isAdmin = Boolean(ADMIN_TOKEN && providedToken === ADMIN_TOKEN);
+    if (!isAdmin && !iptvOrgService.canPublicRefresh(IPTV_ORG_PUBLIC_REFRESH_COOLDOWN)) {
+        return res.status(429).json({
+            ...iptvOrgService.status(),
+            ok: false,
+            error: 'Une synchronisation a déjà été demandée récemment. Réessaie dans quelques minutes.'
+        });
+    }
+    try {
+        const snapshot = await iptvOrgService.refresh(true);
+        res.json({ ...iptvOrgService.status(), ok: true, total: snapshot.total });
+    } catch (error) {
+        res.status(503).json({ ...iptvOrgService.status(), ok: false, error: error.message });
+    }
+});
+
 app.get('/api/direct/status', (req, res) => {
     res.json({
         ok: true,
         service: 'direct',
-        accepted: ['url', 'txt', 'm3u', 'm3u8', 'cdnlivetv'],
+        accepted: ['url', 'txt', 'm3u', 'm3u8', 'cdnlivetv', 'iptv-org'],
         endpoints: [
             'GET /api/direct/resolve?url=https://...',
             'POST /api/direct/resolve { url }',
@@ -2541,6 +2624,9 @@ app.get('/api/direct/status', (req, res) => {
             'GET /api/direct/channel-stream?url=https://...',
             'GET /api/direct/health?url=https://...',
             'GET /api/direct/channels',
+            'GET /api/direct/iptv-org/status',
+            'GET /api/direct/iptv-org/channels?offset=0&limit=250',
+            'POST /api/direct/iptv-org/refresh',
             'GET /api/direct/epg?channel=TF1'
         ]
     });
@@ -2769,6 +2855,13 @@ setInterval(() => {
     });
 }, 10 * 60 * 1000);
 
+// IPTV-org est synchronisé en arrière-plan. La dernière version valide reste disponible en cas de panne distante.
+setInterval(() => {
+    iptvOrgService.refresh(false).catch((error) => {
+        console.log('[IPTV-ORG] Synchronisation différée :', error.message);
+    });
+}, IPTV_ORG_CACHE_DURATION);
+
 // Démarrage
 app.listen(PORT, "0.0.0.0", async () => {
     console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
@@ -2779,6 +2872,9 @@ app.listen(PORT, "0.0.0.0", async () => {
         console.log('🌍 Hors Wi-Fi: utilise Tailscale puis ouvre http://ADRESSE_TAILSCALE:3000');
     }
     console.log(`🧭 Fichier serveur: ${__filename}`);
+    setTimeout(() => {
+        iptvOrgService.getSnapshot().catch((error) => console.log('[IPTV-ORG] Initialisation différée :', error.message));
+    }, 1500);
     printRegisteredRoutes();
     console.log('🔍 Recherche de l\'URL FrenchStream fonctionnelle...');
     await findWorkingUrl();

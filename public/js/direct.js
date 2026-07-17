@@ -1,5 +1,5 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-livelive24-hesgoaler-v2';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-v3';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = 500;
@@ -22,6 +22,7 @@ let directHealthObserver = null;
 let directPlaybackToken = 0;
 const attemptedDirectSources = new Set();
 const directSourceStates = new Map();
+let iptvOrgLastSyncLabel = '';
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -457,6 +458,7 @@ async function loadDirectChannels(force = false) {
     let cdnChannels = [];
     let liveLiveChannels = [];
     let hesgoalerChannels = [];
+    let iptvOrgChannels = [];
     try {
       const response = await fetch('/api/direct/channels', { cache: 'no-store' });
       const data = await response.json();
@@ -498,11 +500,18 @@ async function loadDirectChannels(force = false) {
     } catch (hesgoalerError) {
       console.warn('[DIRECT] Hesgoaler indisponible, autres fournisseurs conservés.', hesgoalerError);
     }
-    directChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels, hesgoalerChannels);
-    localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
-    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
+    try {
+      iptvOrgChannels = await loadIptvOrgChannels(force);
+    } catch (iptvOrgError) {
+      console.warn('[DIRECT] IPTV-org indisponible, catalogue Madrador conservé.', iptvOrgError);
+      showToast('IPTV-org indisponible : dernière liste Madrador conservée');
+    }
+    const madradorChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels, hesgoalerChannels);
+    directChannels = mergeGroupedChannels(madradorChannels, iptvOrgChannels);
+    localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
+    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes francophones`;
     renderDirectChannels();
-    setHint(`${directChannels.length} chaînes françaises chargées`);
+    setHint(`${directChannels.length} chaînes francophones chargées${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
     return directChannels;
   } catch (error) {
     console.error(error);
@@ -513,6 +522,50 @@ async function loadDirectChannels(force = false) {
     button?.classList.remove('loading');
     if (button) button.disabled = false;
   }
+}
+
+async function loadIptvOrgChannels(force = false) {
+  if (force) {
+    const refresh = await fetch('/api/direct/iptv-org/refresh', { method: 'POST', cache: 'no-store' });
+    if (!refresh.ok && refresh.status !== 429) {
+      const error = await refresh.json().catch(() => ({}));
+      throw new Error(error.error || 'Synchronisation IPTV-org impossible');
+    }
+  }
+
+  const channels = [];
+  let offset = 0;
+  let hasMore = true;
+  let updatedAt = null;
+  while (hasMore && offset < 2000) {
+    const response = await fetch(`/api/direct/iptv-org/channels?offset=${offset}&limit=500`, { cache: force ? 'reload' : 'default' });
+    const data = await response.json();
+    if (!response.ok || !data?.ok) throw new Error(data?.error || 'Catalogue IPTV-org indisponible');
+    updatedAt = data.updatedAt || updatedAt;
+    channels.push(...(data.channels || []));
+    offset += data.count || 0;
+    hasMore = Boolean(data.hasMore && data.count);
+  }
+  if (updatedAt) {
+    const date = new Date(updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    iptvOrgLastSyncLabel = `synchronisé le ${date}`;
+    $('directChannelsReload')?.setAttribute('title', `IPTV-org synchronisé le ${date}`);
+  }
+  return channels.map((channel) => ({
+    ...channel,
+    code: String(channel.country || 'fr').toLowerCase(),
+    country: channel.country || 'FR',
+    image: channel.logo || '',
+    url: channel.sources?.[0]?.url || '',
+    status: 'unknown',
+    sources: (channel.sources || []).map((source) => ({
+      ...source,
+      provider: 'IPTV-org',
+      provenance: 'IPTV-org',
+      catalog: 'iptv-org',
+      name: source.name || 'IPTV-org'
+    }))
+  }));
 }
 
 function renderDirectChannels() {
@@ -704,10 +757,12 @@ function detectProvider(url) {
   }
 }
 
-function isAllowedSource(url) {
+function isAllowedSource(url, source = {}) {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    if (source.catalog === 'iptv-org' || source.provenance === 'IPTV-org') return true;
     return parsed.protocol === 'https:' && ALLOWED_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
   } catch {
     return false;
@@ -729,7 +784,7 @@ function groupChannels(rawChannels) {
     }
     const item = grouped.get(key);
     if (!item.sources.some((source) => source.url === url)) {
-      item.sources.push({ name: `Source ${item.sources.length + 1}`, provider: detectProvider(url), url });
+      item.sources.push({ name: `Source ${item.sources.length + 1}`, provider: detectProvider(url), provenance: 'Madrador', catalog: 'madrador', url });
     }
   });
   return [...grouped.values()].map((channel) => ({ ...channel, url: channel.sources[0]?.url || '' }));
@@ -756,7 +811,7 @@ function mergeGroupedChannels(...catalogs) {
       target.image = channel.image || target.image;
     }
     (channel.sources || []).forEach((source) => {
-      if (isAllowedSource(source.url) && !target.sources.some((item) => item.url === source.url)) {
+      if (isAllowedSource(source.url, source) && !target.sources.some((item) => item.url === source.url)) {
         target.sources.push({ ...source, name: `Source ${target.sources.length + 1}` });
       }
     });
@@ -781,7 +836,8 @@ function getSourcePriority(source) {
   if (provider.includes('cdnlivetv')) return 0;
   if (provider.includes('livelive24')) return 5;
   if (provider.includes('hesgoaler')) return 6;
-  return 5;
+  if (provider.includes('iptv-org')) return 20;
+  return 10;
 }
 
 function getFrenchChannels(channels) {
@@ -947,7 +1003,7 @@ function focusDirectPlayer() {
 
 async function playChannelSource(channel, index) {
   const source = channel?.sources?.[index];
-  if (!source || !isAllowedSource(source.url)) {
+  if (!source || !isAllowedSource(source.url, source)) {
     if (source) {
       attemptedDirectSources.add(index);
       handleDirectSourceFailure(channel, source, index, 'Cette source est invalide ou non autorisée.');
@@ -974,7 +1030,7 @@ async function playChannelSource(channel, index) {
       return;
     }
   } else {
-    playUrl(source.url, { ...activeChannel, type: 'iframe' }, getDirectSourceLifecycle(channel, source, index));
+    playUrl(source.url, { ...activeChannel, type: source.type || getDirectType(source.url) }, getDirectSourceLifecycle(channel, source, index));
   }
   saveRecent(source.url, activeChannel);
   renderRecent();
@@ -988,13 +1044,19 @@ function renderChannelSources(channel) {
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
     <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${escapeHtml(source.name)}">
-      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)} · ${escapeHtml(getDirectSourceStateLabel(source.url))}${getDirectSourceCheckedLabel(source.url)}</small>
+      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(getSourceProvenance(source))} · ${escapeHtml(getDirectSourceStateLabel(source))}${getDirectSourceCheckedLabel(source)}</small>
     </button>
   `).join('');
   list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
     attemptedDirectSources.clear();
     playChannelSource(channel, Number(button.dataset.sourceIndex));
   }));
+}
+
+function getSourceProvenance(source) {
+  if (source?.provenance === 'IPTV-org' || source?.catalog === 'iptv-org') return 'IPTV-org';
+  if (source?.provenance === 'Source personnelle' || source?.catalog === 'personal') return 'Source personnelle';
+  return `Madrador · ${source?.provider || 'Source'}`;
 }
 
 function getDirectSourceLifecycle(channel, source, index) {
@@ -1027,13 +1089,13 @@ function updateDirectSourceState(url, state, error = '') {
   directSourceStates.set(url, { state, error, checkedAt: new Date().toISOString() });
 }
 
-function getDirectSourceStateLabel(url) {
-  const state = directSourceStates.get(url)?.state || 'idle';
-  return ({ idle: 'non testée', checking: 'chargement', available: 'prête', slow: 'lente', unavailable: 'indisponible' })[state] || state;
+function getDirectSourceStateLabel(source) {
+  const state = directSourceStates.get(source?.url)?.state || source?.status || 'idle';
+  return ({ idle: 'À vérifier', unchecked: 'À vérifier', checking: 'chargement', available: 'fonctionnelle', slow: 'lente', unavailable: 'indisponible' })[state] || state;
 }
 
-function getDirectSourceCheckedLabel(url) {
-  const checkedAt = directSourceStates.get(url)?.checkedAt;
+function getDirectSourceCheckedLabel(source) {
+  const checkedAt = directSourceStates.get(source?.url)?.checkedAt || source?.checkedAt;
   if (!checkedAt) return '';
   const time = new Date(checkedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   return ` · vérifiée ${escapeHtml(time)}`;
