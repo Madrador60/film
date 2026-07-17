@@ -617,7 +617,7 @@ body.nova-app::before {
 }
 
 .nova-app .btn.primary {
-  color: #06110f !important;
+  color: #a39df1 !important;
   background: var(--nova-mint) !important;
   box-shadow: none !important;
 }
