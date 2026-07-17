@@ -1,5 +1,5 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-livelive24';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:cdn-livelive24-hesgoaler-v2';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = 500;
@@ -456,6 +456,7 @@ async function loadDirectChannels(force = false) {
   try {
     let cdnChannels = [];
     let liveLiveChannels = [];
+    let hesgoalerChannels = [];
     try {
       const response = await fetch('/api/direct/channels', { cache: 'no-store' });
       const data = await response.json();
@@ -483,7 +484,21 @@ async function loadDirectChannels(force = false) {
     } catch (liveError) {
       console.warn('[DIRECT] LiveLive24 indisponible, CDNLiveTV conservé.', liveError);
     }
-    directChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels);
+    try {
+      const response = await fetch('./data/hesgoaler-chaines-france.json', { cache: force ? 'reload' : 'default' });
+      const data = await response.json();
+      hesgoalerChannels = groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
+        name: channel.channel_name,
+        category: channel.category,
+        url: channel.url,
+        logo: channel.image,
+        code: 'fr',
+        country: 'FR'
+      })));
+    } catch (hesgoalerError) {
+      console.warn('[DIRECT] Hesgoaler indisponible, autres fournisseurs conservés.', hesgoalerError);
+    }
+    directChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels, hesgoalerChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(directChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes françaises`;
     renderDirectChannels();

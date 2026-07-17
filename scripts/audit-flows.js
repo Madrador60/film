@@ -94,6 +94,14 @@ async function run() {
     if (rmcSources.length < 2 || new Set(rmcSources.map((source) => source.url)).size < 2) {
       throw new Error('RMC Sport 1 ne conserve pas ses sources indépendantes pour le fallback.');
     }
+    if (!rmcSources.some((source) => source.provider === 'Hesgoaler' && source.url.includes('hesgoaler.com'))) {
+      throw new Error('La source Hesgoaler française de RMC Sport 1 n’est pas regroupée avec la chaîne.');
+    }
+    const foreignHesgoalerChannel = await page.evaluate(() => directChannels.find((channel) => (
+      (channel.sources || []).some((source) => source.provider === 'Hesgoaler') &&
+      String(channel.country || '').toUpperCase() !== 'FR'
+    ))?.name || '');
+    if (foreignHesgoalerChannel) throw new Error(`Une chaîne Hesgoaler étrangère a été importée : ${foreignHesgoalerChannel}`);
     await page.route('**/api/direct/channel-stream?**', (route) => route.fulfill({
       status: 502,
       contentType: 'application/json',
