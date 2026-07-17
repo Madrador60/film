@@ -82,8 +82,12 @@ const MadradorStorage = (() => {
 
   function normalizeMediaType(item) {
     const raw = String(item?.type || '').toLowerCase();
-    if (item?.isSeries === true || raw === 'series' || raw === 'serie' || raw === 'tv') return 'series';
-    if (item?.isSeries === false || raw === 'movie' || raw === 'movies' || raw === 'film') return 'movies';
+    // The explicit type is canonical. A stale legacy isSeries flag must not
+    // turn a known movie into a series.
+    if (raw === 'series' || raw === 'serie' || raw === 'tv') return 'series';
+    if (raw === 'movie' || raw === 'movies' || raw === 'film') return 'movies';
+    if (item?.isSeries === true) return 'series';
+    if (item?.isSeries === false) return 'movies';
     return item?.season || item?.episode ? 'series' : 'movies';
   }
 
@@ -175,8 +179,14 @@ const MadradorStorage = (() => {
   function findMedia(id) {
     const remembered = normalizeMediaItem(read(`${MEDIA_PREFIX}${id}`, {}));
     if (remembered.id) return remembered;
+    const targetApiId = getApiId(id);
     return [...list(KEYS.continue), ...list(KEYS.favorites), ...list(KEYS.history)]
-      .find((item) => String(item.id) === String(id)) || null;
+      .find((item) => String(item.id) === String(id) || getApiId(item.id) === targetApiId) || null;
+  }
+
+  function getApiId(value) {
+    const clean = String(value || '').trim();
+    return clean.match(/^\d+/)?.[0] || clean;
   }
 
   return {

@@ -332,17 +332,16 @@ async function warmCatalogCache() {
   }
 
   try {
-    const res = await fetch('/api/cache/warm?limit=all', { cache: 'no-store' });
+    const res = await fetch('/api/catalog/ensure', {
+      method: 'POST',
+      cache: 'no-store'
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    paintCatalogHealth({
-      source: data.source,
-      film: data.status?.film,
-      series: data.status?.series,
-      ready: data.ready,
-      updatedAt: data.timestamp
-    });
-    showToast('Préparation du catalogue lancée');
+    showToast(data.coolingDown || data.mode === 'rate-limited'
+      ? 'Préparation déjà en cours'
+      : 'Préparation du catalogue lancée');
+    await loadCatalogHealth();
   } catch (err) {
     showToast('Préparation indisponible');
     paintCatalogHealthError('Impossible de lancer la préparation du catalogue.');
@@ -373,7 +372,7 @@ function paintCatalogHealth(data) {
   const message = ready
     ? 'Le catalogue complet est disponible depuis le cache serveur.'
     : building
-      ? 'Le scan continue en arrière-plan. UptimeRobot peut rappeler /api/cache/warm pour reprendre si Render redémarre.'
+      ? 'Le scan continue progressivement en arrière-plan sans ralentir la navigation.'
       : 'Clique sur Préparer le catalogue pour lancer ou reprendre le scan complet.';
   $('catalogHealthMessage').textContent = message;
 }

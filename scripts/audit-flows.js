@@ -81,8 +81,29 @@ async function run() {
 
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#hero');
+    const explicitMovieType = await page.evaluate(() => MadradorStorage.normalizeMediaType({ type: 'movie', isSeries: true }));
+    if (explicitMovieType !== 'movies') throw new Error('Un type movie explicite est encore transformé en série.');
     await page.click('#directBtn');
     await page.waitForURL(/direct\.html/);
+    await page.waitForFunction(() => typeof directChannels !== 'undefined' && directChannels.length > 0, null, { timeout: 10000 });
+    const rmcChannel = await page.evaluate(() => {
+      const channel = directChannels.find((item) => /^RMC Sport 1$/i.test(item.name || ''));
+      return channel ? JSON.parse(JSON.stringify(channel)) : null;
+    });
+    const rmcSources = rmcChannel?.sources || [];
+    if (rmcSources.length < 2 || new Set(rmcSources.map((source) => source.url)).size < 2) {
+      throw new Error('RMC Sport 1 ne conserve pas ses sources indépendantes pour le fallback.');
+    }
+    await page.route('**/api/direct/channel-stream?**', (route) => route.fulfill({
+      status: 502,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: false, error: 'Flux HLS indisponible (audit)' })
+    }));
+    await page.evaluate((channel) => playChannel(channel), rmcChannel);
+    await page.waitForFunction(() => selectedDirectSourceIndex === 1, null, { timeout: 4000 });
+    const firstDirectState = await page.evaluate((url) => directSourceStates.get(url)?.state, rmcSources[0].url);
+    if (firstDirectState !== 'unavailable') throw new Error('La première source Direct en échec n’est pas marquée indisponible.');
+    await page.unroute('**/api/direct/channel-stream?**');
 
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'domcontentloaded' });
     await page.click('#settingsBtn');
@@ -107,7 +128,60 @@ async function run() {
     }));
     if (semantics.nested || !semantics.openName) throw new Error('Structure interactive des cartes invalide.');
 
-    console.log('Audit fonctionnel réussi : API, navigation, recherche et cartes vérifiées.');
+    await page.evaluate(() => {
+      const seed = visibleCatalogItems[0];
+      catalogItems = Array.from({ length: 72 }, (_value, index) => ({
+        ...seed,
+        id: `audit-film-${index + 1}`,
+        title: `Film audit ${index + 1}`,
+        type: 'movies'
+      }));
+      renderedCount = 24;
+      renderCatalog();
+    });
+    if (await page.locator('#catalogGrid .media-card').count() !== 24) throw new Error('Le catalogue ne démarre pas à 24 éléments.');
+    await page.click('#catalogNext');
+    if (await page.locator('#catalogGrid .media-card').count() !== 48) throw new Error('Afficher plus ne passe pas de 24 à 48.');
+    await page.click('#catalogPrev');
+    if (await page.locator('#catalogGrid .media-card').count() !== 24) throw new Error('Afficher moins ne revient pas de 48 à 24.');
+
+    await page.goto(`${BASE_URL}/catalog.html?view=popular`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(100);
+    const activeNav = await page.locator('#sidebar .nav.active').count();
+    if (activeNav !== 1 || !(await page.locator('#catalogPopularNav').evaluate((node) => node.classList.contains('active')))) {
+      throw new Error('La navigation Populaires conserve plusieurs rubriques actives.');
+    }
+
+    await page.addInitScript(() => {
+      localStorage.setItem('madrador:favorites', JSON.stringify([{
+        id: 'audit-il-maestro',
+        title: 'Il maestro',
+        type: 'movie',
+        isSeries: true
+      }]));
+    });
+    await page.goto(`${BASE_URL}/library.html?view=favorites`, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.library-card');
+    const libraryBadge = await page.locator('.library-card .media-badges span').first().textContent();
+    if (libraryBadge?.trim() !== 'Film') throw new Error('Il maestro est encore identifié comme série dans la bibliothèque.');
+
+    await page.route('**/api/film/999001', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ id: '999001', title: 'Film audit', type: 'movie', isSeries: false, year: '2026', description: 'Test cinéma' })
+    }));
+    await page.route('**/api/film/999001/sources', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ id: '999001', sources: [] })
+    }));
+    await page.goto(`${BASE_URL}/player.html?id=999001&type=movie`, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#cinemaMode');
+    await page.click('#cinemaMode');
+    if (!(await page.locator('body').evaluate((node) => node.classList.contains('cinema-mode')))) throw new Error('Le mode cinéma ne s’active pas.');
+    await page.keyboard.press('Escape');
+    if (await page.locator('body').evaluate((node) => node.classList.contains('cinema-mode'))) throw new Error('Échap ne ferme pas le mode cinéma.');
+    if ((await page.locator('#player').getAttribute('title')) !== 'Lecteur vidéo Madrador TV') throw new Error('Le lecteur iframe n’a pas de titre accessible.');
+
+    console.log('Audit fonctionnel réussi : API, navigation, catalogue 24/48/24, types, bibliothèque et mode cinéma vérifiés.');
   } finally {
     await browser?.close();
     server.kill('SIGTERM');

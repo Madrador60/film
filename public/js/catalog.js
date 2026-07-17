@@ -19,6 +19,8 @@ let catalogSuggestionItems = [];
 let catalogViewMode = localStorage.getItem('madrador:catalog-view') || 'grid';
 const pendingJsonRequests = new Map();
 let catalogSnapshotComplete = false;
+let catalogSnapshotState = 'loading';
+let catalogSnapshotTotal = 0;
 let catalogHydrationAttempts = 0;
 let catalogHydrationTimer = null;
 
@@ -279,12 +281,16 @@ async function fetchCatalogSnapshots() {
   const types = catalogType === 'all' ? ['movie', 'series'] : [catalogType === 'series' ? 'series' : 'movie'];
   const snapshots = await Promise.all(types.map(async (type) => {
     const data = await fetchJson(`/api/catalog/snapshot?type=${type}&limit=all`, { ttl: 15000, timeout: 8000, retries: 1 });
-    if (!data?.complete && ['idle', 'error'].includes(data?.status?.state)) {
-      fetch(`/api/cache/build?target=${type}&limit=all`, { method: 'POST' }).catch(() => {});
+    if ((!data?.complete || data?.refreshNeeded) && ['idle', 'error', 'ready'].includes(data?.status?.state)) {
+      fetch(`/api/catalog/ensure?target=${type}`, { method: 'POST' }).catch(() => {});
     }
     return data;
   }));
   catalogSnapshotComplete = snapshots.every((data) => data?.complete === true);
+  catalogSnapshotState = catalogSnapshotComplete
+    ? (snapshots.some((data) => data?.refreshNeeded) ? 'stale' : 'complete')
+    : snapshots.some((data) => data?.partial) ? 'partial' : snapshots.some((data) => data?.state === 'error') ? 'error' : 'loading';
+  catalogSnapshotTotal = snapshots.reduce((total, data) => total + (Number(data?.total) || 0), 0);
   const raw = snapshots.flatMap((data) => data?.items || []);
   if (!raw.length) return fetchCatalogPages(CATALOG_FAST_LIMIT);
   const normalized = normalizeItems(raw, catalogType === 'series' ? 'series' : 'movies');
@@ -365,6 +371,8 @@ function renderCatalog() {
   }
 
   $('catalogCount').textContent = getCatalogCountLabel(total);
+  $('catalogCount').dataset.state = catalogSnapshotState;
+  $('catalogCount').title = getCatalogStateDescription(total);
   $('catalogPage').textContent = total
     ? `${Math.min(renderedCount, total)} / ${total} affichés`
     : '0 résultat';
@@ -382,9 +390,20 @@ function renderCatalog() {
 }
 
 function getCatalogCountLabel(total) {
-  if (catalogType === 'movies') return `${total} film${total > 1 ? 's' : ''}`;
-  if (catalogType === 'series') return `${total} série${total > 1 ? 's' : ''}`;
-  return `${total} titre${total > 1 ? 's' : ''}`;
+  const suffix = catalogSnapshotState === 'partial' || catalogSnapshotState === 'loading'
+    ? ' · catalogue partiel'
+    : catalogSnapshotState === 'stale' ? ' · cache complet en actualisation' : '';
+  if (catalogType === 'movies') return `${total} film${total > 1 ? 's' : ''}${suffix}`;
+  if (catalogType === 'series') return `${total} série${total > 1 ? 's' : ''}${suffix}`;
+  return `${total} titre${total > 1 ? 's' : ''}${suffix}`;
+}
+
+function getCatalogStateDescription(total) {
+  if (catalogSnapshotState === 'complete') return `Catalogue complet : ${total} titres disponibles.`;
+  if (catalogSnapshotState === 'stale') return `Cache complet disponible (${catalogSnapshotTotal || total} titres), actualisation en arrière-plan.`;
+  if (catalogSnapshotState === 'partial') return `Catalogue temporaire : ${catalogSnapshotTotal || total} titres déjà récupérés. Le catalogue complet remplacera automatiquement cette vue.`;
+  if (catalogSnapshotState === 'error') return 'Le dernier chargement complet a échoué. Les données temporaires restent disponibles.';
+  return 'Le catalogue complet est en cours de préparation.';
 }
 
 function renderActiveFilters() {
@@ -1022,6 +1041,7 @@ function openDetails(item) {
 }
 
 function openPlayer(item, autoplay = false) {
+  MadradorStorage.rememberMedia(item);
   const query = new URLSearchParams({ id: item.id, type: item.type === 'series' ? 'series' : 'movie' });
   if (item.type === 'series') query.set('seriesTitle', item.seriesTitle || item.title);
   if (autoplay) query.set('autoplay', '1');

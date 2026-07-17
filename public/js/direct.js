@@ -933,7 +933,12 @@ function focusDirectPlayer() {
 async function playChannelSource(channel, index) {
   const source = channel?.sources?.[index];
   if (!source || !isAllowedSource(source.url)) {
-    showDirectError(channel, 'Cette source est invalide ou non autorisée.');
+    if (source) {
+      attemptedDirectSources.add(index);
+      handleDirectSourceFailure(channel, source, index, 'Cette source est invalide ou non autorisée.');
+    } else {
+      showDirectError(channel, 'Cette source est invalide ou non autorisée.');
+    }
     return;
   }
   selectedDirectSourceIndex = index;
@@ -967,8 +972,8 @@ function renderChannelSources(channel) {
   panel?.classList.toggle('hidden', !sources.length);
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
-    <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}">
-      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)} · ${escapeHtml(getDirectSourceStateLabel(source.url))}</small>
+    <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${escapeHtml(source.name)}">
+      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.provider)} · ${escapeHtml(getDirectSourceStateLabel(source.url))}${getDirectSourceCheckedLabel(source.url)}</small>
     </button>
   `).join('');
   list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
@@ -1010,6 +1015,13 @@ function updateDirectSourceState(url, state, error = '') {
 function getDirectSourceStateLabel(url) {
   const state = directSourceStates.get(url)?.state || 'idle';
   return ({ idle: 'non testée', checking: 'chargement', available: 'prête', slow: 'lente', unavailable: 'indisponible' })[state] || state;
+}
+
+function getDirectSourceCheckedLabel(url) {
+  const checkedAt = directSourceStates.get(url)?.checkedAt;
+  if (!checkedAt) return '';
+  const time = new Date(checkedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return ` · vérifiée ${escapeHtml(time)}`;
 }
 
 function playNextChannelSource() {
@@ -1173,7 +1185,7 @@ function renderCurrentFavorite() {
 }
 
 function showDirectLoading(name) {
-  destroyActiveHls();
+  destroyDirectPlayback();
   $('directScreen').innerHTML = `
     <div class="direct-placeholder">
       <span class="search-loader"></span>

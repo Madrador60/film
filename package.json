@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "audit:ui": "node scripts/audit-ui.js",
     "audit:flows": "node scripts/audit-flows.js",
-    "audit:all": "npm run audit:ui && npm run audit:flows"
+    "audit:all": "npm run audit:ui && npm run audit:flows",
+    "benchmark": "node scripts/benchmark-performance.js"
   },
   "dependencies": {
     "axios": "^1.6.0",

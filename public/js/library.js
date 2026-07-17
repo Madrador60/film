@@ -13,6 +13,7 @@ function bindLibrary() {
   document.querySelectorAll('[data-library-view]').forEach((button) => {
     button.addEventListener('click', () => {
       libraryView = button.dataset.libraryView;
+      updateLibraryUrl(true);
       renderLibrary();
     });
   });
@@ -35,6 +36,17 @@ function bindLibrary() {
     renderLibrary();
     showToast('Bibliothèque locale vidée');
   });
+  window.addEventListener('popstate', () => {
+    libraryView = new URLSearchParams(location.search).get('view') || 'all';
+    renderLibrary();
+  });
+}
+
+function updateLibraryUrl(push) {
+  const url = new URL(location.href);
+  if (libraryView === 'all') url.searchParams.delete('view');
+  else url.searchParams.set('view', libraryView);
+  history[push ? 'pushState' : 'replaceState']({ view: libraryView }, '', url);
 }
 
 function getLibrarySets() {
@@ -168,10 +180,10 @@ function createLibraryCard(item, index) {
         <span>${escapeHtml(item.quality || 'HD')}</span>
         ${item.version ? `<span>${escapeHtml(item.version)}</span>` : ''}
       </div>
-      <button type="button" class="media-card-open" data-action="info" aria-label="Voir ${escapeHtml(item.title)} dans le lecteur"></button>
+      <button type="button" class="media-card-open" data-action="info" aria-label="Regarder ${escapeHtml(item.title)}"></button>
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-action="play" aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-play"></i></button>
-        <button type="button" class="media-action" data-action="info" aria-label="Voir ${escapeHtml(item.title)} dans le lecteur"><i class="fa-solid fa-circle-info"></i></button>
+        <button type="button" class="media-action" data-action="info" aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-circle-play"></i></button>
         <button type="button" class="media-action danger-action" data-action="remove" aria-label="Retirer ${escapeHtml(item.title)} de la bibliothèque"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <h3>${escapeHtml(item.title)}</h3>

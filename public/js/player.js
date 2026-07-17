@@ -27,6 +27,7 @@ let playbackContinueItem = null;
 let playbackWasVisible = !document.hidden;
 let sourceLaunchLocked = false;
 let cinemaScrollY = 0;
+let cinemaOverflowState = null;
 const attemptedSourceIndexes = new Set();
 const pendingJsonRequests = new Map();
 const SERIES_VERSIONS = ['vf', 'vostfr', 'vo'];
@@ -83,6 +84,14 @@ function toggleCinemaMode() {
 
 function setCinemaMode(active) {
   if (active) cinemaScrollY = window.scrollY;
+  if (active && !cinemaOverflowState) {
+    cinemaOverflowState = {
+      html: document.documentElement.style.overflow,
+      body: document.body.style.overflow
+    };
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+  }
   document.body.classList.toggle('cinema-mode', active);
   $('cinemaMode').classList.toggle('is-favorite', active);
   $('cinemaMode').innerHTML = active
@@ -90,7 +99,12 @@ function setCinemaMode(active) {
     : '<i class="fa-solid fa-expand"></i><span>Mode cinéma</span>';
   $('cinemaMode').setAttribute('aria-pressed', String(active));
   if (active) $('screen').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  else window.scrollTo({ top: cinemaScrollY, behavior: 'smooth' });
+  else {
+    document.documentElement.style.overflow = cinemaOverflowState?.html || '';
+    document.body.style.overflow = cinemaOverflowState?.body || '';
+    cinemaOverflowState = null;
+    window.scrollTo({ top: cinemaScrollY, behavior: 'smooth' });
+  }
 }
 
 async function enterFullscreen() {
@@ -111,7 +125,7 @@ async function loadPlayer() {
       ? null
       : fetchMovieSources(apiId);
     const [details, prefetchedSources] = await Promise.all([
-      fetchJson(getInitialDetailsEndpoint(), { timeout: 9000, retries: 1 }),
+      fetchInitialDetails(),
       movieSourcesPromise
     ]);
 
@@ -137,6 +151,29 @@ async function loadPlayer() {
   } catch (err) {
     console.error(err);
     setError(err.message || 'Impossible de charger la page lecteur.');
+  }
+}
+
+async function fetchInitialDetails() {
+  const remembered = MadradorStorage.findMedia(id) || MadradorStorage.findMedia(apiId) || {};
+  try {
+    return await fetchJson(getInitialDetailsEndpoint(), { timeout: 9000, retries: 1 });
+  } catch (primaryError) {
+    try {
+      return await fetchJson(`/api/details/${encodeURIComponent(apiId)}`, { timeout: 7000, retries: 0 });
+    } catch {
+      const query = routeSeriesTitle || remembered.seriesTitle || remembered.title;
+      if (query) {
+        try {
+          const data = await fetchJson(`/api/search?q=${encodeURIComponent(query)}`, { timeout: 7000, retries: 0 });
+          const candidate = (data.items || []).find((item) => getApiId(item.id) === apiId)
+            || (data.items || []).find((item) => normalizeTitleKey(item.title).includes(normalizeTitleKey(query)));
+          if (candidate) return { ...remembered, ...candidate };
+        } catch {}
+      }
+      if (remembered.id) return remembered;
+      throw primaryError;
+    }
   }
 }
 
@@ -1009,6 +1046,9 @@ function destroyPlayerFrame(clearSelection = false) {
   window.clearTimeout(watchSourceLoad.timer);
   const oldFrame = $('player');
   const frame = oldFrame.cloneNode(false);
+  frame.title = selectedIndex >= 0 && streams[selectedIndex]
+    ? `Lecteur ${streams[selectedIndex].name || streams[selectedIndex].provider || 'vidéo'}`
+    : 'Lecteur vidéo Madrador TV';
   frame.classList.remove('active');
   frame.removeAttribute('src');
   oldFrame.src = 'about:blank';

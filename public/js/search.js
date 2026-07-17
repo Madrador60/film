@@ -474,6 +474,7 @@ function openDetails(item) {
 }
 
 function openPlayer(item, autoplay = false) {
+  MadradorStorage.rememberMedia(item);
   const query = new URLSearchParams({ id: item.id, type: item.type === 'series' ? 'series' : 'movie' });
   if (item.type === 'series') query.set('seriesTitle', item.seriesTitle || item.title);
   if (autoplay) query.set('autoplay', '1');

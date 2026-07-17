@@ -274,7 +274,7 @@ async function startCatalogCacheBuild() {
   try {
     const status = await fetchJson('/api/catalog/status?limit=all', { timeout: 6000, retries: 0 });
     if (status?.ready || [status?.film?.state, status?.series?.state].includes('building')) return;
-    await fetch('/api/cache/build?limit=all', { method: 'POST' });
+    await fetch('/api/catalog/ensure', { method: 'POST' });
   } catch (error) {
     console.warn('Construction cache catalogue indisponible.', error);
   }

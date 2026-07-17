@@ -13,6 +13,7 @@ const app = express();
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
+const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 const FSTREAM_INFO = 'https://fstream.info/';
 
 // ⚠️ COOKIE ANTI-BOT OBLIGATOIRE
@@ -88,11 +89,25 @@ app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: IS_PRODUCTION ? '1h' : 0
 }));
 
+function requireAdminAction(req, res, next) {
+    if (!IS_PRODUCTION) return next();
+    const bearer = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const token = String(req.get('x-admin-token') || bearer || '');
+    if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
+        return res.status(403).json({
+            ok: false,
+            error: 'Action administrative désactivée en production.'
+        });
+    }
+    next();
+}
+
 // Cache simple
 const cache = new Map();
 const inFlightCache = new Map();
 const catalogBuilds = new Map();
 let fullCatalogBuildRunning = false;
+let lastPublicCatalogEnsureAt = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
 const ALL_CACHE_DURATION = 30 * 60 * 1000;
 const DETAILS_CACHE_DURATION = 6 * 60 * 60 * 1000;
@@ -570,14 +585,16 @@ function getPersistentCatalogCheckpointPath(kind, limit) {
     return path.join(PERSISTENT_CACHE_DIR, `${kind}-catalog-${limit}.checkpoint.json`);
 }
 
-function readPersistentCatalog(kind, limit) {
+function readPersistentCatalog(kind, limit, options = {}) {
     try {
         const file = getPersistentCatalogPath(kind, limit);
         if (!fs.existsSync(file)) return null;
         const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-        if (!parsed?.savedAt || Date.now() - parsed.savedAt > PERSISTENT_CATALOG_DURATION) return null;
+        if (!parsed?.savedAt) return null;
         if (parsed.schemaVersion !== CATALOG_CACHE_SCHEMA_VERSION || parsed.data?.complete !== true) return null;
-        return parsed.data || null;
+        const stale = Date.now() - parsed.savedAt > PERSISTENT_CATALOG_DURATION;
+        if (stale && !options.allowStale) return null;
+        return parsed.data ? { ...parsed.data, stale, savedAt: parsed.savedAt } : null;
     } catch (error) {
         console.log(`[CACHE] Lecture cache persistant impossible (${kind}) : ${error.message}`);
         return null;
@@ -2157,6 +2174,9 @@ app.get('/api/catalog/bootstrap', async (req, res) => {
             ok: true,
             source: currentBaseUrl,
             limit,
+            scope: 'temporary',
+            complete: false,
+            temporary: true,
             totals: {
                 movies: movies.total || 0,
                 series: series.total || 0,
@@ -2359,13 +2379,14 @@ app.get('/api/catalog/status', (req, res) => {
 app.get('/api/catalog/snapshot', (req, res) => {
     const kind = String(req.query.type || req.query.kind || '').toLowerCase().startsWith('serie') ? 'series' : 'movie';
     const limit = getAllPageLimit(req.query.limit || 'all', kind);
-    const complete = readPersistentCatalog(kind, limit);
+    const complete = readPersistentCatalog(kind, limit, { allowStale: true });
     const checkpoint = complete || readPersistentCatalogCheckpoint(kind, limit);
     const allItems = Array.isArray(checkpoint?.items) ? checkpoint.items : [];
     const maxItems = Math.max(0, Math.min(Number(req.query.maxItems) || allItems.length, 50000));
     const items = allItems.slice(0, maxItems);
     const state = getCatalogBuildState(kind, limit);
     const completeSnapshot = Boolean(complete);
+    const refreshNeeded = Boolean(complete?.stale);
     const snapshotState = completeSnapshot
         ? 'complete'
         : allItems.length
@@ -2380,7 +2401,9 @@ app.get('/api/catalog/snapshot', (req, res) => {
         partial: !completeSnapshot && allItems.length > 0,
         temporary: !completeSnapshot,
         state: snapshotState,
-        source: completeSnapshot ? 'persistent-complete' : allItems.length ? 'persistent-checkpoint' : 'none',
+        source: completeSnapshot ? (refreshNeeded ? 'persistent-complete-stale' : 'persistent-complete') : allItems.length ? 'persistent-checkpoint' : 'none',
+        refreshNeeded,
+        fresh: completeSnapshot && !refreshNeeded,
         total: allItems.length,
         returned: items.length,
         page: checkpoint?.page || checkpoint?.pagesScraped || state.page || 0,
@@ -2389,7 +2412,30 @@ app.get('/api/catalog/snapshot', (req, res) => {
     });
 });
 
-app.post('/api/cache/build', async (req, res) => {
+app.post('/api/catalog/ensure', (req, res) => {
+    const now = Date.now();
+    const target = ['movie', 'movies', 'film', 'series', 'serie'].includes(String(req.query.target || '').toLowerCase())
+        ? String(req.query.target).toLowerCase()
+        : 'all';
+    const coolingDown = now - lastPublicCatalogEnsureAt < 10 * 60 * 1000;
+    const filmLimit = FULL_CATALOG_PAGE_LIMITS.movie;
+    const serieLimit = FULL_CATALOG_PAGE_LIMITS.series;
+    const build = coolingDown
+        ? { mode: 'rate-limited', tasks: [], message: 'Une préparation récente est déjà enregistrée.' }
+        : startCatalogCacheBuild({ filmLimit, serieLimit, target });
+    if (!coolingDown) lastPublicCatalogEnsureAt = now;
+    res.json({
+        ok: true,
+        ...build,
+        coolingDown,
+        status: {
+            film: getCatalogBuildState('movie', filmLimit),
+            series: getCatalogBuildState('series', serieLimit)
+        }
+    });
+});
+
+app.post('/api/cache/build', requireAdminAction, async (req, res) => {
     const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
     const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const target = String(req.query.target || 'all').toLowerCase();
@@ -2412,7 +2458,7 @@ app.post('/api/cache/build', async (req, res) => {
     });
 });
 
-app.get('/api/cache/warm', (req, res) => {
+app.get('/api/cache/warm', requireAdminAction, (req, res) => {
     const filmLimit = getAllPageLimit(req.query.filmLimit || req.query.limit || 'all', 'movie');
     const serieLimit = getAllPageLimit(req.query.serieLimit || req.query.seriesLimit || req.query.limit || 'all', 'series');
     const target = String(req.query.target || 'all').toLowerCase();
@@ -2689,7 +2735,7 @@ app.get('/api/library/stats', async (req, res) => {
 });
 
 // 🔄 Force la recherche du domaine actif sans redémarrer le serveur
-app.post('/api/refresh-domain', async (req, res) => {
+app.post('/api/refresh-domain', requireAdminAction, async (req, res) => {
     try {
         const domain = await findWorkingUrl();
         res.json({ ok: true, domain });
