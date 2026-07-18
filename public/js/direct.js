@@ -569,7 +569,7 @@ async function loadIptvOrgChannels(force = false) {
   let hasMore = true;
   let updatedAt = null;
   while (hasMore && offset < 2000) {
-    const response = await fetch(`/api/direct/iptv-org/channels?scope=all&offset=${offset}&limit=500`, { cache: force ? 'reload' : 'default' });
+    const response = await fetch(`/api/direct/iptv-org/channels?scope=all&offset=${offset}&limit=500&schema=3`, { cache: 'no-store' });
     const data = await response.json();
     if (!response.ok || !data?.ok) throw new Error(data?.error || 'Catalogue IPTV-org indisponible');
     updatedAt = data.updatedAt || updatedAt;
