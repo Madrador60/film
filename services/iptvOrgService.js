@@ -97,13 +97,18 @@ function parseM3u(content) {
         if (line.startsWith('#EXTINF:')) {
             const attributes = parseAttributes(line);
             const comma = line.lastIndexOf(',');
+            const rawName = comma >= 0 ? line.slice(comma + 1).trim() : '';
+            const quality = rawName.match(/\((\d{3,4}p)\)/i)?.[1] || '';
+            const labels = Array.from(rawName.matchAll(/\[([^\]]+)\]/g), (match) => match[1]);
             metadata = {
                 tvgId: attributes['tvg-id'] || '',
                 tvgName: attributes['tvg-name'] || '',
                 logo: attributes['tvg-logo'] || '',
                 group: attributes['group-title'] || '',
                 language: attributes['tvg-language'] || 'fr',
-                name: comma >= 0 ? line.slice(comma + 1).trim() : ''
+                name: rawName,
+                quality,
+                label: labels.find((label) => /geo.?blocked|not\s*24\/?7|offline/i.test(label)) || ''
             };
             headers = {
                 referrer: attributes['http-referrer'] || '',
@@ -139,7 +144,11 @@ function parseM3u(content) {
         const tvgKey = canonicalTvgId(entry.tvgId);
         const nameKey = normalizeChannelName(displayName);
         if (!nameKey) continue;
-        const key = (tvgKey && tvgIndex.get(tvgKey)) || nameIndex.get(nameKey) || (tvgKey ? `tvg:${tvgKey}` : `name:${nameKey}`);
+        // Un tvg-id est une identité forte. Ne fusionne par nom que les entrées
+        // qui n'en possèdent pas afin d'éviter d'écraser deux chaînes proches.
+        const key = tvgKey
+            ? (tvgIndex.get(tvgKey) || `tvg:${tvgKey}`)
+            : (nameIndex.get(nameKey) || `name:${nameKey}`);
         if (!channels.has(key)) {
             channels.set(key, {
                 id: `iptv-org-${slug(tvgKey || nameKey)}`,
@@ -156,7 +165,7 @@ function parseM3u(content) {
             duplicateMerges += 1;
         }
         if (tvgKey) tvgIndex.set(tvgKey, key);
-        nameIndex.set(nameKey, key);
+        if (!tvgKey) nameIndex.set(nameKey, key);
         const channel = channels.get(key);
         if (!channel.logo && isPublicHttpUrl(entry.logo)) channel.logo = entry.logo;
         if (!channel.sources.some((source) => source.url === entry.url)) {
@@ -168,6 +177,8 @@ function parseM3u(content) {
                 catalog: 'iptv-org',
                 status: 'unchecked',
                 checkedAt: null,
+                quality: entry.quality,
+                label: entry.label,
                 headers: entry.headers
             });
         } else {

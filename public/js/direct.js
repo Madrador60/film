@@ -509,9 +509,9 @@ async function loadDirectChannels(force = false) {
     const madradorChannels = mergeGroupedChannels(cdnChannels, hesgoalerChannels, publicMadradorChannels);
     directChannels = mergeGroupedChannels(madradorChannels, iptvOrgChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
-    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes francophones`;
+    if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
     renderDirectChannels();
-    setHint(`${directChannels.length} chaînes francophones chargées${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
+    setHint(`${directChannels.length} chaînes chargées${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
     return directChannels;
   } catch (error) {
     console.error(error);
@@ -525,20 +525,12 @@ async function loadDirectChannels(force = false) {
 }
 
 async function loadIptvOrgChannels(force = false) {
-  if (force) {
-    const refresh = await fetch('/api/direct/iptv-org/refresh', { method: 'POST', cache: 'no-store' });
-    if (!refresh.ok && refresh.status !== 429) {
-      const error = await refresh.json().catch(() => ({}));
-      throw new Error(error.error || 'Synchronisation IPTV-org impossible');
-    }
-  }
-
   const channels = [];
   let offset = 0;
   let hasMore = true;
   let updatedAt = null;
   while (hasMore && offset < 2000) {
-    const response = await fetch(`/api/direct/iptv-org/channels?offset=${offset}&limit=500`, { cache: force ? 'reload' : 'default' });
+    const response = await fetch(`/api/direct/iptv-org/channels?scope=all&offset=${offset}&limit=500`, { cache: force ? 'reload' : 'default' });
     const data = await response.json();
     if (!response.ok || !data?.ok) throw new Error(data?.error || 'Catalogue IPTV-org indisponible');
     updatedAt = data.updatedAt || updatedAt;
@@ -553,17 +545,19 @@ async function loadIptvOrgChannels(force = false) {
   }
   return channels.map((channel) => ({
     ...channel,
+    catalog: 'iptv-org',
+    provenance: 'IPTV-org',
     code: String(channel.country || 'fr').toLowerCase(),
     country: channel.country || 'FR',
     image: channel.logo || '',
-    url: channel.sources?.[0]?.url || '',
+    url: channel.sources?.find((source) => source.playable)?.url || channel.sources?.[0]?.url || '',
     status: 'unknown',
     sources: (channel.sources || []).map((source) => ({
       ...source,
-      provider: 'IPTV-org',
+      provider: source.provider || 'IPTV-org',
       provenance: 'IPTV-org',
       catalog: 'iptv-org',
-      name: source.name || 'IPTV-org'
+      name: source.name || `${source.provider || 'IPTV-org'}${source.quality ? ` · ${source.quality}` : ''}`
     }))
   }));
 }
@@ -580,6 +574,9 @@ function renderDirectChannels() {
   const favoriteKeys = getDirectFavorites();
   const recentOrder = new Map(getRecent().map((item, index) => [getChannelKey(item), index]));
   const viewChannels = normalized
+    .filter((channel) => activeDirectView !== 'france' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('france'))
+    .filter((channel) => activeDirectView !== 'francophone' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone'))
+    .filter((channel) => activeDirectView !== 'functional' || (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state)))
     .filter((channel) => activeDirectView !== 'favorites' || favoriteKeys.has(getChannelKey(channel)))
     .filter((channel) => activeDirectView !== 'recent' || recentOrder.has(getChannelKey(channel)));
   renderDirectCategoryTabs(viewChannels);
@@ -623,7 +620,7 @@ function renderDirectChannels() {
               </span>
               <span class="direct-channel-copy">
                 <b>${escapeHtml(channel.name)}</b>
-                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span><em class="direct-health-label">À vérifier</em></small>
+                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span>${channel.maxQuality ? `<span>${escapeHtml(channel.maxQuality)}</span>` : ''}<span>${channel.sources?.length || 1} source${(channel.sources?.length || 1) > 1 ? 's' : ''}</span><em class="direct-health-label">À vérifier</em></small>
               </span>
               <i class="fa-solid fa-play"></i>
             </button>
@@ -716,13 +713,17 @@ function paintDirectHealth(card, health) {
 function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
   const counts = {
     all: channels.length,
+    france: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('france')).length,
+    francophone: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone')).length,
+    functional: channels.filter((channel) => (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state))).length,
     favorites: channels.filter((channel) => favoriteKeys.has(getChannelKey(channel))).length,
     recent: channels.filter((channel) => recentOrder.has(getChannelKey(channel))).length
   };
   $('directViewTabs')?.querySelectorAll('[data-direct-view]').forEach((button) => {
     const view = button.dataset.directView;
     button.classList.toggle('active', view === activeDirectView);
-    button.querySelector('span').textContent = `${view === 'all' ? 'Toutes' : view === 'favorites' ? 'Favoris' : 'Récentes'} · ${counts[view]}`;
+    const labels = { all: 'Toutes', france: 'France', francophone: 'Francophones', functional: 'Fonctionnelles', favorites: 'Favoris', recent: 'Récentes' };
+    button.querySelector('span').textContent = `${labels[view]} · ${counts[view]}`;
   });
 }
 
@@ -762,7 +763,7 @@ function isAllowedSource(url, source = {}) {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
     if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-    if (source.catalog === 'iptv-org' || source.provenance === 'IPTV-org') return true;
+    if (source.catalog === 'iptv-org' || source.provenance === 'IPTV-org') return parsed.protocol === 'https:' && source.playable !== false;
     return parsed.protocol === 'https:' && ALLOWED_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
   } catch {
     return false;
@@ -1017,7 +1018,7 @@ async function playChannelSource(channel, index) {
   const activeChannel = { ...channel, url: source.url, sourceName: source.name, provider: source.provider };
   setCurrentChannel(activeChannel);
   renderChannelSources(activeChannel);
-  showDirectLoading(`${channel.name} · ${source.name}`);
+  showDirectLoading(`${channel.name} · tentative ${index + 1}/${channel.sources.length} · ${source.name}`);
   if (isCdnLivePlayerUrl(source.url)) {
     try {
       const response = await fetch(`/api/direct/channel-stream?url=${encodeURIComponent(source.url)}`, { cache: 'no-store' });
@@ -1043,7 +1044,7 @@ function renderChannelSources(channel) {
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
     <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${escapeHtml(source.name)}">
-      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(getSourceProvenance(source))} · ${escapeHtml(getDirectSourceStateLabel(source))}${getDirectSourceCheckedLabel(source)}</small>
+      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(getSourceProvenance(source))}${source.quality ? ` · ${escapeHtml(source.quality)}` : ''}${source.protocol ? ` · ${escapeHtml(source.protocol)}` : ''}${source.label ? ` · ${escapeHtml(source.label)}` : ''} · ${escapeHtml(getDirectSourceStateLabel(source))}${getDirectSourceCheckedLabel(source)}</small>
     </button>
   `).join('');
   list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
@@ -1063,7 +1064,7 @@ function getDirectSourceLifecycle(channel, source, index) {
     timeout: 14000,
     onReady(elapsed) {
       updateDirectSourceState(source.url, elapsed > 5000 ? 'slow' : 'available');
-      setHint(`Lecture : ${channel.name} · ${source.name} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
+      setHint(`Lecture : ${channel.name} · ${source.name} · tentative ${index + 1}/${channel.sources.length} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
       renderChannelSources({ ...channel, url: source.url });
     },
     onFailure(message) {

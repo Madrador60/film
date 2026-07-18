@@ -6,7 +6,7 @@ const compression = require('compression');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { createIptvOrgService } = require('./services/iptvOrgService');
+const { createIptvOrgApiService } = require('./services/iptvOrgApiService');
 
 loadEnvFile();
 
@@ -137,16 +137,14 @@ const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
-const IPTV_ORG_URL = 'https://iptv-org.github.io/iptv/languages/fra.m3u';
 const IPTV_ORG_CACHE_DURATION = 8 * 60 * 60 * 1000;
-const IPTV_ORG_PUBLIC_REFRESH_COOLDOWN = 15 * 60 * 1000;
-const iptvOrgService = createIptvOrgService({
+const iptvOrgService = createIptvOrgApiService({
     axios,
-    remoteUrl: IPTV_ORG_URL,
     maxAge: IPTV_ORG_CACHE_DURATION,
-    timeout: 20000,
-    cacheFile: path.join(PERSISTENT_DATA_CACHE_DIR, 'iptv-org-fra.json'),
-    fallbackFile: path.join(__dirname, 'data', 'iptv-org-fra-fallback.json')
+    timeout: 30000,
+    cacheFile: path.join(PERSISTENT_DATA_CACHE_DIR, 'iptv-org-api.json'),
+    fallbackFile: path.join(__dirname, 'data', 'iptv-org-api-fallback.json'),
+    supplementFile: path.join(__dirname, 'data', 'iptv-org-fra-supplement.m3u')
 });
 const DIRECT_EPG_DIRECTORY_URL = 'https://epg.pw/areas/fr.html?lang=en';
 const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
@@ -273,15 +271,18 @@ async function checkDirectHealth(value) {
     const result = await getOrCreateCached(key, DIRECT_HEALTH_CACHE_DURATION, async () => {
         const startedAt = Date.now();
         try {
+            const isHls = new URL(url).pathname.toLowerCase().endsWith('.m3u8');
             const response = await axios.get(url, {
                 ...axiosConfig,
                 timeout: DIRECT_HEALTH_TIMEOUT,
-                responseType: 'stream',
+                responseType: isHls ? 'text' : 'stream',
+                maxContentLength: isHls ? 512 * 1024 : 1024 * 1024,
                 validateStatus: (status) => status >= 200 && status < 500
             });
-            response.data?.destroy?.();
+            if (!isHls) response.data?.destroy?.();
             const latency = Date.now() - startedAt;
-            const available = response.status < 400;
+            const validHls = !isHls || (/^\s*#EXTM3U/m.test(String(response.data)) && /#EXT-X-(?:STREAM-INF|MEDIA-SEQUENCE)|#EXTINF/i.test(String(response.data)));
+            const available = response.status < 400 && validHls;
             return {
                 ok: available,
                 state: available ? (latency > 2500 ? 'slow' : 'available') : 'unavailable',
@@ -2558,17 +2559,19 @@ app.get('/api/direct/iptv-org/channels', async (req, res) => {
         const query = String(req.query.q || '').trim().toLocaleLowerCase('fr');
         const category = String(req.query.category || '').trim().toLocaleLowerCase('fr');
         const country = String(req.query.country || '').trim().toLowerCase();
+        const scope = String(req.query.scope || 'all').trim().toLowerCase();
         const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
         const limit = Math.max(1, Math.min(Number.parseInt(req.query.limit, 10) || 250, 500));
         let channels = snapshot.channels || [];
 
         if (query) {
             channels = channels.filter((channel) => (
-                `${channel.name} ${channel.tvgId} ${channel.country} ${channel.category}`.toLocaleLowerCase('fr').includes(query)
+                `${channel.name} ${channel.channelId} ${(channel.altNames || []).join(' ')} ${channel.country} ${channel.category}`.toLocaleLowerCase('fr').includes(query)
             ));
         }
         if (category) channels = channels.filter((channel) => channel.category.toLocaleLowerCase('fr') === category);
         if (country) channels = channels.filter((channel) => String(channel.country || '').toLowerCase() === country);
+        if (scope !== 'all') channels = channels.filter((channel) => (channel.scopes || []).includes(scope));
 
         const total = channels.length;
         const page = channels.slice(offset, offset + limit);
@@ -2591,17 +2594,19 @@ app.get('/api/direct/iptv-org/channels', async (req, res) => {
     }
 });
 
-app.post('/api/direct/iptv-org/refresh', async (req, res) => {
-    const bearer = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    const providedToken = String(req.get('x-admin-token') || bearer || '');
-    const isAdmin = Boolean(ADMIN_TOKEN && providedToken === ADMIN_TOKEN);
-    if (!isAdmin && !iptvOrgService.canPublicRefresh(IPTV_ORG_PUBLIC_REFRESH_COOLDOWN)) {
-        return res.status(429).json({
-            ...iptvOrgService.status(),
-            ok: false,
-            error: 'Une synchronisation a déjà été demandée récemment. Réessaie dans quelques minutes.'
-        });
+app.get('/api/direct/iptv-org/channel/:id', async (req, res) => {
+    try {
+        await iptvOrgService.getSnapshot();
+        const channel = iptvOrgService.findChannel(req.params.id);
+        if (!channel) return res.status(404).json({ ok: false, error: 'Chaîne IPTV-org introuvable.' });
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+        res.json({ ok: true, source: 'iptv-org', channel });
+    } catch (error) {
+        res.status(503).json({ ok: false, error: error.message });
     }
+});
+
+app.post('/api/direct/iptv-org/refresh', requireAdminAction, async (_req, res) => {
     try {
         const snapshot = await iptvOrgService.refresh(true);
         res.json({ ...iptvOrgService.status(), ok: true, total: snapshot.total });
@@ -2625,7 +2630,8 @@ app.get('/api/direct/status', (req, res) => {
             'GET /api/direct/health?url=https://...',
             'GET /api/direct/channels',
             'GET /api/direct/iptv-org/status',
-            'GET /api/direct/iptv-org/channels?offset=0&limit=250',
+            'GET /api/direct/iptv-org/channels?scope=france&offset=0&limit=250',
+            'GET /api/direct/iptv-org/channel/:id',
             'POST /api/direct/iptv-org/refresh',
             'GET /api/direct/epg?channel=TF1'
         ]
