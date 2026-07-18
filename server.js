@@ -134,6 +134,8 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 
 const DIRECT_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
 const CDN_LIVE_TV_CHANNELS_URL = 'https://api.cdnlivetv.tv/api/v1/channels/?user=cdnlivetv&plan=free';
+const CDN_LIVE_TV_METADATA_FILE = path.join(__dirname, 'data', 'cdnlivetv-fr-metadata.json');
+const CDN_LIVE_TV_METADATA = loadCdnLiveTvMetadata(CDN_LIVE_TV_METADATA_FILE);
 const DIRECT_CHANNELS_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_CACHE_DURATION = 10 * 60 * 1000;
 const DIRECT_PLAYLIST_ITEM_LIMIT = 1000;
@@ -479,7 +481,8 @@ function normalizeDirectChannel(channel = {}, index = 0) {
     const name = String(channel.name || '').trim();
     const code = String(channel.code || '').trim().toLowerCase();
     const url = normalizeDirectUrl(channel.url);
-    const image = normalizeDirectUrl(channel.image);
+    const metadata = findCdnLiveTvMetadata(name);
+    const image = normalizeDirectUrl(metadata?.image || channel.image);
 
     return {
         id: `${code || 'xx'}-${name || index}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
@@ -491,9 +494,47 @@ function normalizeDirectChannel(channel = {}, index = 0) {
         status: String(channel.status || 'unknown').toLowerCase(),
         viewers: Number(channel.viewers || 0),
         type: getDirectType(url),
-        category: classifyDirectChannel(name, code),
-        source: 'cdnlivetv'
+        category: normalizeDirectMetadataCategory(metadata?.category) || classifyDirectChannel(name, code),
+        source: 'cdnlivetv',
+        metadataSource: metadata ? 'chaines-francaises-completes' : 'cdnlivetv'
     };
+}
+
+function loadCdnLiveTvMetadata(filename) {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
+        return Array.isArray(parsed)
+            ? parsed.filter((item) => item && item.channel_name && normalizeDirectUrl(item.image))
+            : [];
+    } catch (error) {
+        console.warn('[DIRECT] Métadonnées CDNLiveTV indisponibles :', error.message);
+        return [];
+    }
+}
+
+function normalizeDirectMetadataName(value) {
+    return String(value || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\+/g, ' plus ')
+        .replace(/\bsports\b/g, 'sport')
+        .replace(/\bsport\s*360\b/g, '360')
+        .replace(/\bplus\b/g, '')
+        .replace(/\b(?:france|fr|hd|fhd)\b/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function findCdnLiveTvMetadata(name) {
+    const key = normalizeDirectMetadataName(name);
+    if (!key) return null;
+    return CDN_LIVE_TV_METADATA.find((item) => normalizeDirectMetadataName(item.channel_name) === key) || null;
+}
+
+function normalizeDirectMetadataCategory(value) {
+    if (/^general$/i.test(String(value || '').trim())) return 'Généralistes';
+    if (/^sports?$/i.test(String(value || '').trim())) return 'Sports';
+    return '';
 }
 
 function classifyDirectChannel(name, code) {
@@ -532,6 +573,8 @@ async function getDirectChannels() {
     const result = {
         ok: true,
         source: 'cdnlivetv',
+        metadataSource: 'chaines-francaises-completes',
+        metadataCount: CDN_LIVE_TV_METADATA.length,
         total: Number(response.data?.total_channels || channels.length),
         count: channels.length,
         channels,
