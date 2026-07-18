@@ -129,15 +129,18 @@ async function main() {
 
     const filters = await page.evaluate(() => {
       directChannels = [
-        { id: 'fr', name: 'France', country: 'FR', languages: ['fra'], scopes: ['france'], sources: [{ url: 'https://x/fr.m3u8', status: 'available' }] },
-        { id: 'fo', name: 'Francophone', country: 'CA', languages: ['fra'], scopes: ['francophone'], sources: [{ url: 'https://x/fo.m3u8', status: 'unchecked' }] },
-        { id: 'in', name: 'International', country: 'AF', languages: ['pus'], scopes: ['international'], sources: [{ url: 'https://x/in.m3u8', status: 'unavailable' }] }
+        { id: 'fr', name: 'France', country: 'FR', languages: ['fra'], scopes: ['france'], sources: [{ url: 'https://x/fr.m3u8', provider: 'IPTV-org', quality: '1080p', status: 'available' }] },
+        { id: 'fo', name: 'Francophone', country: 'CA', languages: ['fra'], scopes: ['francophone'], sources: [{ url: 'https://x/fo.m3u8', provider: 'Infomaniak', quality: '720p', status: 'unchecked' }] },
+        { id: 'in', name: 'International', country: 'AF', languages: ['pus'], scopes: ['international'], sources: [{ url: 'https://x/in.m3u8', provider: 'IPTV-org', quality: '576p', status: 'unavailable' }] }
       ];
       const fav = new Set(); const recent = new Map();
       renderDirectViewTabs(directChannels, fav, recent);
+      renderDirectMetadataFilters(directChannels);
       const labels = [...document.querySelectorAll('#directViewTabs span')].map((node) => node.textContent);
       return {
         labels,
+        countries: [...document.querySelectorAll('#directCountryFilter option')].map((node) => node.value),
+        providers: [...document.querySelectorAll('#directProviderFilter option')].map((node) => node.value),
         unavailable: channelMatchesAvailability(directChannels[2], 'unavailable'),
         france: getDirectChannelScope(directChannels[0]),
         francophone: getDirectChannelScope(directChannels[1]),
@@ -145,6 +148,8 @@ async function main() {
       };
     });
     assert(filters.labels.some((label) => label === 'France · 1'));
+    assert(filters.countries.includes('FR') && filters.countries.includes('CA') && filters.countries.includes('AF'));
+    assert(filters.providers.includes('iptv-org') && filters.providers.includes('infomaniak'));
     assert.strictEqual(filters.unavailable, true);
     assert.deepStrictEqual([filters.france, filters.francophone, filters.international], ['france', 'francophone', 'international']);
 

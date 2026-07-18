@@ -7,6 +7,8 @@ const MadradorStorage = (() => {
     prefs: 'madrador:prefs'
   };
   const MEDIA_PREFIX = 'madrador:media:';
+  let storageAvailable = detectStorageAvailability();
+  window.__madradorStorageAvailable = storageAvailable;
 
   const DEFAULT_PREFS = {
     theme: 'dark',
@@ -38,7 +40,16 @@ const MadradorStorage = (() => {
   }
 
   function write(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (!storageAvailable) return false;
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (err) {
+      storageAvailable = false;
+      window.__madradorStorageAvailable = false;
+      window.dispatchEvent(new CustomEvent('madrador:storage-error'));
+      return false;
+    }
   }
 
   function list(key) {
@@ -60,7 +71,18 @@ const MadradorStorage = (() => {
   }
 
   function clear(key) {
-    localStorage.removeItem(key);
+    try { localStorage.removeItem(key); } catch {}
+  }
+
+  function detectStorageAvailability() {
+    try {
+      const key = 'madrador:storage-test';
+      localStorage.setItem(key, '1');
+      localStorage.removeItem(key);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function media(details) {
@@ -216,11 +238,14 @@ const MadradorStorage = (() => {
     clearContinue: () => clear(KEYS.continue),
     clearCache: () => {
       Object.values(KEYS).forEach(clear);
-      Object.keys(localStorage)
-        .filter((key) => key.startsWith('madrador:cache:') || key.startsWith(MEDIA_PREFIX))
-        .forEach((key) => localStorage.removeItem(key));
+      try {
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith('madrador:cache:') || key.startsWith(MEDIA_PREFIX))
+          .forEach((key) => localStorage.removeItem(key));
+      } catch {}
       setPrefs(DEFAULT_PREFS);
-    }
+    },
+    isAvailable: () => storageAvailable
   };
 })();
 

@@ -30,6 +30,7 @@ function bindLibrary() {
     renderLibrary();
   });
   $('clearAllLibrary').addEventListener('click', () => {
+    if (!window.confirm('Vider toute la bibliothèque locale ? Cette action supprimera les favoris, l’historique et les reprises.')) return;
     MadradorStorage.clearContinue();
     MadradorStorage.clearFavorites();
     MadradorStorage.clearHistory();

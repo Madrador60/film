@@ -1,10 +1,10 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-livelive-v5';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-ads-v6';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_SOURCE_PREF_KEY = 'madrador:direct:source-preferences';
-const DIRECT_BATCH_SIZE = 500;
-const ALLOWED_HOSTS = ['cdnlivetv.tv', 'hesgoaler.com', 'event.vedge.infomaniak.com'];
+const DIRECT_BATCH_SIZE = 72;
+const ALLOWED_HOSTS = ['cdnlivetv.tv', 'event.vedge.infomaniak.com'];
 const DIRECT_LANGUAGE_LABELS = {
   fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien',
   bul: 'Bulgare', ell: 'Grec', fas: 'Persan', gsw: 'Suisse allemand', kur: 'Kurde', pus: 'Pachto',
@@ -42,7 +42,7 @@ window.addEventListener('DOMContentLoaded', () => {
     directRenderLimit = DIRECT_BATCH_SIZE;
     renderDirectChannels();
   });
-  ['directLanguageFilter', 'directQualityFilter', 'directAvailabilityFilter'].forEach((id) => $(id)?.addEventListener('change', () => {
+  ['directCountryFilter', 'directLanguageFilter', 'directQualityFilter', 'directProviderFilter', 'directAvailabilityFilter'].forEach((id) => $(id)?.addEventListener('change', () => {
     directRenderLimit = DIRECT_BATCH_SIZE;
     renderDirectChannels();
   }));
@@ -495,7 +495,6 @@ async function loadDirectChannels(force = false) {
 
   try {
     let cdnChannels = [];
-    let hesgoalerChannels = [];
     let publicMadradorChannels = [];
     let iptvOrgChannels = [];
     try {
@@ -510,20 +509,6 @@ async function loadDirectChannels(force = false) {
       })));
     } catch (apiError) {
       console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
-    }
-    try {
-      const response = await fetch('./data/hesgoaler-chaines-france.json', { cache: force ? 'reload' : 'default' });
-      const data = await response.json();
-      hesgoalerChannels = groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
-        name: channel.channel_name,
-        category: channel.category,
-        url: channel.url,
-        logo: channel.image,
-        code: 'fr',
-        country: 'FR'
-      })));
-    } catch (hesgoalerError) {
-      console.warn('[DIRECT] Hesgoaler indisponible, autres fournisseurs conservés.', hesgoalerError);
     }
     try {
       const response = await fetch('./data/madrador-public-channels.json', { cache: force ? 'reload' : 'default' });
@@ -545,7 +530,7 @@ async function loadDirectChannels(force = false) {
       console.warn('[DIRECT] IPTV-org indisponible, catalogue Madrador conservé.', iptvOrgError);
       showToast('IPTV-org indisponible : dernière liste Madrador conservée');
     }
-    const madradorChannels = mergeGroupedChannels(cdnChannels, hesgoalerChannels, publicMadradorChannels);
+    const madradorChannels = mergeGroupedChannels(cdnChannels, publicMadradorChannels);
     directChannels = mergeGroupedChannels(madradorChannels, iptvOrgChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
@@ -620,13 +605,17 @@ function renderDirectChannels() {
   renderDirectCategoryTabs(viewChannels);
   renderDirectMetadataFilters(viewChannels);
   const language = $('directLanguageFilter')?.value || '';
+  const country = $('directCountryFilter')?.value || '';
   const quality = $('directQualityFilter')?.value || '';
+  const provider = $('directProviderFilter')?.value || '';
   const availability = $('directAvailabilityFilter')?.value || '';
   let filtered = viewChannels
     .filter((channel) => activeDirectCategory === 'Toutes' || channel.category === activeDirectCategory)
     .filter((channel) => !query || `${channel.name} ${(channel.altNames || []).join(' ')} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query))
+    .filter((channel) => !country || String(channel.country || channel.code || '').toUpperCase() === country)
     .filter((channel) => !language || (channel.languages || []).includes(language) || (channel.sources || []).some((source) => (source.languages || []).includes(language)))
     .filter((channel) => !quality || (channel.sources || []).some((source) => String(source.quality || '').toLowerCase() === quality))
+    .filter((channel) => !provider || (channel.sources || []).some((source) => normalizeProviderFilterValue(source.provider) === provider))
     .filter((channel) => !availability || channelMatchesAvailability(channel, availability));
   if (activeDirectView === 'recent') {
     filtered = filtered.sort((a, b) => recentOrder.get(getChannelKey(a)) - recentOrder.get(getChannelKey(b)));
@@ -798,9 +787,21 @@ function renderDirectMetadataFilters(channels) {
     if (values.includes(current)) select.value = current;
   };
   const languages = [...new Set(channels.flatMap((channel) => channel.languages || []).filter(Boolean))].sort();
+  const countries = [...new Set(channels.map((channel) => String(channel.country || channel.code || '').toUpperCase()).filter(Boolean))].sort();
   const qualities = [...new Set(channels.flatMap((channel) => (channel.sources || []).map((source) => String(source.quality || '').toLowerCase())).filter(Boolean))].sort();
+  const providers = [...new Set(channels.flatMap((channel) => (channel.sources || []).map((source) => normalizeProviderFilterValue(source.provider))).filter(Boolean))].sort();
+  fill('directCountryFilter', countries);
   fill('directLanguageFilter', languages, DIRECT_LANGUAGE_LABELS);
   fill('directQualityFilter', qualities);
+  fill('directProviderFilter', providers, { 'iptv-org': 'IPTV-org', cdnlivetv: 'CDNLiveTV', infomaniak: 'Infomaniak' });
+}
+
+function normalizeProviderFilterValue(value) {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (normalized.includes('iptv-org')) return 'iptv-org';
+  if (normalized.includes('cdnlivetv')) return 'cdnlivetv';
+  if (normalized.includes('infomaniak')) return 'infomaniak';
+  return normalized;
 }
 
 function channelMatchesAvailability(channel, availability) {

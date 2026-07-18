@@ -23,9 +23,11 @@ let automaticFallbacks = 0;
 let playbackTimer = null;
 let playbackLastTick = 0;
 let playbackSeconds = 0;
+let playbackSessionSeconds = 0;
 let playbackContinueItem = null;
 let playbackWasVisible = !document.hidden;
 let sourceLaunchLocked = false;
+const MIN_CONFIRMED_SESSION_SECONDS = 30;
 let cinemaScrollY = 0;
 let cinemaOverflowState = null;
 const attemptedSourceIndexes = new Set();
@@ -927,12 +929,21 @@ function renderTrailer(url) {
 function normalizeStreams(list) {
   return list.map((source, index) => ({
     name: source.name || source.provider || `Lecteur ${index + 1}`,
-    url: fixUrl(source.url || source.src || ''),
+    url: getSafePlayerUrl(source.url || source.src || ''),
     quality: source.quality || source.lang || 'HD',
     lang: String(source.lang || source.quality || '').toUpperCase(),
     provider: normalizeProvider(source.provider || source.name || '')
   })).filter((source) => source.url)
     .sort((a, b) => getProviderRank(a) - getProviderRank(b));
+}
+
+function getSafePlayerUrl(value) {
+  try {
+    const url = new URL(fixUrl(value), location.href);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
 }
 
 function renderSources() {
@@ -975,7 +986,6 @@ function playSource(index) {
 
   selectedIndex = index;
   attemptedSourceIndexes.add(index);
-  const prefs = MadradorStorage.getPrefs();
   destroyPlayerFrame(false);
   const attemptId = ++sourceAttemptId;
   window.requestAnimationFrame(() => {
@@ -1001,26 +1011,12 @@ function playSource(index) {
     continueItem.version = selectedSeriesVersion;
     continueItem.episodeTitle = episode?.title;
     if (season && episode) {
-      saveSeriesProgress(season, episode, { markWatched: true, addContinue: false });
+      saveSeriesProgress(season, episode, { markWatched: false, addContinue: false });
       renderEpisodeList();
     }
   }
 
   startPlaybackTracking(continueItem);
-  if (prefs.miniPlayerEnabled) {
-    MadradorStorage.setMiniPlayer({
-      ...continueItem,
-      sourceUrl: streams[index].url,
-      sourceName: streams[index].name,
-      playerUrl: location.href,
-      savedAt: Date.now()
-    });
-  }
-
-  if (prefs.rememberLastSource) {
-    MadradorStorage.setPrefs({ lastSource: streams[index].provider || streams[index].name });
-  }
-
   document.querySelectorAll('.source-btn').forEach((btn, idx) => {
     btn.classList.toggle('active', idx === selectedIndex);
   });
@@ -1058,9 +1054,14 @@ function destroyPlayerFrame(clearSelection = false) {
 }
 
 function handlePlayerLoad() {
-  window.clearTimeout(watchSourceLoad.timer);
   if (selectedIndex < 0 || !$('player').classList.contains('active')) return;
-  renderSourceStatus(streams[selectedIndex], 'Lecteur prêt', getSourceHelpText(streams[selectedIndex]), [], 'ready');
+  renderSourceStatus(
+    streams[selectedIndex],
+    'Lecteur chargé, lecture à confirmer',
+    'La page du fournisseur répond, mais Madrador ne peut pas confirmer la lecture interne de cette iframe. La source suivante sera essayée si nécessaire.',
+    [{ label: 'Essayer une autre source', icon: 'fa-forward-step', action: () => playRelativeSource(1), disabled: streams.length < 2 }],
+    'checking'
+  );
 }
 
 function handleSourceFailure(message) {
@@ -1114,25 +1115,41 @@ function startPlaybackTracking(item) {
     playbackSeconds: Number(saved?.playbackSeconds) || 0
   };
   playbackSeconds = playbackContinueItem.playbackSeconds;
+  playbackSessionSeconds = 0;
   playbackLastTick = Date.now();
   playbackWasVisible = !document.hidden;
   window.clearInterval(playbackTimer);
-  MadradorStorage.addContinue({ ...playbackContinueItem, progressPercent: getTrackedPercent(playbackSeconds) });
   playbackTimer = window.setInterval(() => flushPlaybackProgress(), 15000);
 }
 
 function flushPlaybackProgress(force = false, countElapsed = playbackWasVisible) {
   if (!playbackContinueItem || !playbackLastTick) return;
   const now = Date.now();
-  if (countElapsed) playbackSeconds += Math.max(0, Math.round((now - playbackLastTick) / 1000));
+  if (countElapsed) {
+    const elapsed = Math.max(0, Math.round((now - playbackLastTick) / 1000));
+    playbackSeconds += elapsed;
+    playbackSessionSeconds += elapsed;
+  }
   playbackLastTick = now;
-  if (!force && playbackSeconds < 5) return;
+  if (playbackSessionSeconds < MIN_CONFIRMED_SESSION_SECONDS) return;
   MadradorStorage.addContinue({
     ...playbackContinueItem,
     playbackSeconds,
     progressPercent: getTrackedPercent(playbackSeconds),
     updatedAt: now
   });
+  const source = streams[selectedIndex];
+  const prefs = MadradorStorage.getPrefs();
+  if (source && prefs.rememberLastSource) MadradorStorage.setPrefs({ lastSource: source.provider || source.name });
+  if (source && prefs.miniPlayerEnabled) {
+    MadradorStorage.setMiniPlayer({
+      ...playbackContinueItem,
+      sourceUrl: source.url,
+      sourceName: source.name,
+      playerUrl: location.href,
+      savedAt: now
+    });
+  }
 }
 
 function getTrackedPercent(seconds) {

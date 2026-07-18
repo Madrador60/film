@@ -65,6 +65,21 @@
   setActiveSidebarLink();
   installNetworkFeedback();
   secureExternalLinks();
+  installStorageFeedback();
+
+  function installStorageFeedback() {
+    const notify = () => {
+      if (document.getElementById('storageUnavailableNotice')) return;
+      const notice = document.createElement('div');
+      notice.id = 'storageUnavailableNotice';
+      notice.className = 'toast storage-notice';
+      notice.setAttribute('role', 'status');
+      notice.textContent = 'Stockage privé indisponible : favoris, historique et reprise resteront temporaires.';
+      document.body.appendChild(notice);
+    };
+    window.addEventListener('madrador:storage-error', notify);
+    if (window.__madradorStorageAvailable === false) notify();
+  }
 
   function isTypingTarget(target) {
     return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"]'));

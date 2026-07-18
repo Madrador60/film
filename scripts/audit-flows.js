@@ -91,27 +91,23 @@ async function run() {
       return channel ? JSON.parse(JSON.stringify(channel)) : null;
     });
     const rmcSources = rmcChannel?.sources || [];
-    if (rmcSources.length < 2 || new Set(rmcSources.map((source) => source.url)).size < 2) {
-      throw new Error('RMC Sport 1 ne conserve pas ses sources indépendantes pour le fallback.');
-    }
-    if (!rmcSources.some((source) => source.provider === 'Hesgoaler' && source.url.includes('hesgoaler.com'))) {
-      throw new Error('La source Hesgoaler française de RMC Sport 1 n’est pas regroupée avec la chaîne.');
-    }
-    const foreignHesgoalerChannel = await page.evaluate(() => directChannels.find((channel) => (
-      (channel.sources || []).some((source) => source.provider === 'Hesgoaler') &&
-      String(channel.country || '').toUpperCase() !== 'FR'
+    if (!rmcChannel || !rmcSources.length) throw new Error('RMC Sport 1 ne possède aucune source autorisée.');
+    const hesgoalerSource = await page.evaluate(() => directChannels.find((channel) => (
+      (channel.sources || []).some((source) => /hesgoaler\.com/i.test(source.url || ''))
     ))?.name || '');
-    if (foreignHesgoalerChannel) throw new Error(`Une chaîne Hesgoaler étrangère a été importée : ${foreignHesgoalerChannel}`);
-    await page.route('**/api/direct/channel-stream?**', (route) => route.fulfill({
-      status: 502,
-      contentType: 'application/json',
-      body: JSON.stringify({ ok: false, error: 'Flux HLS indisponible (audit)' })
-    }));
-    await page.evaluate((channel) => playChannel(channel), rmcChannel);
-    await page.waitForFunction(() => selectedDirectSourceIndex === 1, null, { timeout: 4000 });
-    const firstDirectState = await page.evaluate((url) => directSourceStates.get(url)?.state, rmcSources[0].url);
-    if (firstDirectState !== 'unavailable') throw new Error('La première source Direct en échec n’est pas marquée indisponible.');
-    await page.unroute('**/api/direct/channel-stream?**');
+    if (hesgoalerSource) throw new Error(`Une source publicitaire Hesgoaler est encore importée : ${hesgoalerSource}`);
+    if (rmcSources.length > 1) {
+      await page.route('**/api/direct/channel-stream?**', (route) => route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: false, error: 'Flux HLS indisponible (audit)' })
+      }));
+      await page.evaluate((channel) => playChannel(channel), rmcChannel);
+      await page.waitForFunction(() => selectedDirectSourceIndex === 1, null, { timeout: 4000 });
+      const firstDirectState = await page.evaluate((url) => directSourceStates.get(url)?.state, rmcSources[0].url);
+      if (firstDirectState !== 'unavailable') throw new Error('La première source Direct en échec n’est pas marquée indisponible.');
+      await page.unroute('**/api/direct/channel-stream?**');
+    }
 
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'domcontentloaded' });
     await page.click('#settingsBtn');
@@ -179,8 +175,9 @@ async function run() {
     }));
     await page.route('**/api/film/999001/sources', (route) => route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ id: '999001', sources: [] })
+      body: JSON.stringify({ id: '999001', sources: [{ name: 'Audit iframe', provider: 'audit', url: `${BASE_URL}/mock-player` }] })
     }));
+    await page.route('**/mock-player', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Lecteur audit</title>' }));
     await page.goto(`${BASE_URL}/player.html?id=999001&type=movie`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#cinemaMode');
     await page.click('#cinemaMode');
@@ -188,6 +185,13 @@ async function run() {
     await page.keyboard.press('Escape');
     if (await page.locator('body').evaluate((node) => node.classList.contains('cinema-mode'))) throw new Error('Échap ne ferme pas le mode cinéma.');
     if ((await page.locator('#player').getAttribute('title')) !== 'Lecteur vidéo Madrador TV') throw new Error('Le lecteur iframe n’a pas de titre accessible.');
+    await page.evaluate(() => localStorage.removeItem(MadradorStorage.KEYS.continue));
+    await page.click('#playFirst');
+    await page.waitForTimeout(800);
+    const prematureContinue = await page.evaluate(() => MadradorStorage.continueWatching().some((item) => String(item.id) === '999001'));
+    if (prematureContinue) throw new Error('Un simple clic sur Lire ajoute encore prématurément le film aux reprises.');
+    const sourceState = await page.locator('#sourceStatus').innerText();
+    if (!sourceState.includes('lecture à confirmer')) throw new Error('Une iframe chargée est encore annoncée comme prête sans preuve de lecture.');
 
     console.log('Audit fonctionnel réussi : API, navigation, catalogue 24/48/24, types, bibliothèque et mode cinéma vérifiés.');
   } finally {
