@@ -1,5 +1,5 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-livelive-v4';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-livelive-v5';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_SOURCE_PREF_KEY = 'madrador:direct:source-preferences';
@@ -861,7 +861,7 @@ function groupChannels(rawChannels) {
   (rawChannels || []).forEach((channel) => {
     const name = String(channel?.name || '').trim();
     const url = String(channel?.url || '').trim();
-    if (!name || !isAllowedSource(url)) return;
+    if (!name || !isAllowedSource(url) || isDisallowedChannelSource(name, url)) return;
     const key = name.toLocaleLowerCase('fr');
     if (!grouped.has(key)) {
       grouped.set(key, {
@@ -875,6 +875,15 @@ function groupChannels(rawChannels) {
     }
   });
   return [...grouped.values()].map((channel) => ({ ...channel, url: channel.sources[0]?.url || '' }));
+}
+
+function isDisallowedChannelSource(name, value) {
+  try {
+    const hostname = new URL(value).hostname.replace(/^www\./, '').toLowerCase();
+    return /^tf1(?:\s|$)/i.test(String(name || '').trim()) && (hostname === 'hesgoaler.com' || hostname.endsWith('.hesgoaler.com'));
+  } catch {
+    return true;
+  }
 }
 
 function normalizeChannelCategory(value) {
