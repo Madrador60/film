@@ -5,7 +5,7 @@ const params = new URLSearchParams(location.search);
 
 let catalogType = params.get('type') || 'all';
 let catalogView = params.get('view') || '';
-let catalogPage = 1;
+let catalogPage = Math.max(1, Number(params.get('page')) || 1);
 let catalogItems = [];
 let visibleCatalogItems = [];
 let renderedCount = ITEMS_PER_PAGE;
@@ -170,6 +170,13 @@ function bindCatalog() {
   });
   $('catalogPrev').addEventListener('click', () => changePage(-1));
   $('catalogNext').addEventListener('click', () => changePage(1));
+  $('catalogPageInput')?.addEventListener('change', () => goToCatalogPage($('catalogPageInput').value));
+  $('catalogPageInput')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      goToCatalogPage($('catalogPageInput').value);
+    }
+  });
   $('catalogAutoLoad')?.addEventListener('click', () => setCatalogAutoLoad(!catalogAutoLoad));
   $('catalogViewToggle').addEventListener('click', toggleCatalogView);
   $('catalogClearLocal').addEventListener('click', clearLocalView);
@@ -371,7 +378,12 @@ function renderCatalog() {
   renderActiveFilters();
   visibleCatalogItems = dedupeMediaItems(catalogItems);
   const total = visibleCatalogItems.length;
-  const itemsToRender = visibleCatalogItems.slice(0, renderedCount);
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+  catalogPage = Math.min(Math.max(1, catalogPage), totalPages);
+  const pageStart = (catalogPage - 1) * ITEMS_PER_PAGE;
+  const itemsToRender = catalogAutoLoad
+    ? visibleCatalogItems.slice(0, renderedCount)
+    : visibleCatalogItems.slice(pageStart, pageStart + ITEMS_PER_PAGE);
 
   itemsToRender.forEach((item, index) => {
     grid.appendChild(createCard(item, index));
@@ -384,13 +396,15 @@ function renderCatalog() {
   $('catalogCount').textContent = getCatalogCountLabel(total);
   $('catalogCount').dataset.state = catalogSnapshotState;
   $('catalogCount').title = getCatalogStateDescription(total);
-  $('catalogPage').textContent = total
-    ? `${Math.min(renderedCount, total)} / ${total} affichés`
-    : '0 résultat';
-  $('catalogPrev').disabled = renderedCount <= ITEMS_PER_PAGE || isLocalView();
-  $('catalogNext').disabled = renderedCount >= total || isLocalView();
-  $('catalogNext').querySelector('span').textContent = renderedCount >= total ? 'Tout affiché' : 'Afficher plus';
-  $('catalogPrev').querySelector('span').textContent = 'Afficher moins';
+  $('catalogPage').textContent = total ? `/ ${totalPages}` : '/ 1';
+  $('catalogPageInput').value = String(catalogPage);
+  $('catalogPageInput').max = String(totalPages);
+  $('catalogPrev').disabled = catalogAutoLoad ? renderedCount <= ITEMS_PER_PAGE : catalogPage <= 1;
+  $('catalogNext').disabled = catalogAutoLoad ? renderedCount >= total : catalogPage >= totalPages;
+  $('catalogNext').querySelector('span').textContent = catalogAutoLoad
+    ? (renderedCount >= total ? 'Tout affiché' : 'Afficher plus')
+    : 'Suivant';
+  $('catalogPrev').querySelector('span').textContent = catalogAutoLoad ? 'Afficher moins' : 'Précédent';
   $('catalogClearLocal').classList.toggle('hidden', !isLocalView() || !total);
   updateCatalogAutoLoadButton(total);
   document.querySelectorAll('[data-local-remove]').forEach((button) => {
@@ -718,6 +732,10 @@ function clearLocalView() {
 }
 
 function changePage(direction) {
+  if (!catalogAutoLoad) {
+    goToCatalogPage(catalogPage + direction);
+    return;
+  }
   if (direction > 0) {
     showMoreCatalogItems();
     return;
@@ -725,6 +743,19 @@ function changePage(direction) {
   renderedCount = Math.max(ITEMS_PER_PAGE, renderedCount - ITEMS_PER_PAGE);
   renderCatalog();
   window.scrollTo({ top: Math.max(0, document.documentElement.scrollTop - 520), behavior: 'smooth' });
+}
+
+function goToCatalogPage(value) {
+  const totalPages = Math.max(1, Math.ceil(visibleCatalogItems.length / ITEMS_PER_PAGE));
+  const nextPage = Math.min(totalPages, Math.max(1, Number(value) || 1));
+  if (nextPage === catalogPage) {
+    $('catalogPageInput').value = String(catalogPage);
+    return;
+  }
+  catalogPage = nextPage;
+  updateUrl();
+  renderCatalog();
+  $('catalogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function updateTitle() {
@@ -750,7 +781,8 @@ function updateUrl() {
     url.searchParams.delete('view');
     url.searchParams.set('type', catalogType);
   }
-  url.searchParams.delete('page');
+  if (catalogPage > 1) url.searchParams.set('page', String(catalogPage));
+  else url.searchParams.delete('page');
   syncFilterParams(url);
   history.replaceState(null, '', url);
 }
@@ -877,6 +909,7 @@ function showMoreCatalogItems() {
   const total = visibleCatalogItems.length;
   if (renderedCount >= total) return;
   renderedCount = Math.min(total, renderedCount + ITEMS_PER_PAGE);
+  catalogPage = Math.max(1, Math.ceil(renderedCount / ITEMS_PER_PAGE));
   renderCatalog();
 }
 
@@ -890,6 +923,13 @@ function handleInfiniteCatalogScroll() {
 function setCatalogAutoLoad(enabled) {
   catalogAutoLoad = Boolean(enabled);
   localStorage.setItem('madrador:catalog-auto-load', String(catalogAutoLoad));
+  if (catalogAutoLoad) {
+    renderedCount = Math.min(visibleCatalogItems.length, Math.max(ITEMS_PER_PAGE, catalogPage * ITEMS_PER_PAGE));
+  } else {
+    catalogPage = Math.max(1, Math.ceil(renderedCount / ITEMS_PER_PAGE));
+  }
+  updateUrl();
+  renderCatalog();
   updateCatalogAutoLoadButton();
   if (catalogAutoLoad) handleInfiniteCatalogScroll();
 }
@@ -897,10 +937,10 @@ function setCatalogAutoLoad(enabled) {
 function updateCatalogAutoLoadButton(total = visibleCatalogItems.length) {
   const button = $('catalogAutoLoad');
   if (!button) return;
-  const complete = Boolean(total) && renderedCount >= total;
+  const complete = catalogAutoLoad && Boolean(total) && renderedCount >= total;
   button.classList.toggle('active', catalogAutoLoad && !complete);
   button.setAttribute('aria-pressed', String(catalogAutoLoad));
-  button.disabled = isLocalView() || complete;
+  button.disabled = complete;
   button.querySelector('span').textContent = complete
     ? 'Catalogue affiché'
     : catalogAutoLoad ? 'Auto activé' : 'Chargement auto';

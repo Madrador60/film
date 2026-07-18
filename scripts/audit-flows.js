@@ -145,10 +145,14 @@ async function run() {
       renderCatalog();
     }, catalogBatch);
     if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch) throw new Error(`Le catalogue ne démarre pas au lot prévu (${catalogBatch}).`);
+    const firstPageTitle = await page.locator('#catalogGrid .media-card-open').first().getAttribute('aria-label');
     await page.click('#catalogNext');
-    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch * 2) throw new Error('Afficher plus ne charge pas le lot suivant.');
+    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch) throw new Error('La page suivante ne conserve pas la bonne taille de lot.');
+    if (await page.inputValue('#catalogPageInput') !== '2') throw new Error('Le numéro de page ne passe pas à 2.');
+    const secondPageTitle = await page.locator('#catalogGrid .media-card-open').first().getAttribute('aria-label');
+    if (secondPageTitle === firstPageTitle) throw new Error('La page suivante affiche encore les mêmes titres.');
     await page.click('#catalogPrev');
-    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch) throw new Error('Afficher moins ne revient pas au lot initial.');
+    if (await page.inputValue('#catalogPageInput') !== '1') throw new Error('Précédent ne revient pas à la page 1.');
 
     await page.goto(`${BASE_URL}/catalog.html?view=popular`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(100);

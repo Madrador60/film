@@ -12445,6 +12445,41 @@ html.nova-ready body {
   background: rgba(255, 255, 255, .08) !important;
 }
 
+.nova-app .catalog-page-jump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px !important;
+  color: var(--nova-muted);
+  white-space: nowrap;
+}
+
+.nova-app .catalog-page-jump input {
+  width: 58px;
+  height: 34px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 9px;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  background: rgba(255, 255, 255, .06);
+  appearance: textfield;
+}
+
+.nova-app .catalog-page-jump input::-webkit-inner-spin-button,
+.nova-app .catalog-page-jump input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.nova-app .catalog-page-jump input:focus {
+  outline: 2px solid rgba(139, 92, 246, .72);
+  outline-offset: 2px;
+}
+
 .nova-app .browse-panels {
   padding-top: clamp(34px, 5vw, 76px) !important;
   border-top: 1px solid var(--nova-line) !important;
@@ -12622,6 +12657,11 @@ html.nova-ready body {
 
   .nova-app .pager .auto-browse-btn {
     flex-basis: 100%;
+  }
+
+  .nova-app .catalog-page-jump {
+    order: -1;
+    flex-basis: 100% !important;
   }
 
   .nova-app .browse-heading {
