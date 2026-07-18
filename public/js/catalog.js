@@ -1,4 +1,4 @@
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = window.innerWidth >= 1600 ? 60 : window.innerWidth >= 992 ? 48 : window.innerWidth >= 768 ? 36 : 24;
 const CATALOG_FAST_LIMIT = 4;
 const CATALOG_ALL_LIMIT = 80;
 const params = new URLSearchParams(location.search);
@@ -23,6 +23,8 @@ let catalogSnapshotState = 'loading';
 let catalogSnapshotTotal = 0;
 let catalogHydrationAttempts = 0;
 let catalogHydrationTimer = null;
+let catalogAutoLoad = localStorage.getItem('madrador:catalog-auto-load') === 'true';
+let catalogScrollFrame = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -168,6 +170,7 @@ function bindCatalog() {
   });
   $('catalogPrev').addEventListener('click', () => changePage(-1));
   $('catalogNext').addEventListener('click', () => changePage(1));
+  $('catalogAutoLoad')?.addEventListener('click', () => setCatalogAutoLoad(!catalogAutoLoad));
   $('catalogViewToggle').addEventListener('click', toggleCatalogView);
   $('catalogClearLocal').addEventListener('click', clearLocalView);
   $('scrollTopBtn').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -175,6 +178,14 @@ function bindCatalog() {
     hideCatalogApiStatus();
     loadCatalog();
   });
+  window.addEventListener('scroll', () => {
+    if (!catalogAutoLoad || catalogScrollFrame) return;
+    catalogScrollFrame = window.requestAnimationFrame(() => {
+      catalogScrollFrame = 0;
+      handleInfiniteCatalogScroll();
+    });
+  }, { passive: true });
+  updateCatalogAutoLoadButton();
 }
 
 async function loadCatalog() {
@@ -381,6 +392,7 @@ function renderCatalog() {
   $('catalogNext').querySelector('span').textContent = renderedCount >= total ? 'Tout affiché' : 'Afficher plus';
   $('catalogPrev').querySelector('span').textContent = 'Afficher moins';
   $('catalogClearLocal').classList.toggle('hidden', !isLocalView() || !total);
+  updateCatalogAutoLoadButton(total);
   document.querySelectorAll('[data-local-remove]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -869,10 +881,29 @@ function showMoreCatalogItems() {
 }
 
 function handleInfiniteCatalogScroll() {
-  if (isCatalogLoading || isLocalView()) return;
+  if (!catalogAutoLoad || isCatalogLoading || isLocalView()) return;
   if (!visibleCatalogItems.length || renderedCount >= visibleCatalogItems.length) return;
   const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 700;
   if (nearBottom) showMoreCatalogItems();
+}
+
+function setCatalogAutoLoad(enabled) {
+  catalogAutoLoad = Boolean(enabled);
+  localStorage.setItem('madrador:catalog-auto-load', String(catalogAutoLoad));
+  updateCatalogAutoLoadButton();
+  if (catalogAutoLoad) handleInfiniteCatalogScroll();
+}
+
+function updateCatalogAutoLoadButton(total = visibleCatalogItems.length) {
+  const button = $('catalogAutoLoad');
+  if (!button) return;
+  const complete = Boolean(total) && renderedCount >= total;
+  button.classList.toggle('active', catalogAutoLoad && !complete);
+  button.setAttribute('aria-pressed', String(catalogAutoLoad));
+  button.disabled = isLocalView() || complete;
+  button.querySelector('span').textContent = complete
+    ? 'Catalogue affiché'
+    : catalogAutoLoad ? 'Auto activé' : 'Chargement auto';
 }
 
 function getPopularItems(items) {

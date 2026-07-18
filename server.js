@@ -968,23 +968,53 @@ function pickTmdbResult(results = [], title = '', year = '') {
         .sort((a, b) => b.score - a.score)[0]?.item || null;
 }
 
-function getTmdbVideoUrl(videos = {}) {
+function getTmdbVideoUrl(videos = {}, options = {}) {
     const results = Array.isArray(videos.results) ? videos.results : [];
     const video = results
         .filter((item) => item.site === 'YouTube' && item.key)
         .map((item, index) => {
             const name = String(item.name || '');
+            const frenchLanguage = String(item.iso_639_1 || '').toLowerCase() === 'fr';
+            const frenchDub = /\bVF\b|version fran[cç]aise|doubl[eé].*fran[cç]ais|bande[- ]annonce fran[cç]aise/i.test(name)
+                && !/VOST|sous[- ]titr/i.test(name);
+            const french = frenchDub || frenchLanguage;
+            if (options.frenchOnly && !french) return null;
             let score = 0;
             if (item.type === 'Trailer') score += 100;
             else if (item.type === 'Teaser') score += 35;
             if (item.official) score += 20;
-            // Prefer a French dub over VOST when TMDB exposes both versions.
-            if (/\bVF\b|fran[cç]ais/i.test(name)) score += 30;
-            if (/VOST/i.test(name)) score -= 5;
+            if (frenchLanguage) score += 90;
+            if (frenchDub) score += 80;
+            if (/VOST|sous[- ]titr/i.test(name)) score -= 20;
             return { item, score, index };
         })
+        .filter(Boolean)
         .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.item;
     return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : '';
+}
+
+async function getPreferredTmdbTrailer(mediaType, tmdbId, appendedVideos = {}) {
+    const appendedFrench = getTmdbVideoUrl(appendedVideos, { frenchOnly: true });
+    if (appendedFrench) return appendedFrench;
+
+    for (const language of ['fr-FR', 'fr-CA']) {
+        try {
+            const response = await tmdbGet(`/${mediaType}/${tmdbId}/videos`, { language });
+            const french = getTmdbVideoUrl(response.data, { frenchOnly: true });
+            if (french) return french;
+        } catch (error) {
+            console.log(`[TMDB] Bande-annonce ${language} indisponible (${tmdbId}) : ${error.message}`);
+        }
+    }
+
+    const appendedFallback = getTmdbVideoUrl(appendedVideos);
+    if (appendedFallback) return appendedFallback;
+    try {
+        const response = await tmdbGet(`/${mediaType}/${tmdbId}/videos`, { language: 'en-US' });
+        return getTmdbVideoUrl(response.data);
+    } catch (error) {
+        return '';
+    }
 }
 
 async function fetchTmdbDetails({ title, year, type = 'movie' }) {
@@ -1016,6 +1046,7 @@ async function fetchTmdbDetails({ title, year, type = 'movie' }) {
             include_image_language: 'fr,en,null'
         });
         const data = detail.data || {};
+        const trailer = await getPreferredTmdbTrailer(mediaType, data.id || result.id, data.videos);
         const tmdb = {
             tmdbId: data.id,
             tmdbType: mediaType,
@@ -1026,7 +1057,7 @@ async function fetchTmdbDetails({ title, year, type = 'movie' }) {
             backdrop: getTmdbImage(data.backdrop_path || result.backdrop_path, 'w780'),
             year: getTmdbYear(data) || getTmdbYear(result) || '',
             genres: Array.isArray(data.genres) ? data.genres.map((genre) => genre.name).filter(Boolean) : [],
-            trailer: getTmdbVideoUrl(data.videos),
+            trailer,
             voteAverage: data.vote_average || result.vote_average || null
         };
 

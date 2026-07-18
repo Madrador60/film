@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="./assets/madrador-icon-256.png" />
   <link rel="apple-touch-icon" href="./assets/madrador-icon-256.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="./css/madrador.css?v=20260718-unified1" />
+  <link rel="stylesheet" href="./css/madrador.css?v=20260718-unified2" />
 </head>
 <body class="home-body catalog-body nova-app">
   <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
@@ -141,6 +141,9 @@
       <button class="btn glass" id="catalogPrev"><i class="fa-solid fa-chevron-left"></i><span>Précédent</span></button>
       <div class="page-pill" id="catalogPage">Page 1</div>
       <button class="btn primary" id="catalogNext"><span>Suivant</span><i class="fa-solid fa-chevron-right"></i></button>
+      <button class="btn glass auto-browse-btn" id="catalogAutoLoad" type="button" aria-pressed="false" title="Charger automatiquement en descendant">
+        <i class="fa-solid fa-forward"></i><span>Chargement auto</span>
+      </button>
     </footer>
     <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Remonter en haut"><i class="fa-solid fa-arrow-up"></i></button>
   </main>
@@ -160,6 +163,6 @@
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260718-storage2"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/catalog.js?v=20260714-stability1"></script>
+  <script src="./js/catalog.js?v=20260718-catalog2"></script>
 </body>
 </html>

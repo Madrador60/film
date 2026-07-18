@@ -132,22 +132,23 @@ async function run() {
     }));
     if (semantics.nested || !semantics.openName) throw new Error('Structure interactive des cartes invalide.');
 
-    await page.evaluate(() => {
+    const catalogBatch = await page.evaluate(() => ITEMS_PER_PAGE);
+    await page.evaluate((batch) => {
       const seed = visibleCatalogItems[0];
-      catalogItems = Array.from({ length: 72 }, (_value, index) => ({
+      catalogItems = Array.from({ length: batch * 3 }, (_value, index) => ({
         ...seed,
         id: `audit-film-${index + 1}`,
         title: `Film audit ${index + 1}`,
         type: 'movies'
       }));
-      renderedCount = 24;
+      renderedCount = batch;
       renderCatalog();
-    });
-    if (await page.locator('#catalogGrid .media-card').count() !== 24) throw new Error('Le catalogue ne démarre pas à 24 éléments.');
+    }, catalogBatch);
+    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch) throw new Error(`Le catalogue ne démarre pas au lot prévu (${catalogBatch}).`);
     await page.click('#catalogNext');
-    if (await page.locator('#catalogGrid .media-card').count() !== 48) throw new Error('Afficher plus ne passe pas de 24 à 48.');
+    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch * 2) throw new Error('Afficher plus ne charge pas le lot suivant.');
     await page.click('#catalogPrev');
-    if (await page.locator('#catalogGrid .media-card').count() !== 24) throw new Error('Afficher moins ne revient pas de 48 à 24.');
+    if (await page.locator('#catalogGrid .media-card').count() !== catalogBatch) throw new Error('Afficher moins ne revient pas au lot initial.');
 
     await page.goto(`${BASE_URL}/catalog.html?view=popular`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(100);

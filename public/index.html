@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" href="./assets/madrador-icon-256.png" />
   <link rel="apple-touch-icon" href="./assets/madrador-icon-256.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="./css/madrador.css?v=20260718-unified1" />
+  <link rel="stylesheet" href="./css/madrador.css?v=20260718-unified2" />
 </head>
 <body class="home-body nova-app">
   <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
@@ -62,7 +62,7 @@
       <div class="search-area" id="searchArea">
         <div class="searchbox">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input id="search" type="text" role="combobox" placeholder="Rechercher un film ou une série..." autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest" />
+          <input id="search" type="text" role="combobox" placeholder="Titre, genre, année, VF, VOSTFR..." autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest" />
           <span class="search-loader hidden" id="topSearchLoader" aria-hidden="true"></span>
           <button id="clearSearch" class="icon-btn" title="Effacer" aria-label="Effacer"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -109,22 +109,34 @@
       <button class="btn glass" id="prevBtn"><i class="fa-solid fa-chevron-left"></i><span>Précédent</span></button>
       <div class="page-pill" id="pageNum">Catalogue</div>
       <button class="btn primary" id="nextBtn"><span>Suivant</span><i class="fa-solid fa-chevron-right"></i></button>
+      <button class="btn glass auto-browse-btn" id="autoBrowseBtn" type="button" aria-pressed="false" title="Faire défiler automatiquement le catalogue">
+        <i class="fa-solid fa-forward"></i><span>Défilement auto</span>
+      </button>
     </footer>
 
     <section class="browse-panels" id="browsePanels">
-      <article>
+      <div class="browse-heading">
+        <div><span>Explorer Madrador</span><h2>Trouve rapidement ton prochain programme</h2></div>
+        <div class="browse-tabs" role="tablist" aria-label="Types de filtres">
+          <button type="button" class="active" data-browse-tab="genres" role="tab" aria-selected="true"><i class="fa-solid fa-layer-group"></i><span>Genres</span></button>
+          <button type="button" data-browse-tab="languages" role="tab" aria-selected="false"><i class="fa-solid fa-language"></i><span>Langues</span></button>
+          <button type="button" data-browse-tab="themes" role="tab" aria-selected="false"><i class="fa-solid fa-trophy"></i><span>Thèmes</span></button>
+          <button type="button" data-browse-tab="collections" role="tab" aria-selected="false"><i class="fa-solid fa-calendar-days"></i><span>Collections</span></button>
+        </div>
+      </div>
+      <article class="active" data-browse-panel="genres">
         <h3><i class="fa-solid fa-layer-group"></i> Par genre</h3>
         <div class="filter-list" id="genreFilters"></div>
       </article>
-      <article>
+      <article data-browse-panel="languages" hidden>
         <h3><i class="fa-solid fa-language"></i> Par langue</h3>
         <div class="filter-list" id="languageFilters"></div>
       </article>
-      <article>
+      <article data-browse-panel="themes" hidden>
         <h3><i class="fa-solid fa-trophy"></i> Par thème</h3>
         <div class="filter-list" id="themeFilters"></div>
       </article>
-      <article>
+      <article data-browse-panel="collections" hidden>
         <h3><i class="fa-solid fa-calendar-days"></i> Collections</h3>
         <div class="filter-list" id="collectionFilters"></div>
       </article>
@@ -186,6 +198,6 @@
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260718-storage2"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/app.js?v=20260714-stability1"></script>
+  <script src="./js/app.js?v=20260718-catalog2"></script>
 </body>
 </html>

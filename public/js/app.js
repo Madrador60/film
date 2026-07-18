@@ -25,6 +25,8 @@ let catalogHydrationAttempts = 0;
 const pendingJsonRequests = new Map();
 let catalogBackgroundTimer = null;
 let heroInteractionStarted = false;
+let autoBrowseEnabled = localStorage.getItem('madrador:auto-browse') === 'true';
+let autoBrowseTimer = null;
 
 const $ = (id) => document.getElementById(id);
 const rows = $('rows');
@@ -46,7 +48,9 @@ const FILTER_GROUPS = {
 window.addEventListener('DOMContentLoaded', () => {
   renderSkeletons();
   renderFilters();
+  bindBrowsePanels();
   bindUI();
+  setAutoBrowse(autoBrowseEnabled);
   startKeepalivePing();
   loadHome();
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((eventName) => {
@@ -117,6 +121,8 @@ function bindUI() {
   });
   $('prevBtn').addEventListener('click', () => changePage(-1));
   $('nextBtn').addEventListener('click', () => changePage(1));
+  $('autoBrowseBtn')?.addEventListener('click', () => setAutoBrowse(!autoBrowseEnabled));
+  updateAutoBrowseButton();
   $('clearSearch').addEventListener('click', () => {
     $('search').value = '';
     isSearching = false;
@@ -346,12 +352,14 @@ async function search() {
   showLoading(true);
 
   try {
+    const intent = parseSearchIntent(q);
+    const backendQuery = intent.words.join(' ') || q;
     const localResults = searchLocalCatalog(q, getEffectiveSearchMode());
-    const data = await fetchJson(`/api/search?q=${encodeURIComponent(q)}`);
-    const normalizedResults = dedupeMediaItems([
+    const data = await fetchJson(`/api/search?q=${encodeURIComponent(backendQuery)}`);
+    const normalizedResults = rankSearchItems(dedupeMediaItems([
       ...localResults,
       ...normalizeItems(data.items || [], 'movies')
-    ]);
+    ]), intent);
     const movies = normalizedResults.filter((item) => item.type === 'movies').slice(0, ITEMS_PER_PAGE);
     const series = groupSeriesItems(normalizedResults.filter((item) => item.type === 'series')).slice(0, ITEMS_PER_PAGE);
     const mode = getEffectiveSearchMode();
@@ -375,32 +383,66 @@ async function search() {
 }
 
 function searchLocalCatalog(query, mode = 'all') {
-  const needle = normalizeTitleKey(query);
-  if (!needle) return [];
-  const words = needle.split(/\s+/).filter(Boolean);
+  const intent = parseSearchIntent(query);
   const pool = mode === 'movies'
     ? movieItems
     : mode === 'series'
       ? seriesItems
       : [...movieItems, ...seriesItems];
+  return rankSearchItems(dedupeMediaItems(pool), intent);
+}
 
-  return dedupeMediaItems(pool)
+function parseSearchIntent(query) {
+  const normalized = normalizeTitleKey(query);
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const type = tokens.some((token) => ['serie', 'series', 'saison', 'episode'].includes(token))
+    ? 'series'
+    : tokens.some((token) => ['film', 'films', 'movie'].includes(token)) ? 'movies' : '';
+  const year = tokens.find((token) => /^(19|20)\d{2}$/.test(token)) || '';
+  const versions = tokens.filter((token) => ['vf', 'vostfr', 'vost', 'truefrench', 'french', 'vfq'].includes(token));
+  const ignored = new Set(['film', 'films', 'movie', 'serie', 'series', 'saison', 'episode', year, ...versions]);
+  const words = tokens.filter((token) => token && !ignored.has(token));
+  return { normalized, words, type, year, versions };
+}
+
+function rankSearchItems(items, intent) {
+  return items
     .map((item) => {
-      const haystack = normalizeTitleKey([
-        item.title,
-        item.originalTitle,
-        item.seriesTitle,
-        item.year,
-        item.quality,
-        item.version
-      ].filter(Boolean).join(' '));
-      const exact = haystack.includes(needle) ? 30 : 0;
-      const score = words.reduce((total, word) => total + (haystack.includes(word) ? 8 : 0), exact);
+      if (intent.type && item.type !== intent.type) return { item, score: -1 };
+      if (intent.year && String(item.year || '') !== intent.year) return { item, score: -1 };
+      const title = normalizeTitleKey([item.title, item.originalTitle, item.seriesTitle].filter(Boolean).join(' '));
+      const metadata = normalizeTitleKey([item.year, item.quality, item.version, ...(item.genres || [])].filter(Boolean).join(' '));
+      if (intent.versions.length && !intent.versions.some((version) => metadata.includes(version))) return { item, score: -1 };
+      let score = intent.normalized && `${title} ${metadata}`.includes(intent.normalized) ? 90 : 0;
+      intent.words.forEach((word) => {
+        if (title === word) score += 80;
+        else if (title.startsWith(word)) score += 40;
+        else if (title.includes(word)) score += 24;
+        else if (metadata.includes(word)) score += 10;
+        else if (title.split(' ').some((part) => isCloseSearchWord(word, part))) score += 8;
+      });
+      if (!intent.words.length && (intent.type || intent.year || intent.versions.length)) score += 12;
       return { item, score };
     })
     .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score - a.score || String(a.item.title).localeCompare(String(b.item.title), 'fr'))
     .map((entry) => entry.item);
+}
+
+function isCloseSearchWord(left, right) {
+  if (left.length < 4 || right.length < 4 || Math.abs(left.length - right.length) > 2) return false;
+  const rows = Array.from({ length: left.length + 1 }, (_, index) => [index]);
+  for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+  for (let row = 1; row <= left.length; row += 1) {
+    for (let column = 1; column <= right.length; column += 1) {
+      rows[row][column] = Math.min(
+        rows[row - 1][column] + 1,
+        rows[row][column - 1] + 1,
+        rows[row - 1][column - 1] + (left[row - 1] === right[column - 1] ? 0 : 1)
+      );
+    }
+  }
+  return rows[left.length][right.length] <= (Math.max(left.length, right.length) >= 8 ? 2 : 1);
 }
 
 async function fetchJson(url, options = {}) {
@@ -583,8 +625,11 @@ function normalizeTitleKey(title) {
 }
 
 function renderHomeRows() {
-  const movies = movieItems.slice(0, ITEMS_PER_PAGE);
-  const series = seriesItems.slice(0, ITEMS_PER_PAGE);
+  const pageCount = getHomePageCount();
+  currentPage = Math.min(Math.max(1, currentPage), pageCount);
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const movies = movieItems.slice(offset, offset + ITEMS_PER_PAGE);
+  const series = seriesItems.slice(offset, offset + ITEMS_PER_PAGE);
   const continueItems = dedupeMediaItems(MadradorStorage.continueWatching()).slice(0, 8);
   const favoriteItems = dedupeMediaItems(MadradorStorage.favorites()).slice(0, 12);
   const historyItems = dedupeMediaItems(MadradorStorage.history()).slice(0, 6);
@@ -629,6 +674,7 @@ function renderHomeRows() {
     .filter((row) => row.items.length);
   const rowDefs = currentTab === 'home' ? availableRows.slice(0, 4) : availableRows;
 
+  lastItems = dedupeMediaItems(currentTab === 'movies' ? movies : currentTab === 'series' ? series : [...movies, ...series]);
   renderRows(rowDefs);
 }
 
@@ -764,9 +810,7 @@ function renderSearchSuggestions() {
   const pool = [...movieItems, ...seriesItems];
   const mode = getEffectiveSearchMode();
   const filteredPool = mode === 'movies' ? movieItems : mode === 'series' ? seriesItems : pool;
-  const matches = q
-    ? filteredPool.filter((item) => normalizeTitleKey(item.title).includes(normalizeTitleKey(q))).slice(0, 7)
-    : [];
+  const matches = q ? rankSearchItems(filteredPool, parseSearchIntent(q)).slice(0, 7) : [];
   const recent = q
     ? history.filter((term) => normalizeTitleKey(term).includes(normalizeTitleKey(q))).slice(0, 3)
     : history.slice(0, 5);
@@ -819,7 +863,7 @@ function renderSearchSuggestions() {
   });
 
   if (q.length >= 2) {
-    renderBackendSuggestions(q, mode);
+    renderBackendSuggestions(parseSearchIntent(q).words.join(' ') || q, mode);
   } else {
     renderTopSearchLoading(false);
   }
@@ -1395,15 +1439,54 @@ async function renderPopular() {
 
 function changePage(dir) {
   if (isSearching) return;
-  currentPage = Math.max(1, currentPage + dir);
-  loadHome();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const pageCount = getHomePageCount();
+  const nextPage = autoBrowseEnabled && currentPage >= pageCount && dir > 0
+    ? 1
+    : Math.min(pageCount, Math.max(1, currentPage + dir));
+  if (nextPage === currentPage && !autoBrowseEnabled) return;
+  currentPage = nextPage;
+  renderHomeRows();
+  updatePager();
+  startHeroCarousel();
+  rows.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function updatePager() {
+  const pageCount = getHomePageCount();
   $('prevBtn').disabled = currentPage <= 1 || isSearching;
-  $('nextBtn').disabled = isSearching || lastItems.length < 1;
-  $('pageNum').textContent = formatVisibleCount(lastItems.length);
+  $('nextBtn').disabled = isSearching || (!autoBrowseEnabled && currentPage >= pageCount) || !lastItems.length;
+  $('pageNum').textContent = isSearching
+    ? formatVisibleCount(lastItems.length)
+    : `Page ${currentPage}/${pageCount} · ${formatVisibleCount(lastItems.length)}`;
+}
+
+function getHomePageCount() {
+  const total = currentTab === 'movies'
+    ? movieItems.length
+    : currentTab === 'series' ? seriesItems.length : Math.max(movieItems.length, seriesItems.length);
+  return Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+}
+
+function setAutoBrowse(enabled) {
+  autoBrowseEnabled = Boolean(enabled);
+  localStorage.setItem('madrador:auto-browse', String(autoBrowseEnabled));
+  updateAutoBrowseButton();
+  window.clearInterval(autoBrowseTimer);
+  autoBrowseTimer = null;
+  if (autoBrowseEnabled) {
+    autoBrowseTimer = window.setInterval(() => {
+      if (!document.hidden && !isSearching && !document.querySelector('.quick-modal:not(.hidden)')) changePage(1);
+    }, 10000);
+  }
+  updatePager();
+}
+
+function updateAutoBrowseButton() {
+  const button = $('autoBrowseBtn');
+  if (!button) return;
+  button.classList.toggle('active', autoBrowseEnabled);
+  button.setAttribute('aria-pressed', String(autoBrowseEnabled));
+  button.querySelector('span').textContent = autoBrowseEnabled ? 'Auto activé' : 'Défilement auto';
 }
 
 function getCardImage(item, layout = 'land') {
@@ -1602,6 +1685,28 @@ function renderFilters() {
       });
     });
   });
+}
+
+function bindBrowsePanels() {
+  const tabs = [...document.querySelectorAll('[data-browse-tab]')];
+  const panels = [...document.querySelectorAll('[data-browse-panel]')];
+  if (!tabs.length || !panels.length) return;
+  const activate = (name) => {
+    tabs.forEach((tab) => {
+      const active = tab.dataset.browseTab === name;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+    });
+    panels.forEach((panel) => {
+      const active = panel.dataset.browsePanel === name;
+      panel.hidden = !active;
+      panel.classList.toggle('active', active);
+    });
+    localStorage.setItem('madrador:browse-tab', name);
+  };
+  tabs.forEach((tab) => tab.addEventListener('click', () => activate(tab.dataset.browseTab)));
+  const saved = localStorage.getItem('madrador:browse-tab');
+  activate(tabs.some((tab) => tab.dataset.browseTab === saved) ? saved : 'genres');
 }
 
 function openFilteredCatalog(label, group) {
