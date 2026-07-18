@@ -10,20 +10,20 @@
   "orientation": "any",
   "id": "/",
   "shortcuts": [
-    { "name": "Direct", "short_name": "Direct", "url": "/direct.html", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] },
-    { "name": "Films", "short_name": "Films", "url": "/catalog.html?type=movies", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] },
-    { "name": "Séries", "short_name": "Séries", "url": "/catalog.html?type=series", "icons": [{ "src": "/assets/madrador-logo.png", "sizes": "1024x1024" }] }
+    { "name": "Direct", "short_name": "Direct", "url": "/direct.html", "icons": [{ "src": "/assets/madrador-icon-256.png", "sizes": "256x256" }] },
+    { "name": "Films", "short_name": "Films", "url": "/catalog.html?type=movies", "icons": [{ "src": "/assets/madrador-icon-256.png", "sizes": "256x256" }] },
+    { "name": "Séries", "short_name": "Séries", "url": "/catalog.html?type=series", "icons": [{ "src": "/assets/madrador-icon-256.png", "sizes": "256x256" }] }
   ],
   "icons": [
     {
-      "src": "./assets/madrador-logo.png",
-      "sizes": "1024x1024",
+      "src": "./assets/madrador-icon-256.png",
+      "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./assets/madrador-logo.png",
-      "sizes": "1024x1024",
+      "src": "./assets/madrador-icon-256.png",
+      "sizes": "256x256",
       "type": "image/png",
       "purpose": "maskable"
     }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'madrador-shell-2026-07-v41';
+const CACHE_VERSION = 'madrador-shell-2026-07-v42';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -11,7 +11,7 @@ const APP_SHELL = [
   '/offline.html',
   '/404.html',
   '/manifest.webmanifest',
-  '/assets/madrador-logo.png',
+  '/assets/madrador-icon-256.png',
   '/assets/madrador-logo-ui.webp',
   '/data/madrador-public-channels.json',
   '/css/style.css',
