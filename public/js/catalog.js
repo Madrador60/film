@@ -298,7 +298,12 @@ async function searchCatalog(query) {
 async function fetchCatalogSnapshots() {
   const types = catalogType === 'all' ? ['movie', 'series'] : [catalogType === 'series' ? 'series' : 'movie'];
   const snapshots = await Promise.all(types.map(async (type) => {
-    const data = await fetchJson(`/api/catalog/snapshot?type=${type}&limit=all`, { ttl: 15000, timeout: 8000, retries: 1 });
+    const data = await fetchJson(`/api/catalog/snapshot?type=${type}&limit=all`, {
+      ttl: 15000,
+      timeout: 30000,
+      retries: 1,
+      cache: false
+    });
     if ((!data?.complete || data?.refreshNeeded) && ['idle', 'error', 'ready'].includes(data?.status?.state)) {
       fetch(`/api/catalog/ensure?target=${type}`, { method: 'POST' }).catch(() => {});
     }
@@ -1034,7 +1039,14 @@ async function fetchJson(url, options = 1000 * 60 * 3) {
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error(`Erreur ${res.status}`);
         const data = await res.json();
-        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data }));
+        if (config.cache !== false) {
+          try {
+            const serialized = JSON.stringify({ time: Date.now(), data });
+            if (serialized.length <= 1_500_000) localStorage.setItem(cacheKey, serialized);
+          } catch (cacheError) {
+            localStorage.removeItem(cacheKey);
+          }
+        }
         return data;
       } catch (error) {
         lastError = error.name === 'AbortError' ? new Error('Délai de chargement dépassé') : error;
