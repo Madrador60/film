@@ -11843,6 +11843,34 @@ body.nova-app::before {
 .nova-app .direct-epg-head span i { color: #42d6d0; }
 .nova-app .direct-epg-head small { color: #8fa3bb; }
 
+.nova-app .direct-epg-head > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nova-app .direct-epg-refresh {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  color: #d8e4f2;
+  background: rgba(255,255,255,.045);
+  cursor: pointer;
+}
+
+.nova-app .direct-epg-refresh:hover,
+.nova-app .direct-epg-refresh:focus-visible {
+  color: #fff;
+  border-color: rgba(66,214,208,.55);
+  background: rgba(66,214,208,.12);
+}
+
+.nova-app .direct-epg-refresh.is-loading i { animation: spin .8s linear infinite; }
+.nova-app .direct-epg-refresh:disabled { cursor: wait; opacity: .65; }
+
 .nova-app .direct-epg-rail {
   display: grid;
   grid-auto-flow: column;
@@ -11896,6 +11924,12 @@ body.nova-app::before {
   min-height: 68px;
   color: #8fa3bb;
 }
+
+.nova-app .direct-epg-message > span,
+.nova-app .direct-epg-message b,
+.nova-app .direct-epg-message small { display: block; }
+.nova-app .direct-epg-message b { color: #dce8f5; }
+.nova-app .direct-epg-message small { margin-top: 3px; }
 
 @media (max-width: 680px) {
   .nova-app .direct-epg { padding-top: 12px; }

@@ -49,6 +49,18 @@ async function expectCatalogSnapshot() {
   }
 }
 
+async function expectTvGuide() {
+  const response = await fetch(`${BASE_URL}/api/direct/epg?channel=France%202&channelId=France2.fr&aliases=France2`);
+  if (!response.ok) throw new Error(`/api/direct/epg: HTTP ${response.status}`);
+  const data = await response.json();
+  if (data.ok !== true || data.timezone !== 'Europe/Paris' || data.matched?.confidence < 60 || !data.items?.length) {
+    throw new Error('/api/direct/epg: correspondance ou programme invalide');
+  }
+  if (data.items.some((item) => new Date(item.stop) <= new Date(item.start))) {
+    throw new Error('/api/direct/epg: horaires non chronologiques');
+  }
+}
+
 async function run() {
   const server = spawn(process.execPath, ['server.js'], {
     cwd: process.cwd(),
@@ -72,6 +84,7 @@ async function run() {
     ];
     for (const [path, status] of apiChecks) await expectApi(path, status);
     await expectCatalogSnapshot();
+    await expectTvGuide();
 
     browser = await chromium.launch({
       headless: true,

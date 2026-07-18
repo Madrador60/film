@@ -164,38 +164,79 @@ const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
 const DIRECT_EPG_SCHEDULE_CACHE_DURATION = 15 * 60 * 1000;
 let directEpgCache = { updatedAt: 0, channels: [] };
 const directEpgScheduleCache = new Map();
+const DIRECT_EPG_ALIASES = {
+    'bfm tv': ['BFMTV', 'BFM TV'],
+    'canal plus': ['Canal+', 'Canal Plus'],
+    cnews: ['CNews'],
+    'france 2': ['France 2', 'France2'],
+    'france 3': ['France 3', 'France3'],
+    'france 4': ['France 4', 'France4'],
+    'france 5': ['France 5', 'France5'],
+    'france 24': ['France 24'],
+    franceinfo: ['Franceinfo', 'France Info'],
+    lci: ['LCI'],
+    m6: ['M6'],
+    tf1: ['TF1'],
+    tmc: ['TMC'],
+    w9: ['W9']
+};
 
 function normalizeEpgName(value) {
     return String(value || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
-        .replace(/\b(france|french|fr|hd|fhd|uhd|tv)\b/g, ' ')
+        .replace(/\b(french|fr|hd|fhd|uhd|4k|direct|live)\b/g, ' ')
         .replace(/\+/g, ' plus ')
         .replace(/[^a-z0-9]+/g, ' ')
         .trim();
 }
 
-function findEpgChannelIds(channelName, channels) {
-    const wanted = normalizeEpgName(channelName);
-    if (!wanted) return [];
-    const wantedParts = wanted.split(' ').filter(Boolean);
-    return channels
-        .map((channel) => {
-            const names = channel.names.map(normalizeEpgName).filter(Boolean);
-            let score = names.includes(wanted) ? 100 : 0;
-            for (const name of names) {
-                if (name.startsWith(wanted) || wanted.startsWith(name)) score = Math.max(score, 85);
-                const parts = name.split(' ').filter(Boolean);
-                const common = wantedParts.filter((part) => parts.includes(part)).length;
-                score = Math.max(score, common * 20 - Math.abs(parts.length - wantedParts.length) * 3);
+function getEpgCandidateNames(input = {}) {
+    const raw = [input.channel, input.channelId, input.tvgId, ...(input.aliases || [])]
+        .flatMap((value) => String(value || '').split('|'))
+        .map((value) => value.replace(/@[^\s]+$/i, '').replace(/\.(fr|be|ch|ca|ma|sn)$/i, '').trim())
+        .filter(Boolean);
+    const expanded = [...raw];
+    raw.forEach((value) => {
+        const aliases = DIRECT_EPG_ALIASES[normalizeEpgName(value)] || [];
+        expanded.push(...aliases);
+    });
+    return [...new Set(expanded.map(normalizeEpgName).filter(Boolean))];
+}
+
+function findEpgChannelMatch(input, channels) {
+    const candidates = getEpgCandidateNames(input);
+    if (!candidates.length) return null;
+    const matches = channels.map((channel) => {
+        let best = 0;
+        let matchedQuery = '';
+        let matchedName = '';
+        for (const candidate of candidates) {
+            const wantedParts = candidate.split(' ').filter(Boolean);
+            for (const rawName of channel.names || []) {
+                const name = normalizeEpgName(rawName);
+                if (!name) continue;
+                const compactCandidate = candidate.replace(/\s+/g, '');
+                const compactName = name.replace(/\s+/g, '');
+                let score = compactName === compactCandidate ? 120 : 0;
+                if (!score && (name.startsWith(`${candidate} `) || candidate.startsWith(`${name} `))) score = 88;
+                const nameParts = name.split(' ').filter(Boolean);
+                const common = wantedParts.filter((part) => nameParts.includes(part)).length;
+                if (common) {
+                    const coverage = common / Math.max(wantedParts.length, nameParts.length);
+                    score = Math.max(score, Math.round(coverage * 80) - Math.abs(nameParts.length - wantedParts.length) * 4);
+                }
+                if (score > best) {
+                    best = score;
+                    matchedQuery = candidate;
+                    matchedName = rawName;
+                }
             }
-            return { id: channel.id, score };
-        })
-        .filter((item) => item.score >= 35)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 1)
-        .map((item) => item.id);
+        }
+        return { id: channel.id, channel, score: best, matchedQuery, matchedName };
+    }).filter((item) => item.score >= 60).sort((a, b) => b.score - a.score);
+    return matches[0] || null;
 }
 
 async function loadFranceEpg(force = false) {
@@ -236,8 +277,11 @@ async function loadChannelEpgSchedule(channelId, force = false) {
     const sourceItems = Array.isArray(response.data?.epg_list) ? response.data.epg_list : [];
     const items = sourceItems.map((item, index) => {
         const start = new Date(item.start_date);
+        const explicitStop = new Date(item.end_date || item.stop_date || '');
         const nextStart = new Date(sourceItems[index + 1]?.start_date);
-        const stop = Number.isNaN(nextStart.getTime()) ? new Date(start.getTime() + 60 * 60 * 1000) : nextStart;
+        const stop = !Number.isNaN(explicitStop.getTime())
+            ? explicitStop
+            : Number.isNaN(nextStart.getTime()) ? new Date(start.getTime() + 60 * 60 * 1000) : nextStart;
         if (Number.isNaN(start.getTime())) return null;
         return {
             channel: key,
@@ -2833,10 +2877,15 @@ app.get('/api/direct/epg', async (req, res) => {
 
     try {
         const epg = await loadFranceEpg(req.query.refresh === '1');
-        const channelIds = findEpgChannelIds(channelName, epg.channels);
-        const channel = epg.channels.find((entry) => entry.id === channelIds[0]);
-        const schedule = channelIds[0]
-            ? await loadChannelEpgSchedule(channelIds[0], req.query.refresh === '1')
+        const match = findEpgChannelMatch({
+            channel: channelName,
+            channelId: req.query.channelId,
+            tvgId: req.query.tvgId,
+            aliases: String(req.query.aliases || '').split('|').slice(0, 8)
+        }, epg.channels);
+        const channel = match?.channel || null;
+        const schedule = match?.id
+            ? await loadChannelEpgSchedule(match.id, req.query.refresh === '1')
             : [];
         const now = Date.now();
         const horizon = now + 24 * 60 * 60 * 1000;
@@ -2850,7 +2899,13 @@ app.get('/api/direct/epg', async (req, res) => {
             ok: true,
             source: 'epg.pw/channel-api',
             query: channelName,
-            matched: channel ? { id: channel.id, name: channel.names[0] || channelName, icon: channel.icon } : null,
+            timezone: 'Europe/Paris',
+            matched: channel ? {
+                id: channel.id,
+                name: match.matchedName || channel.names[0] || channelName,
+                icon: channel.icon,
+                confidence: match.score
+            } : null,
             current: items.find((item) => new Date(item.start).getTime() <= now && new Date(item.stop).getTime() > now) || null,
             next: items.find((item) => new Date(item.start).getTime() > now) || null,
             items,
