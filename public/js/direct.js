@@ -7,6 +7,7 @@ const DIRECT_HEALTH_KEY = 'madrador:direct:health-v1';
 const DIRECT_HEALTH_TTL = 6 * 60 * 60 * 1000;
 const DIRECT_BATCH_SIZE = 72;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'event.vedge.infomaniak.com'];
+const BLOCKED_DIRECT_HOSTS = ['hesgoaler.com', 'livelive24.com', 'cartelive.club', 'freeshot.sbs'];
 const DIRECT_LANGUAGE_LABELS = {
   fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien',
   bul: 'Bulgare', ell: 'Grec', fas: 'Persan', gsw: 'Suisse allemand', kur: 'Kurde', pus: 'Pachto',
@@ -859,6 +860,7 @@ function isAllowedSource(url, source = {}) {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
     if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    if (BLOCKED_DIRECT_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))) return false;
     if (source.catalog === 'iptv-org' || source.provenance === 'IPTV-org') return parsed.protocol === 'https:' && source.playable !== false;
     return parsed.protocol === 'https:' && ALLOWED_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
   } catch {
@@ -947,7 +949,6 @@ function getChannelMergeKey(name) {
 function getSourcePriority(source) {
   const provider = String(source?.provider || '').toLowerCase();
   if (provider.includes('cdnlivetv')) return 0;
-  if (provider.includes('hesgoaler')) return 90;
   if (provider.includes('iptv-org')) return 20;
   return 10;
 }
@@ -1141,6 +1142,7 @@ function focusDirectPlayer() {
 
 async function playChannelSource(channel, index) {
   const source = channel?.sources?.[index];
+  const sourceName = getDirectSourceDisplayName(index);
   if (!source || !isAllowedSource(source.url, source)) {
     if (source) {
       attemptedDirectSources.add(index);
@@ -1153,10 +1155,10 @@ async function playChannelSource(channel, index) {
   selectedDirectSourceIndex = index;
   attemptedDirectSources.add(index);
   updateDirectSourceState(source.url, 'checking');
-  const activeChannel = { ...channel, url: source.url, sourceName: source.name, provider: source.provider };
+  const activeChannel = { ...channel, url: source.url, sourceName, provider: source.provider };
   setCurrentChannel(activeChannel);
   renderChannelSources(activeChannel);
-  showDirectLoading(`${channel.name} · tentative ${index + 1}/${channel.sources.length} · ${source.name}`);
+  showDirectLoading(`${channel.name} · ${sourceName} · tentative ${index + 1}/${channel.sources.length}`);
   if (isCdnLivePlayerUrl(source.url)) {
     try {
       const response = await fetch(`/api/direct/channel-stream?url=${encodeURIComponent(source.url)}`, { cache: 'no-store' });
@@ -1181,8 +1183,8 @@ function renderChannelSources(channel) {
   panel?.classList.toggle('hidden', !sources.length);
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
-    <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${escapeHtml(source.name)}">
-      <b>${escapeHtml(source.name)}</b><small>${escapeHtml(getSourceProvenance(source))}${source.quality ? ` · ${escapeHtml(source.quality)}` : ''}${source.protocol ? ` · ${escapeHtml(source.protocol)}` : ''}${source.label ? ` · ${escapeHtml(source.label)}` : ''} · ${escapeHtml(getDirectSourceStateLabel(source))}${getDirectSourceCheckedLabel(source)}</small>
+    <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${getDirectSourceDisplayName(index)}">
+      <b>${getDirectSourceDisplayName(index)}</b><small>${getDirectSourceTechnicalLabel(source)} · ${escapeHtml(getDirectSourceStateLabel(source))}${getDirectSourceCheckedLabel(source)}</small>
     </button>
   `).join('');
   list.querySelectorAll('[data-source-index]').forEach((button) => button.addEventListener('click', () => {
@@ -1191,10 +1193,15 @@ function renderChannelSources(channel) {
   }));
 }
 
-function getSourceProvenance(source) {
-  if (source?.provenance === 'IPTV-org' || source?.catalog === 'iptv-org') return 'IPTV-org';
-  if (source?.provenance === 'Source personnelle' || source?.catalog === 'personal') return 'Source personnelle';
-  return `Madrador · ${source?.provider || 'Source'}`;
+function getDirectSourceDisplayName(index) {
+  return `Source ${Number(index) + 1}`;
+}
+
+function getDirectSourceTechnicalLabel(source) {
+  const details = [source?.quality, source?.protocol || source?.type]
+    .map((value) => String(value || '').trim().toUpperCase())
+    .filter(Boolean);
+  return escapeHtml([...new Set(details)].join(' · ') || 'DIRECT');
 }
 
 function getDirectSourceLifecycle(channel, source, index) {
@@ -1205,7 +1212,7 @@ function getDirectSourceLifecycle(channel, source, index) {
       const preferences = getDirectSourcePreferences();
       preferences[getChannelKey(channel)] = source.url;
       localStorage.setItem(DIRECT_SOURCE_PREF_KEY, JSON.stringify(preferences));
-      setHint(`Lecture : ${channel.name} · ${source.name} · tentative ${index + 1}/${channel.sources.length} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
+      setHint(`Lecture : ${channel.name} · ${getDirectSourceDisplayName(index)} · tentative ${index + 1}/${channel.sources.length} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
       renderChannelSources({ ...channel, url: source.url });
     },
     onFailure(message) {
@@ -1222,7 +1229,7 @@ function handleDirectSourceFailure(channel, source, index, message) {
   updateDirectSourceState(source.url, 'unavailable', message);
   const nextIndex = (channel.sources || []).findIndex((_item, candidateIndex) => !attemptedDirectSources.has(candidateIndex));
   if (nextIndex >= 0) {
-    setHint(`${source.name} indisponible. Essai automatique de la source suivante...`);
+    setHint(`${getDirectSourceDisplayName(index)} indisponible. Essai automatique de la source suivante...`);
     window.setTimeout(() => playChannelSource(channel, nextIndex), 250);
     return;
   }

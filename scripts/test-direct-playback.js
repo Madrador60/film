@@ -117,6 +117,30 @@ async function main() {
     }));
     assert.strictEqual(fallback.index, 1, `la seconde source doit être sélectionnée automatiquement: ${JSON.stringify(fallback.states)}`);
 
+    const sourceLabels = await page.evaluate(() => {
+      const channel = {
+        name: 'Chaîne test',
+        sources: [
+          { name: 'CDNLiveTV', provider: 'CDNLiveTV', url: 'https://cdnlivetv.tv/one', type: 'hls', status: 'available' },
+          { name: 'IPTV-org France', provider: 'IPTV-org', url: 'https://example.test/two.m3u8', type: 'hls', status: 'unchecked' }
+        ]
+      };
+      renderChannelSources(channel);
+      return {
+        names: [...document.querySelectorAll('#directSourceList b')].map((node) => node.textContent),
+        text: document.querySelector('#directSourceList')?.textContent || '',
+        blocked: [
+          isAllowedSource('https://hesgoaler.com/stream.php?ch=tf1', { catalog: 'iptv-org' }),
+          isAllowedSource('https://livelive24.com/live24.php?ch=tf1', { catalog: 'iptv-org' }),
+          isAllowedSource('https://cartelive.club/player/1/24', { catalog: 'iptv-org' }),
+          isAllowedSource('https://www.freeshot.sbs/embed/stream-51.php', { catalog: 'iptv-org' })
+        ]
+      };
+    });
+    assert.deepStrictEqual(sourceLabels.names, ['Source 1', 'Source 2']);
+    assert(!/CDNLiveTV|IPTV-org/i.test(sourceLabels.text), 'les fournisseurs ne doivent pas être affichés dans le sélecteur');
+    assert.deepStrictEqual(sourceLabels.blocked, [false, false, false, false]);
+
     const noSource = await page.evaluate(() => {
       showDirectError({ name: 'TF1', url: 'https://invalid.test/' }, 'Aucun flux public lisible.');
       return {
@@ -153,7 +177,7 @@ async function main() {
     assert.strictEqual(filters.unavailable, true);
     assert.deepStrictEqual([filters.france, filters.francophone, filters.international], ['france', 'francophone', 'international']);
 
-    console.log(JSON.stringify({ ok: true, iframeFalsePositive: 'blocked', hlsBroken: 'blocked', hlsProgress: 'ready', fallbackSource: 2, officialFallback: 'TF1+', filters: 'ok' }));
+    console.log(JSON.stringify({ ok: true, iframeFalsePositive: 'blocked', hlsBroken: 'blocked', hlsProgress: 'ready', fallbackSource: 2, sourceLabels: 'numbered', unsafeProviders: 'blocked', officialFallback: 'TF1+', filters: 'ok' }));
   } finally {
     await browser?.close();
     server.kill();
