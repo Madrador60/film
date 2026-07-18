@@ -233,6 +233,7 @@ const MadradorStorage = (() => {
     isFavorite: (id) => list(KEYS.favorites).some((item) => item.id === id),
     addHistory: (item) => upsert(KEYS.history, item),
     addContinue: (item) => upsert(KEYS.continue, item),
+    removeContinue: (id) => remove(KEYS.continue, id),
     clearFavorites: () => clear(KEYS.favorites),
     clearHistory: () => clear(KEYS.history),
     clearContinue: () => clear(KEYS.continue),

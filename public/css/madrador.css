@@ -1,3 +1,4 @@
+/* Base: public/css/style.css */
 :root {
   --bg: #050713;
   --primary: #3b82f6;
@@ -10162,3 +10163,2408 @@ html[data-device="phone"] .mobile-bottom-nav span {
     margin-inline: 0 !important;
   }
 }
+
+/* Experience: public/css/experience.css */
+:root {
+  --mx-bg: #040711;
+  --mx-bg-soft: #080d1b;
+  --mx-surface: rgba(13, 19, 38, .72);
+  --mx-surface-strong: rgba(16, 23, 45, .92);
+  --mx-line: rgba(148, 163, 184, .14);
+  --mx-line-active: rgba(71, 213, 255, .52);
+  --mx-text: #f8fafc;
+  --mx-muted: #9aa8c2;
+  --mx-blue: #3b82f6;
+  --mx-violet: #8b5cf6;
+  --mx-cyan: #22d3ee;
+  --mx-radius: 8px;
+  --mx-shadow: 0 24px 64px rgba(0, 0, 0, .34);
+  --mx-content: 1920px;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--mx-bg);
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--mx-text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(88, 75, 190, .14), transparent 30%),
+    linear-gradient(180deg, #040711, #070b17 48%, #040711) !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(34, 211, 238, .035), transparent 24%, transparent 76%, rgba(139, 92, 246, .045));
+}
+
+.main,
+.catalog-main,
+.player-shell {
+  width: auto;
+  max-width: var(--mx-content);
+}
+
+.home-body .main {
+  overflow-x: clip;
+}
+
+.sidebar {
+  background: rgba(4, 8, 20, .94) !important;
+  border-right: 1px solid rgba(148, 163, 184, .12) !important;
+  box-shadow: 20px 0 55px rgba(0, 0, 0, .16);
+  backdrop-filter: blur(24px);
+}
+
+.brand {
+  border-radius: var(--mx-radius) !important;
+}
+
+.nav {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  background: transparent !important;
+}
+
+.nav:hover,
+.nav:focus-visible {
+  background: rgba(59, 130, 246, .10) !important;
+}
+
+.nav.active {
+  background: linear-gradient(90deg, rgba(59, 130, 246, .30), rgba(139, 92, 246, .20)) !important;
+  box-shadow: inset 3px 0 var(--mx-cyan);
+}
+
+.nav.active::before {
+  display: none !important;
+}
+
+.topbar,
+.catalog-hero-head,
+.settings-hero,
+.library-hero,
+.admin-hero,
+.diagnostic-hero,
+.direct-tv-header {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.topbar {
+  backdrop-filter: blur(20px);
+}
+
+.searchbox,
+.direct-channel-search,
+.catalog-search,
+.search-input-wrap {
+  border: 1px solid var(--mx-line) !important;
+  background: rgba(7, 12, 27, .82) !important;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(18px);
+}
+
+.searchbox:focus-within,
+.direct-channel-search:focus-within,
+.catalog-search:focus-within,
+.search-input-wrap:focus-within {
+  border-color: var(--mx-line-active) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12), 0 16px 42px rgba(0, 0, 0, .24) !important;
+}
+
+.hero,
+.home-hero,
+.media-hero {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  box-shadow: none !important;
+}
+
+.hero-shade {
+  background:
+    linear-gradient(90deg, rgba(3, 6, 15, .95), rgba(3, 6, 15, .66) 42%, rgba(3, 6, 15, .08) 78%),
+    linear-gradient(0deg, var(--mx-bg-soft), transparent 42%) !important;
+}
+
+.btn,
+.icon-btn,
+.page-pill,
+.smart-tabs a,
+.search-type-tabs button,
+.library-tabs button,
+.direct-view-tabs button,
+.direct-category-tab {
+  border-radius: var(--mx-radius) !important;
+}
+
+.btn.primary {
+  border: 0 !important;
+  background: linear-gradient(120deg, var(--mx-blue), var(--mx-violet) 72%, var(--mx-cyan)) !important;
+  box-shadow: 0 12px 30px rgba(59, 130, 246, .24);
+}
+
+.btn.glass,
+.icon-btn,
+.page-pill {
+  border-color: var(--mx-line) !important;
+  background: rgba(13, 19, 38, .72) !important;
+  box-shadow: none !important;
+}
+
+.btn:hover,
+.icon-btn:hover {
+  filter: brightness(1.12);
+}
+
+.content-row,
+.rows > section,
+.catalog-filters,
+.catalog-toolbar,
+.advanced-search-panel,
+.library-controls,
+.direct-explore,
+.direct-playlist,
+.direct-tools,
+.series-panel,
+.sources-panel,
+.settings-card,
+.admin-panel,
+.diagnostic-layout > *,
+.browse-panels > * {
+  box-shadow: none !important;
+}
+
+.content-row,
+.rows > section {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.catalog-filters,
+.advanced-search-panel,
+.library-controls,
+.direct-tools,
+.direct-playlist {
+  border: 1px solid var(--mx-line) !important;
+  background: rgba(9, 14, 29, .62) !important;
+  backdrop-filter: blur(20px);
+}
+
+.settings-card,
+.admin-panel,
+.diagnostic-layout > article,
+.browse-panels > article {
+  border: 0 !important;
+  border-top: 1px solid var(--mx-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.media-card,
+.direct-channel-tile,
+.episode-btn,
+.source-btn {
+  border-color: transparent !important;
+  border-radius: var(--mx-radius) !important;
+  box-shadow: none !important;
+}
+
+.media-card {
+  background: transparent !important;
+}
+
+.media-thumb,
+.media-thumb img,
+.direct-channel-logo,
+.episode-thumb {
+  border-radius: var(--mx-radius) !important;
+}
+
+.media-card:hover,
+.media-card:focus-visible,
+.direct-channel-tile:focus-within,
+.episode-btn:hover,
+.episode-btn:focus-visible,
+.source-btn:hover,
+.source-btn:focus-visible {
+  border-color: var(--mx-line-active) !important;
+  transform: translateY(-4px) scale(1.018);
+  box-shadow: var(--mx-shadow) !important;
+}
+
+.catalog-grid,
+.catalog-page-grid {
+  align-items: start;
+}
+
+.empty-state,
+.direct-empty,
+.source-empty {
+  border: 1px dashed rgba(148, 163, 184, .20) !important;
+  background: rgba(9, 14, 29, .32) !important;
+}
+
+.watch-zone {
+  align-items: start;
+}
+
+.screen,
+.direct-screen {
+  border: 0 !important;
+  border-radius: var(--mx-radius) !important;
+  background: #000 !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .42) !important;
+}
+
+.sources-panel {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.source-status,
+.episode-now,
+.direct-nowbar {
+  border-color: var(--mx-line) !important;
+  background: rgba(10, 16, 32, .76) !important;
+}
+
+.direct-tv-stage {
+  margin-bottom: clamp(28px, 4vw, 54px);
+}
+
+.direct-explore {
+  padding-inline: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.direct-channel-group {
+  margin-bottom: clamp(26px, 3vw, 44px);
+}
+
+.direct-channel-group > header {
+  padding-inline: 2px;
+}
+
+.direct-channel-tile {
+  background: rgba(10, 15, 30, .62) !important;
+}
+
+.toast,
+.mx-network-toast {
+  position: fixed;
+  z-index: 400;
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  max-width: min(390px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border: 1px solid var(--mx-line);
+  border-radius: var(--mx-radius);
+  background: rgba(6, 10, 23, .94);
+  color: var(--mx-text);
+  box-shadow: var(--mx-shadow);
+  backdrop-filter: blur(20px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.mx-network-toast[data-state="online"] {
+  border-color: rgba(46, 230, 166, .38);
+}
+
+.mx-network-toast[data-state="offline"] {
+  border-color: rgba(248, 113, 113, .42);
+}
+
+.mx-network-toast.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(71, 213, 255, .82) !important;
+  outline-offset: 3px !important;
+}
+
+html[data-input="pointer"] :focus:not(:focus-visible) {
+  outline: 0 !important;
+}
+
+@media (min-width: 1280px) {
+  .main,
+  .catalog-main {
+    padding-inline: clamp(28px, 3vw, 60px) !important;
+  }
+
+  .catalog-page-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+  }
+
+  .watch-zone {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 360px) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .settings-grid,
+  .admin-grid,
+  .diagnostic-layout,
+  .browse-panels {
+    grid-template-columns: 1fr !important;
+  }
+
+  .watch-zone {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sources-panel {
+    padding-inline: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body,
+  .main,
+  .catalog-main,
+  .player-shell,
+  .direct-main {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: clip !important;
+  }
+
+  .main,
+  .catalog-main,
+  .direct-main {
+    padding-inline: 14px !important;
+  }
+
+  .home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .catalog-hero-head,
+  .catalog-filters,
+  .catalog-toolbar,
+  .advanced-search-panel,
+  .library-controls,
+  .settings-shell > *,
+  .admin-main > *,
+  .diagnostic-main > * {
+    margin-inline: 0 !important;
+  }
+
+  .hero,
+  .home-hero,
+  .media-hero,
+  .screen,
+  .direct-screen {
+    border-radius: 0 !important;
+  }
+
+  .player-shell {
+    padding-inline: 0 !important;
+  }
+
+  .media-info,
+  .series-panel,
+  .sources-panel {
+    padding-inline: 16px !important;
+  }
+
+  .catalog-page-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .direct-tv-stage .direct-screen,
+  .direct-nowbar {
+    width: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  .direct-category-tabs,
+  .smart-tabs,
+  .library-tabs,
+  .search-type-tabs {
+    scroll-padding-inline: 14px;
+  }
+
+  .toast,
+  .mx-network-toast {
+    right: 14px;
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html[data-device="tv"] body {
+  font-size: 18px;
+}
+
+html[data-device="tv"] .main,
+html[data-device="tv"] .catalog-main,
+html[data-device="4k"] .main,
+html[data-device="4k"] .catalog-main {
+  max-width: none;
+}
+
+html[data-device="tv"] :focus,
+html[data-device="4k"] :focus-visible {
+  outline-width: 4px !important;
+  outline-offset: 5px !important;
+}
+
+html[data-device="tv"] .media-card:focus,
+html[data-device="tv"] .direct-channel-tile:focus-within,
+html[data-device="tv"] .episode-btn:focus,
+html[data-device="tv"] .source-btn:focus {
+  transform: scale(1.035);
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Nova: public/css/nova.css */
+:root {
+  --nova-bg: #08090d;
+  --nova-panel: #111319;
+  --nova-panel-soft: rgba(17, 19, 25, .78);
+  --nova-text: #f5f7fa;
+  --nova-muted: #9299a8;
+  --nova-line: rgba(255, 255, 255, .11);
+  --nova-mint: #6675ff;
+  --nova-coral: #9b5cff;
+  --nova-gold: #f0c56e;
+  --nova-radius: 10px;
+  --nova-nav-height: 76px;
+}
+
+/* Final interaction polish: stable carousel controls and richer detail/filter surfaces. */
+.nova-app .row-track-wrap {
+  position: relative;
+  min-width: 0;
+  contain: layout paint;
+}
+
+.nova-app .row-arrow,
+.nova-app .row-arrow:hover,
+.nova-app .row-arrow:active,
+.nova-app .row-arrow:focus,
+.nova-app .row-arrow:focus-visible {
+  top: 50% !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+  transition: opacity .18s ease, border-color .18s ease, background-color .18s ease !important;
+}
+
+.nova-app .row-arrow-left {
+  left: 6px !important;
+  right: auto !important;
+}
+
+.nova-app .row-arrow-right {
+  right: 6px !important;
+  left: auto !important;
+}
+
+.nova-app .row-arrow:disabled {
+  opacity: .22;
+  pointer-events: none;
+}
+
+#quickClose {
+  top: 18px !important;
+  right: 18px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+}
+
+#quickClose i {
+  margin: 0 !important;
+  line-height: 1;
+}
+
+.quick-trailer-card {
+  width: min(980px, calc(100vw - 32px));
+  padding: 58px 18px 18px;
+  aspect-ratio: auto !important;
+}
+
+#quickTrailerModal {
+  z-index: 180 !important;
+}
+
+.quick-trailer-card iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: 0;
+  border-radius: 12px;
+  background: #000;
+}
+
+.quick-trailer-card .close-modal {
+  top: 10px !important;
+  right: 10px !important;
+}
+
+.quick-trailer-card .trailer-external {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  margin-top: 14px;
+}
+
+.nova-app .browse-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(18px, 2vw, 28px);
+  padding-block: 28px 12px;
+  border-top: 1px solid rgba(148, 163, 184, .12);
+}
+
+.nova-app .browse-panels article {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nova-app .browse-panels h3 {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.nova-app .browse-panels h3 i {
+  margin-right: 8px;
+  color: var(--nova-mint);
+}
+
+.nova-app .filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nova-app .filter-list button {
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, .15);
+  border-radius: 999px;
+  color: #dce5fa;
+  background: rgba(255, 255, 255, .035);
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.nova-app .filter-list button i {
+  color: var(--nova-mint);
+  transition: transform .18s ease;
+}
+
+.nova-app .filter-list button:hover,
+.nova-app .filter-list button:focus-visible {
+  color: white;
+  border-color: color-mix(in srgb, var(--nova-mint) 65%, transparent);
+  background: color-mix(in srgb, var(--nova-mint) 14%, transparent);
+}
+
+.nova-app .filter-list button:hover i,
+.nova-app .filter-list button:focus-visible i {
+  transform: translateX(2px);
+}
+
+.mini-player {
+  display: none !important;
+}
+
+.theme-candy::before {
+  background: linear-gradient(135deg, #ff4fa3, #c45cff, #ff9bd1);
+}
+
+.theme-emerald::before {
+  background: linear-gradient(135deg, #1f9c91, #49d2bd, #79ead8);
+}
+
+.settings-preview .media-thumb > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.about-madrador {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.about-madrador img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.about-madrador strong {
+  display: block;
+  margin-bottom: 5px;
+  color: white;
+  font-size: 20px;
+}
+
+.about-madrador p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.about-features {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 18px;
+}
+
+.about-features span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dce5fa;
+}
+
+.about-features i {
+  width: 20px;
+  color: var(--nova-mint);
+  text-align: center;
+}
+
+.about-version {
+  display: block;
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .nova-app .browse-panels {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .nova-app .filter-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 2px 8px;
+    scrollbar-width: none;
+  }
+
+  .nova-app .filter-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nova-app .filter-list button {
+    flex: 0 0 auto;
+  }
+
+  .quick-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Unified palettes: the Nova layer follows the selected Madrador theme. */
+html[data-theme="dark"] {
+  --bg: #050713;
+  --bg-soft: #080b1b;
+  --panel: #0b1020;
+  --panel2: #111827;
+  --primary: #3b82f6;
+  --secondary: #8b5cf6;
+  --cyan: #4cc9ff;
+  --mx-bg: #040612;
+  --mx-bg-soft: #080b1c;
+  --mx-blue: #3b82f6;
+  --mx-violet: #8b5cf6;
+  --mx-cyan: #4cc9ff;
+  --nova-bg: #060817;
+  --nova-panel: #0d1227;
+  --nova-panel-soft: rgba(13, 18, 39, .80);
+  --nova-mint: #6675ff;
+  --nova-coral: #a855f7;
+}
+
+html[data-theme="candy"] {
+  --bg: #120716;
+  --bg-soft: #1d0a22;
+  --panel: #210e2a;
+  --panel2: #301337;
+  --primary: #ff4fa3;
+  --secondary: #c45cff;
+  --cyan: #ff9bd1;
+  --mx-bg: #100512;
+  --mx-bg-soft: #1c091f;
+  --mx-blue: #ff4fa3;
+  --mx-violet: #c45cff;
+  --mx-cyan: #ff9bd1;
+  --nova-bg: #100512;
+  --nova-panel: #210e2a;
+  --nova-panel-soft: rgba(33, 14, 42, .82);
+  --nova-mint: #ff4fa3;
+  --nova-coral: #ff9bd1;
+  --line: rgba(255, 155, 209, .20);
+  --line-strong: rgba(255, 79, 163, .48);
+}
+
+html[data-theme="emerald"] {
+  --bg: #03100f;
+  --bg-soft: #071917;
+  --panel: #0a211e;
+  --panel2: #10302c;
+  --primary: #1f9c91;
+  --secondary: #49d2bd;
+  --cyan: #79ead8;
+  --mx-bg: #020e0d;
+  --mx-bg-soft: #071917;
+  --mx-blue: #1f9c91;
+  --mx-violet: #49d2bd;
+  --mx-cyan: #79ead8;
+  --nova-bg: #020e0d;
+  --nova-panel: #0a211e;
+  --nova-panel-soft: rgba(10, 33, 30, .82);
+  --nova-mint: #1f9c91;
+  --nova-coral: #79ead8;
+  --line: rgba(121, 234, 216, .18);
+  --line-strong: rgba(31, 156, 145, .52);
+}
+
+html[data-theme="candy"] body.nova-app {
+  background-image: radial-gradient(circle at 78% -14%, rgba(255,79,163,.18), transparent 38%), linear-gradient(180deg, #100512, #1b0820 54%, #100512) !important;
+}
+
+html[data-theme="emerald"] body.nova-app {
+  background-image: radial-gradient(circle at 78% -14%, rgba(31,156,145,.20), transparent 38%), linear-gradient(180deg, #020e0d, #071917 54%, #020e0d) !important;
+}
+
+html.nova-ready,
+body.nova-app {
+  background: var(--nova-bg) !important;
+}
+
+body.nova-app {
+  color: var(--nova-text);
+  background-image:
+    radial-gradient(circle at 76% -18%, rgba(66, 217, 200, .10), transparent 36%),
+    radial-gradient(circle at 14% 86%, rgba(255, 107, 95, .055), transparent 28%) !important;
+}
+
+body.nova-app::before {
+  display: none !important;
+}
+
+.nova-app .sidebar {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  z-index: 180 !important;
+  width: 100% !important;
+  height: var(--nova-nav-height) !important;
+  min-height: 0 !important;
+  padding: 0 clamp(20px, 3vw, 54px) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: clamp(18px, 3vw, 52px) !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: rgba(8, 9, 13, .88) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.nova-app .brand {
+  flex: 0 0 auto;
+  min-width: 0 !important;
+  padding: 0 !important;
+  gap: 10px !important;
+  background: transparent !important;
+}
+
+.nova-app .brand-logo {
+  width: 40px !important;
+  height: 40px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.nova-app .brand b {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.nova-app .brand em {
+  color: var(--nova-mint) !important;
+}
+
+.nova-app .side-nav {
+  min-width: 0;
+  flex: 1;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none;
+}
+
+@media (min-width: 761px) {
+  .nova-app .side-nav {
+    justify-content: safe center !important;
+    padding-inline: clamp(8px, 2vw, 28px) !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1380px) {
+  .nova-app .sidebar {
+    padding-inline: clamp(14px, 2vw, 28px) !important;
+    gap: clamp(10px, 1.5vw, 24px) !important;
+  }
+
+  .nova-app .brand b {
+    display: none;
+  }
+
+  .nova-app .side-nav {
+    padding-inline: 0 !important;
+  }
+
+  .nova-app .nav {
+    padding-inline: 10px !important;
+  }
+}
+
+.nova-app .side-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .nav {
+  flex: 0 0 auto;
+  width: auto !important;
+  min-height: 42px !important;
+  padding: 0 13px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  color: #c8ccd5 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+}
+
+.nova-app .nav i {
+  width: auto !important;
+  color: inherit !important;
+}
+
+.nova-app .nav:hover,
+.nova-app .nav:focus-visible {
+  color: white !important;
+  background: rgba(255, 255, 255, .07) !important;
+}
+
+.nova-app .nav.active {
+  color: #07100f !important;
+  background: var(--nova-mint) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .sidebar-categories {
+  display: none !important;
+}
+
+.nova-app .main,
+.nova-app .catalog-main,
+.nova-app .direct-main {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin-left: 0 !important;
+  padding: calc(var(--nova-nav-height) + 26px) clamp(20px, 4vw, 72px) 80px !important;
+  overflow-x: clip;
+}
+
+.nova-app .topbar {
+  position: relative !important;
+  top: auto !important;
+  max-width: 760px;
+  margin: 0 auto 24px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+.nova-app .searchbox,
+.nova-app .catalog-search,
+.nova-app .direct-channel-search,
+.nova-app .advanced-searchbox {
+  min-height: 52px !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .24) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .searchbox:focus-within,
+.nova-app .catalog-search:focus-within,
+.nova-app .direct-channel-search:focus-within,
+.nova-app .advanced-searchbox:focus-within {
+  border-color: var(--nova-mint) !important;
+  box-shadow: 0 1px var(--nova-mint) !important;
+}
+
+/* One polished search capsule: no nested square control or split border. */
+.nova-app .topbar .search-area {
+  min-height: 60px !important;
+  padding: 6px !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  border-radius: 999px !important;
+  background: rgba(17, 20, 28, .92) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .30) !important;
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.nova-app .topbar .search-area:focus-within {
+  border-color: rgba(66, 217, 200, .72) !important;
+  box-shadow: 0 0 0 4px rgba(66, 217, 200, .10), 0 22px 60px rgba(0, 0, 0, .38) !important;
+}
+
+.nova-app .topbar .searchbox {
+  width: 100% !important;
+  min-height: 46px !important;
+  padding: 0 4px 0 14px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .topbar .searchbox input {
+  min-width: 0;
+  height: 46px;
+  color: white !important;
+}
+
+.nova-app .topbar #clearSearch {
+  width: 40px !important;
+  height: 40px !important;
+  flex: 0 0 40px !important;
+  margin-right: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, .065) !important;
+  color: var(--nova-muted) !important;
+}
+
+.nova-app .topbar #clearSearch:hover,
+.nova-app .topbar #clearSearch:focus-visible {
+  color: #06110f !important;
+  background: var(--nova-mint) !important;
+}
+
+.nova-app .catalog-search,
+.nova-app .advanced-searchbox {
+  padding-inline: 16px !important;
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(17, 20, 28, .86) !important;
+}
+
+.nova-app .hero,
+.nova-app .home-hero {
+  min-height: min(68vh, 720px) !important;
+  margin-inline: calc(clamp(20px, 4vw, 72px) * -1) !important;
+  margin-bottom: 42px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.nova-app .hero-content {
+  max-width: 760px !important;
+  padding-left: clamp(28px, 8vw, 142px) !important;
+  padding-bottom: clamp(54px, 8vw, 116px) !important;
+}
+
+.nova-app .hero h1 {
+  font-size: clamp(48px, 7vw, 108px) !important;
+  font-weight: 750 !important;
+  line-height: .94 !important;
+}
+
+.nova-app .hero-shade {
+  background:
+    linear-gradient(90deg, rgba(8, 9, 13, .97), rgba(8, 9, 13, .62) 42%, transparent 78%),
+    linear-gradient(0deg, var(--nova-bg), transparent 44%) !important;
+}
+
+.nova-app .eyebrow,
+.nova-app .page-pill,
+.nova-app .media-badges span,
+.nova-app .quality-badge,
+.nova-app .version-badge {
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: var(--nova-mint) !important;
+  background: rgba(66, 217, 200, .11) !important;
+}
+
+.nova-app .btn,
+.nova-app .icon-btn {
+  min-height: 44px;
+  border-radius: 2px !important;
+}
+
+.nova-app .btn.primary {
+  color: #a39df1 !important;
+  background: var(--nova-mint) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .btn.glass,
+.nova-app .icon-btn {
+  border: 1px solid var(--nova-line) !important;
+  background: rgba(12, 14, 19, .72) !important;
+}
+
+.nova-app .hero-nav {
+  top: 50% !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  background: rgba(8, 9, 13, .74) !important;
+  transform: translateY(-50%) !important;
+}
+
+.nova-app .hero-nav:hover,
+.nova-app .hero-nav:focus-visible {
+  transform: translateY(-50%) scale(1.06) !important;
+}
+
+.nova-app .hero-nav.ui2-pressed,
+.nova-app .hero-nav:active {
+  transform: translateY(-50%) scale(.96) !important;
+}
+
+.nova-app .hero-nav.ui2-ripple-host {
+  position: absolute !important;
+}
+
+.nova-app .hero-dots button.active,
+.nova-app .hero-dots button[aria-current="true"] {
+  background: var(--nova-coral) !important;
+}
+
+.nova-app .rows {
+  display: block !important;
+}
+
+.nova-app .content-row,
+.nova-app .rows > section {
+  margin: 0 0 clamp(34px, 5vw, 72px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .row-head h2,
+.nova-app .section-head h2 {
+  padding-left: 0 !important;
+  font-size: clamp(20px, 2vw, 30px) !important;
+  font-weight: 650 !important;
+}
+
+.nova-app .row-head h2::before,
+.nova-app .section-head h2::before {
+  display: none !important;
+}
+
+.nova-app .row-see-all {
+  color: var(--nova-mint) !important;
+}
+
+.nova-app .media-card {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .media-thumb,
+.nova-app .media-thumb img {
+  border-radius: var(--nova-radius) !important;
+}
+
+.nova-app .media-thumb img,
+.nova-app .poster-frame img,
+.nova-app .episode-thumb img,
+.nova-app .suggest-cover img {
+  image-rendering: auto;
+  object-fit: cover;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.nova-app img.image-upgraded {
+  animation: nova-image-upgrade .28s ease both;
+}
+
+@keyframes nova-image-upgrade {
+  from { opacity: .72; }
+  to { opacity: 1; }
+}
+
+.nova-app .media-card:hover,
+.nova-app .media-card:focus-visible {
+  transform: scale(1.035) !important;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .55) !important;
+}
+
+.nova-app .library-date-heading {
+  grid-column: 1 / -1;
+  margin: 18px 0 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--nova-line);
+  color: var(--nova-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.nova-app .player-recommendations {
+  margin-top: clamp(40px, 6vw, 84px);
+  padding-top: 28px;
+  border-top: 1px solid var(--nova-line);
+}
+
+.nova-app .recommendation-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 340px);
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px 16px;
+  scrollbar-width: none;
+}
+
+.nova-app .recommendation-track::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .recommendation-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--nova-radius);
+  background: #111319;
+  color: white;
+  text-align: left;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.nova-app .recommendation-card:hover,
+.nova-app .recommendation-card:focus-visible {
+  transform: translateY(-4px);
+  background: #171a21;
+}
+
+.nova-app .recommendation-image {
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #090a0e;
+}
+
+.nova-app .recommendation-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nova-app .recommendation-copy {
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.nova-app .recommendation-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .recommendation-copy small {
+  color: var(--nova-muted);
+}
+
+.nova-app .catalog-hero-head,
+.nova-app .settings-hero,
+.nova-app .library-hero,
+.nova-app .admin-hero,
+.nova-app .diagnostic-hero,
+.nova-app .direct-tv-header {
+  min-height: 190px;
+  margin: 0 0 34px !important;
+  padding: 28px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .catalog-hero-head h1,
+.nova-app .settings-hero h1,
+.nova-app .direct-tv-header h1 {
+  font-size: clamp(42px, 6vw, 86px) !important;
+  line-height: .96 !important;
+}
+
+.nova-app .smart-tabs,
+.nova-app .catalog-toolbar,
+.nova-app .library-controls,
+.nova-app .direct-discovery-bar,
+.nova-app .direct-view-tabs,
+.nova-app .direct-category-tabs {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .smart-tabs a,
+.nova-app .library-tabs button,
+.nova-app .direct-view-tabs button,
+.nova-app .direct-category-tab,
+.nova-app .search-type-tabs button {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .055) !important;
+}
+
+.nova-app .smart-tabs a.active,
+.nova-app .library-tabs button.active,
+.nova-app .direct-view-tabs button.active,
+.nova-app .direct-category-tab.active,
+.nova-app .search-type-tabs button.active {
+  color: #06110f !important;
+  background: var(--nova-mint) !important;
+}
+
+.nova-app .catalog-filters,
+.nova-app .advanced-search-panel,
+.nova-app .library-controls,
+.nova-app .direct-tools,
+.nova-app .direct-playlist,
+.nova-app .series-panel,
+.nova-app .sources-panel,
+.nova-app .settings-card,
+.nova-app .admin-panel,
+.nova-app .diagnostic-section,
+.nova-app .browse-panels > article {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .catalog-filters,
+.nova-app .advanced-search-panel,
+.nova-app .library-controls,
+.nova-app .direct-tools,
+.nova-app .direct-playlist,
+.nova-app .series-panel {
+  padding: 26px 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .settings-card,
+.nova-app .admin-panel,
+.nova-app .diagnostic-section {
+  padding: 28px 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .screen,
+.nova-app .direct-screen {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.nova-app .direct-tv-stage {
+  margin-inline: calc(clamp(20px, 4vw, 72px) * -1);
+}
+
+.nova-app .direct-nowbar {
+  border: 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: #0d0f14 !important;
+}
+
+.nova-app .direct-explore {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .direct-channel-tile {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  background: #111319 !important;
+}
+
+.nova-app .direct-view-tabs,
+.nova-app .direct-category-tabs {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.nova-app .direct-view-tabs::-webkit-scrollbar,
+.nova-app .direct-category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .direct-view-tabs button,
+.nova-app .direct-category-tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.nova-app .direct-channel-logo {
+  width: 78px !important;
+  height: 58px !important;
+  flex: 0 0 78px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 10px !important;
+  background: #000 !important;
+}
+
+.nova-app .direct-channel-logo img,
+.nova-app .direct-now-logo img {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 6px;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+.nova-app .direct-brand-mark {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  place-items: center;
+  padding: 4px;
+  color: #111827;
+  line-height: 1;
+  text-align: center;
+}
+/* Cache le logo texte de secours quand l'image est bien chargée */
+.nova-app .direct-channel-logo:has(> img.ui2-img-loaded) .direct-brand-mark,
+.nova-app .direct-now-logo:has(> img.ui2-img-loaded) .direct-brand-mark {
+  display: none !important;
+}
+
+.nova-app .direct-brand-mark strong {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+}
+
+.nova-app .direct-brand-mark small {
+  max-width: 100%;
+  color: #526075;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nova-app .direct-channel-logo.is-canal .direct-brand-mark,
+.nova-app .direct-now-logo.is-canal .direct-brand-mark {
+  color: white;
+}
+
+.nova-app .direct-channel-logo.is-canal .direct-brand-mark small,
+.nova-app .direct-now-logo.is-canal .direct-brand-mark small {
+  color: var(--nova-mint);
+}
+
+.nova-app .direct-channel-logo > img,
+.nova-app .direct-now-logo > img {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+
+.nova-app .direct-logo-variant {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 2;
+  max-width: calc(100% - 6px);
+  padding: 2px 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  color: #06110f;
+  background: var(--nova-mint);
+  font-size: 7px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .direct-channel-logo.is-canal,
+.nova-app .direct-now-logo.is-canal {
+  border-color: rgba(255, 255, 255, .18) !important;
+  background: #050505 !important;
+}
+
+.nova-app .direct-channel-logo.is-canal img,
+.nova-app .direct-now-logo.is-canal img {
+  padding: 5px 3px !important;
+  background: #050505 !important;
+}
+
+.nova-app .direct-channel-logo.is-rmc img,
+.nova-app .direct-channel-logo.is-bein img,
+.nova-app .direct-now-logo.is-rmc img,
+.nova-app .direct-now-logo.is-bein img {
+  padding: 2px !important;
+}
+
+.nova-app .direct-channel-copy {
+  min-width: 0;
+}
+
+.nova-app .direct-channel-copy b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .nova-app .direct-channel-logo {
+    width: 74px !important;
+    height: 54px !important;
+    flex-basis: 74px !important;
+  }
+}
+
+.nova-app .direct-channel-tile .direct-channel {
+  width: 100% !important;
+  min-height: 94px !important;
+  display: grid !important;
+  grid-template-columns: 78px minmax(0, 1fr) 28px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  background: rgba(255, 255, 255, .028) !important;
+}
+
+.nova-app .direct-channel-tile .direct-channel > i {
+  margin: 0 !important;
+  justify-self: center;
+}
+
+.nova-app .direct-channel-copy {
+  display: grid !important;
+  gap: 5px !important;
+  align-content: center;
+}
+
+.nova-app .direct-channel-copy b {
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+}
+
+.nova-app .direct-explore .direct-channel-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.direct-catalog-skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-block: 16px;
+}
+
+.direct-catalog-skeleton span {
+  min-height: 92px;
+  border-radius: 14px;
+  background: linear-gradient(100deg, rgba(255,255,255,.045) 25%, rgba(99,102,241,.15) 45%, rgba(255,255,255,.045) 65%);
+  background-size: 220% 100%;
+  animation: direct-skeleton 1.25s ease-in-out infinite;
+}
+
+@keyframes direct-skeleton {
+  to { background-position-x: -220%; }
+}
+
+@media (max-width: 767px) {
+  .direct-catalog-skeleton { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .direct-catalog-skeleton span { min-height: 78px; }
+}
+
+@media (max-width: 600px) {
+  .nova-app .direct-explore .direct-channel-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .nova-app .direct-channel-tile .direct-channel {
+    min-height: 86px !important;
+    grid-template-columns: 74px minmax(0, 1fr) 30px !important;
+  }
+
+  .nova-app .direct-channel-copy b {
+    font-size: 16px !important;
+  }
+}
+
+.nova-app .direct-channel-tile .direct-channel:hover,
+.nova-app .direct-channel-tile .direct-channel:focus-visible {
+  border-color: rgba(66, 217, 200, .48) !important;
+  background: rgba(66, 217, 200, .07) !important;
+}
+
+.source-runtime-meta {
+  display: inline-flex;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.source-runtime-meta[data-state="ready"] { color: #4ade80; }
+.source-runtime-meta[data-state="error"] { color: #fb7185; }
+
+.nova-app .direct-health-label {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .direct-channel[data-health="available"] .direct-health-label { color: #4ade80; }
+.nova-app .direct-channel[data-health="slow"] .direct-health-label { color: #fbbf24; }
+.nova-app .direct-channel[data-health="unavailable"] .direct-health-label { color: #fb7185; }
+
+.nova-app .direct-source-switcher {
+  padding: 16px clamp(16px, 4vw, 54px) 20px;
+  border-top: 1px solid var(--nova-line);
+  background: #0d0f14;
+}
+
+.nova-app .direct-epg {
+  padding: 16px 0 4px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.nova-app .direct-epg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px 10px;
+  color: #f8fafc;
+}
+
+.nova-app .direct-epg-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.nova-app .direct-epg-head span i { color: #42d6d0; }
+.nova-app .direct-epg-head small { color: #8fa3bb; }
+
+.nova-app .direct-epg-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding: 2px 4px 10px;
+}
+
+.nova-app .direct-epg-item {
+  position: relative;
+  min-height: 92px;
+  padding: 13px 14px 16px;
+  overflow: hidden;
+  border-left: 2px solid rgba(143,163,187,.25);
+  background: rgba(255,255,255,.035);
+}
+
+.nova-app .direct-epg-item.is-now {
+  border-color: #42d6d0;
+  background: rgba(66,214,208,.09);
+}
+
+.nova-app .direct-epg-item span,
+.nova-app .direct-epg-item small {
+  display: block;
+  color: #8fa3bb;
+  font-size: 12px;
+}
+
+.nova-app .direct-epg-item b {
+  display: block;
+  margin: 5px 0 3px;
+  color: #f8fafc;
+  line-height: 1.25;
+}
+
+.nova-app .direct-epg-item > i {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, #42d6d0 var(--epg-progress), rgba(255,255,255,.09) var(--epg-progress));
+}
+
+.nova-app .direct-epg-message {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 68px;
+  color: #8fa3bb;
+}
+
+@media (max-width: 680px) {
+  .nova-app .direct-epg { padding-top: 12px; }
+  .nova-app .direct-epg-rail { grid-auto-columns: minmax(170px, 72vw); }
+  .nova-app .direct-epg-item { min-height: 86px; }
+}
+
+.nova-app .direct-source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  color: var(--nova-muted);
+  font-size: 13px;
+}
+
+.nova-app .direct-source-heading > div,
+.nova-app .direct-source-list {
+  display: flex;
+  gap: 8px;
+}
+
+.nova-app .direct-source-list {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.nova-app .direct-source-list::-webkit-scrollbar {
+  display: none;
+}
+
+.nova-app .direct-source-choice {
+  min-width: 130px;
+  min-height: 58px;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 8px 14px;
+  border: 1px solid var(--nova-line);
+  border-radius: 9px;
+  color: var(--nova-text);
+  text-align: left;
+  background: rgba(255, 255, 255, .035);
+  scroll-snap-align: start;
+}
+
+.nova-app .direct-source-choice small {
+  color: var(--nova-muted);
+}
+
+.nova-app .direct-source-choice.active {
+  color: #06110f;
+  border-color: var(--nova-mint);
+  background: var(--nova-mint);
+}
+
+.nova-app .direct-source-choice.active small {
+  color: rgba(6, 17, 15, .72);
+}
+
+@media (max-width: 600px) {
+  .nova-app .direct-source-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nova-app .direct-source-heading > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .nova-app .direct-source-heading .btn {
+    min-width: 0;
+    padding-inline: 9px !important;
+  }
+}
+
+.nova-app .episode-btn,
+.nova-app .source-btn {
+  border: 0 !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.nova-app .episode-btn.active,
+.nova-app .source-btn.active {
+  background: rgba(66, 217, 200, .08) !important;
+  box-shadow: inset 3px 0 var(--nova-mint) !important;
+}
+
+.nova-app .player-top {
+  height: var(--nova-nav-height);
+  padding-inline: clamp(18px, 4vw, 64px) !important;
+  border-bottom: 1px solid var(--nova-line);
+  background: rgba(8, 9, 13, .80) !important;
+  backdrop-filter: blur(24px);
+}
+
+.nova-app .player-shell {
+  max-width: none !important;
+  padding: calc(var(--nova-nav-height) + 28px) clamp(20px, 4vw, 72px) 80px !important;
+}
+
+.nova-app .media-hero {
+  min-height: 62vh;
+  align-items: end !important;
+  padding-block: 48px !important;
+  border-bottom: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .poster-frame {
+  border: 0 !important;
+  border-radius: var(--nova-radius) !important;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .48) !important;
+}
+
+.nova-app .mobile-bottom-nav {
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(9, 11, 15, .92) !important;
+  backdrop-filter: blur(24px);
+}
+
+.nova-app .mobile-bottom-nav a.active {
+  color: #07100f !important;
+  background: var(--nova-mint) !important;
+}
+
+@media (max-width: 1100px) {
+  .nova-app .nav span {
+    display: none;
+  }
+
+  .nova-app .nav {
+    width: 42px !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --nova-nav-height: 64px;
+  }
+
+  .nova-app .sidebar {
+    inset: 0 auto 0 0 !important;
+    width: min(84vw, 320px) !important;
+    height: 100dvh !important;
+    padding: 86px 16px 26px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    transform: translateX(-105%);
+    transition: transform .24s ease;
+  }
+
+  .nova-app .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .nova-app .sidebar .brand {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+  }
+
+  .nova-app .side-nav {
+    width: 100%;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    overflow-y: auto !important;
+  }
+
+  .nova-app .nav,
+  .nova-app .nav span {
+    display: flex !important;
+  }
+
+  .nova-app .nav {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    padding: 0 16px !important;
+  }
+
+  .nova-app .mobile-menu {
+    top: max(12px, env(safe-area-inset-top, 0px)) !important;
+    left: 14px !important;
+    width: 46px !important;
+    height: 46px !important;
+    border: 1px solid var(--nova-line) !important;
+    border-radius: 50% !important;
+    background: rgba(9, 11, 15, .88) !important;
+  }
+
+  .nova-app .main,
+  .nova-app .catalog-main,
+  .nova-app .direct-main {
+    padding: 78px 14px 104px !important;
+  }
+
+  .nova-app .home-body .main,
+  body.nova-app.home-body .main {
+    padding-inline: 0 !important;
+  }
+
+  .nova-app .topbar {
+    padding-inline: 14px !important;
+  }
+
+  .nova-app .hero,
+  .nova-app .home-hero {
+    min-height: 660px !important;
+    margin-inline: 0 !important;
+    background-color: #071018 !important;
+    background-position: center top !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% auto !important;
+  }
+
+  .nova-app .hero-content {
+    width: 100% !important;
+    align-self: stretch !important;
+    padding: clamp(270px, 76vw, 330px) 20px 70px !important;
+  }
+
+  .nova-app .hero h1 {
+    max-width: 100% !important;
+    font-size: clamp(38px, 11vw, 52px) !important;
+    line-height: 1 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .nova-app .hero-shade {
+    background:
+      linear-gradient(0deg, #071018 0%, rgba(7, 16, 24, .96) 42%, rgba(7, 16, 24, .12) 76%),
+      linear-gradient(90deg, rgba(7, 16, 24, .28), transparent 75%) !important;
+  }
+
+  .nova-app .hero-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px !important;
+  }
+
+  .nova-app .hero-actions .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 10px !important;
+  }
+
+  .nova-app .hero-nav {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .nova-app .content-row,
+  .nova-app .rows > section {
+    padding-left: 14px !important;
+  }
+
+  .nova-app .catalog-hero-head,
+  .nova-app .settings-hero,
+  .nova-app .library-hero,
+  .nova-app .admin-hero,
+  .nova-app .diagnostic-hero,
+  .nova-app .direct-tv-header {
+    min-height: 150px;
+  }
+
+  .nova-app .direct-tv-stage {
+    margin-inline: -14px;
+  }
+
+  .nova-app .player-shell {
+    padding: calc(var(--nova-nav-height) + 16px) 0 100px !important;
+  }
+
+  .nova-app .media-hero,
+  .nova-app .series-panel,
+  .nova-app .sources-panel {
+    padding-inline: 16px !important;
+  }
+
+  .nova-app .media-hero {
+    min-height: auto;
+    padding-top: 28px !important;
+  }
+}
+
+html[data-device="tv"] .nova-app .sidebar,
+html[data-device="4k"] .nova-app .sidebar {
+  height: 96px !important;
+}
+
+html[data-device="tv"] .nova-app .main,
+html[data-device="4k"] .nova-app .main {
+  padding-top: 130px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-app * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Nova owns the application shell on every device profile. */
+html body.nova-app .sidebar {
+  inset: 0 0 auto 0 !important;
+  width: 100% !important;
+  height: var(--nova-nav-height) !important;
+  padding: 0 clamp(20px, 3vw, 54px) !important;
+}
+
+html body.nova-app .main,
+html body.nova-app .catalog-main,
+html body.nova-app .direct-main {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  padding: calc(var(--nova-nav-height) + 26px) clamp(20px, 4vw, 72px) 80px !important;
+}
+
+@media (max-width: 760px) {
+  html body.nova-app .sidebar {
+    inset: 0 auto 0 0 !important;
+    width: min(84vw, 320px) !important;
+    height: 100dvh !important;
+    padding: 86px 16px 26px !important;
+  }
+
+  html body.nova-app .main,
+  html body.nova-app .catalog-main,
+  html body.nova-app .direct-main {
+    padding: 78px 14px 104px !important;
+  }
+
+  html body.nova-app.home-body .main {
+    padding-inline: 0 !important;
+  }
+}
+
+html[data-device="tv"] body.nova-app .sidebar,
+html[data-device="4k"] body.nova-app .sidebar {
+  height: 96px !important;
+}
+
+/* Keep the complete live player and its controls inside a 1080p viewport. */
+@media (min-width: 992px) and (min-height: 650px) {
+  body.nova-app.direct-body .direct-tv-stage {
+    --direct-stage-width: min(100%, calc((100dvh - var(--nova-nav-height) - 300px) * 16 / 9));
+    scroll-margin-top: calc(var(--nova-nav-height) + 12px);
+  }
+
+  body.nova-app.direct-body .direct-tv-stage > .direct-screen,
+  body.nova-app.direct-body .direct-tv-stage > .direct-nowbar,
+  body.nova-app.direct-body .direct-tv-stage > .direct-epg,
+  body.nova-app.direct-body .direct-tv-stage > .direct-source-switcher,
+  body.nova-app.direct-body .direct-tv-stage > .direct-hint {
+    width: var(--direct-stage-width) !important;
+    margin-inline: auto !important;
+  }
+
+  body.nova-app.direct-body .direct-tv-stage > .direct-screen {
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  body.nova-app.direct-body .direct-screen .direct-video {
+    object-fit: contain !important;
+  }
+}
+
+@media (min-width: 2560px) and (min-height: 1200px) {
+  body.nova-app.direct-body .direct-tv-stage {
+    --direct-stage-width: min(100%, calc((100dvh - var(--nova-nav-height) - 420px) * 16 / 9));
+  }
+}
+
+html[data-device="tv"] body.nova-app .main,
+html[data-device="tv"] body.nova-app .catalog-main,
+html[data-device="tv"] body.nova-app .direct-main,
+html[data-device="4k"] body.nova-app .main,
+html[data-device="4k"] body.nova-app .catalog-main,
+html[data-device="4k"] body.nova-app .direct-main {
+  margin-left: 0 !important;
+  padding: 130px clamp(42px, 4vw, 100px) 100px !important;
+}
+
+/* Final shared finish: one continuous streaming surface on every page. */
+html.nova-ready,
+html.nova-ready body {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+  color-scheme: dark;
+}
+
+.nova-app :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid rgba(66, 217, 200, .92) !important;
+  outline-offset: 3px !important;
+}
+
+.nova-app :is(button, a, input, select) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nova-app .rows,
+.nova-app #rows {
+  display: grid;
+  gap: clamp(30px, 4vw, 58px) !important;
+}
+
+.nova-app .content-row,
+.nova-app .rows > section {
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .section-head,
+.nova-app .row-head {
+  min-height: 38px;
+  margin-bottom: 13px !important;
+  align-items: end !important;
+}
+
+.nova-app .section-head h2,
+.nova-app .row-head h2 {
+  font-size: clamp(19px, 1.7vw, 27px) !important;
+  letter-spacing: 0 !important;
+}
+
+.nova-app .media-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  border-radius: var(--nova-radius) !important;
+  background: #101217 !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .20) !important;
+  transform: translateZ(0);
+}
+
+.nova-app .media-card:hover,
+.nova-app .media-card:focus-visible,
+.nova-app .media-card:focus-within {
+  z-index: 3;
+  border-color: rgba(66, 217, 200, .44) !important;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .42), 0 0 0 1px rgba(66, 217, 200, .16) !important;
+}
+
+.nova-app .media-card img,
+.nova-app .media-card .poster {
+  transition: transform .32s ease, filter .32s ease, opacity .22s ease !important;
+}
+
+.nova-app .media-card-open {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nova-app .media-card-open:focus-visible {
+  outline: 3px solid var(--nova-mint) !important;
+  outline-offset: -4px !important;
+}
+
+.nova-app .media-card :is(.media-badges, .media-actions, h3, .watch-progress, .local-date, .library-card-meta) {
+  z-index: 2;
+}
+
+.nova-app .media-card :is(.media-badges, h3, .watch-progress, .local-date, .library-card-meta) {
+  pointer-events: none;
+}
+
+.nova-app .media-card .media-actions {
+  z-index: 3;
+}
+
+.nova-app .media-card:focus-within .media-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.nova-app .media-card:hover img,
+.nova-app .media-card:focus-within img {
+  transform: scale(1.035);
+}
+
+.nova-app :is(.settings-card, .admin-panel, .diagnostic-panel, .library-panel, .direct-tools) {
+  border: 0 !important;
+  border-top: 1px solid var(--nova-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app :is(.settings-grid, .admin-grid, .diagnostic-grid) {
+  gap: clamp(18px, 2.2vw, 34px) !important;
+}
+
+.nova-app :is(.empty, .api-status) {
+  border: 1px dashed rgba(255, 255, 255, .16) !important;
+  border-radius: var(--nova-radius) !important;
+  background: rgba(255, 255, 255, .025) !important;
+  box-shadow: none !important;
+}
+
+.nova-app .pager {
+  width: fit-content;
+  max-width: 100%;
+  margin: clamp(38px, 5vw, 72px) auto !important;
+  padding: 6px !important;
+  gap: 6px !important;
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(11, 13, 18, .82) !important;
+  backdrop-filter: blur(18px);
+}
+
+.nova-app .pager .btn,
+.nova-app .page-pill {
+  min-height: 42px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+}
+
+.nova-app .pager .btn:not(:disabled):hover,
+.nova-app .pager .btn:not(:disabled):focus-visible {
+  background: rgba(255, 255, 255, .08) !important;
+}
+
+.nova-app .browse-panels {
+  padding-top: clamp(34px, 5vw, 76px) !important;
+  border-top: 1px solid var(--nova-line) !important;
+}
+
+.nova-app .browse-panels article {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.nova-app .toast,
+.nova-app .mx-network-toast {
+  max-width: min(420px, calc(100vw - 28px));
+  border: 1px solid var(--nova-line) !important;
+  border-radius: 999px !important;
+  background: rgba(9, 11, 15, .94) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .48) !important;
+  backdrop-filter: blur(22px);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .nova-app :is(button, .btn, .nav, .source-btn, .episode-btn) {
+    min-height: 46px;
+  }
+
+  .nova-app .media-card:hover img {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  html.nova-ready,
+  html.nova-ready body {
+    min-height: 100dvh;
+    background: var(--nova-bg) !important;
+  }
+
+  .nova-app .topbar {
+    width: calc(100% - 28px) !important;
+    margin: 0 14px 18px !important;
+  }
+
+  .nova-app .topbar .search-area {
+    min-height: 54px !important;
+    padding: 4px !important;
+  }
+
+  .nova-app .rows,
+  .nova-app #rows {
+    gap: 34px !important;
+  }
+
+  .nova-app .media-card {
+    border-radius: 9px !important;
+  }
+
+  .nova-app .pager {
+    width: calc(100% - 28px);
+  }
+
+  .nova-app .pager .page-pill {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nova-app .mobile-bottom-nav {
+    right: 10px !important;
+    bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    left: 10px !important;
+    width: auto !important;
+    padding: 6px !important;
+    gap: 2px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .62) !important;
+  }
+
+  .nova-app .mobile-bottom-nav a {
+    min-width: 0 !important;
+    min-height: 54px !important;
+    border-radius: 999px !important;
+  }
+
+  .nova-app .mobile-bottom-nav span {
+    overflow: hidden;
+    font-size: 10px !important;
+    text-overflow: ellipsis;
+  }
+}
+
+html[data-device="tv"] .nova-app :is(a, button, [tabindex]):focus-visible,
+html[data-device="4k"] .nova-app :is(a, button, [tabindex]):focus-visible {
+  outline-width: 5px !important;
+  outline-offset: 5px !important;
+  transform: scale(1.035);
+}
+
+html[data-device="tv"] .nova-app .nav,
+html[data-device="4k"] .nova-app .nav {
+  min-height: 52px !important;
+  padding-inline: 18px !important;
+  font-size: 16px !important;
+}
+
+.nova-app .catalog-list-view .media-actions {
+  display: flex !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+.nova-app.cinema-mode #cinemaMode {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  right: max(14px, env(safe-area-inset-right, 0px));
+  z-index: 1400;
+  display: inline-flex !important;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, .55);
+}
+

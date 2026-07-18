@@ -169,6 +169,19 @@ async function run() {
     const libraryBadge = await page.locator('.library-card .media-badges span').first().textContent();
     if (libraryBadge?.trim() !== 'Film') throw new Error('Il maestro est encore identifié comme série dans la bibliothèque.');
 
+    await page.evaluate(() => {
+      MadradorStorage.addContinue({ id: 'audit-continue', title: 'Film à terminer', type: 'movie', progressPercent: 42 });
+    });
+    await page.goto(`${BASE_URL}/library.html?view=continue`, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-action="complete"]');
+    await page.hover('.library-card');
+    await page.click('[data-action="complete"]');
+    const completedState = await page.evaluate(() => ({
+      stillContinuing: MadradorStorage.continueWatching().some((item) => item.id === 'audit-continue'),
+      inHistory: MadradorStorage.history().some((item) => item.id === 'audit-continue' && item.completed === true)
+    }));
+    if (completedState.stillContinuing || !completedState.inHistory) throw new Error('Marquer comme terminé ne synchronise pas reprise et historique.');
+
     await page.route('**/api/film/999001', (route) => route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ id: '999001', title: 'Film audit', type: 'movie', isSeries: false, year: '2026', description: 'Test cinéma' })

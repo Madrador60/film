@@ -185,6 +185,7 @@ function createLibraryCard(item, index) {
       <div class="media-actions">
         <button type="button" class="media-action primary-action" data-action="play" aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-play"></i></button>
         <button type="button" class="media-action" data-action="info" aria-label="Regarder ${escapeHtml(item.title)}"><i class="fa-solid fa-circle-play"></i></button>
+        ${item.bucket === 'continue' ? `<button type="button" class="media-action" data-action="complete" aria-label="Marquer ${escapeHtml(item.title)} comme terminé" title="Marquer comme terminé"><i class="fa-solid fa-check"></i></button>` : ''}
         <button type="button" class="media-action danger-action" data-action="remove" aria-label="Retirer ${escapeHtml(item.title)} de la bibliothèque"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <h3>${escapeHtml(item.title)}</h3>
@@ -208,6 +209,13 @@ function createLibraryCard(item, index) {
   card.querySelector('[data-action="remove"]').addEventListener('click', (event) => {
     event.stopPropagation();
     removeLibraryItem(item);
+  });
+  card.querySelector('[data-action="complete"]')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    MadradorStorage.removeContinue(item.id);
+    MadradorStorage.addHistory({ ...item, completed: true, progressPercent: 100, updatedAt: Date.now() });
+    renderLibrary();
+    showToast('Marqué comme terminé');
   });
 
   return card;
@@ -233,7 +241,7 @@ function renderEmptyState() {
 function removeLibraryItem(item) {
   if (libraryView === 'favorites' || item.bucket === 'favorites') MadradorStorage.removeFavorite(item.id);
   if (libraryView === 'history' || item.bucket === 'history') removeStorageItem(MadradorStorage.KEYS.history, item);
-  if (libraryView === 'continue' || item.bucket === 'continue') removeStorageItem(MadradorStorage.KEYS.continue, item);
+  if (libraryView === 'continue' || item.bucket === 'continue') MadradorStorage.removeContinue(item.id);
   renderLibrary();
   showToast('Élément retiré');
 }

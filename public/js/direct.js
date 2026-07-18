@@ -3,6 +3,8 @@ const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-ads-v6';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_SOURCE_PREF_KEY = 'madrador:direct:source-preferences';
+const DIRECT_HEALTH_KEY = 'madrador:direct:health-v1';
+const DIRECT_HEALTH_TTL = 6 * 60 * 60 * 1000;
 const DIRECT_BATCH_SIZE = 72;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'event.vedge.infomaniak.com'];
 const DIRECT_LANGUAGE_LABELS = {
@@ -33,6 +35,7 @@ let iptvOrgLastSyncLabel = '';
 let directStatusRefreshTimer = 0;
 
 window.addEventListener('DOMContentLoaded', () => {
+  restoreDirectHealthCache();
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
   $('directPlay')?.addEventListener('click', playFromInput);
   $('directOpen')?.addEventListener('click', openFromInput);
@@ -647,7 +650,7 @@ function renderDirectChannels() {
       <div class="direct-channel-grid">
         ${channels.map((channel) => `
           <article class="direct-channel-tile ${getChannelKey(currentDirectChannel) === getChannelKey(channel) ? 'is-playing' : ''}">
-            <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}" data-health-url="${escapeHtml(channel.url)}">
+            <button class="direct-channel direct-channel-card" type="button" data-channel-id="${escapeHtml(channel.id || '')}" data-url="${escapeHtml(channel.url)}" data-name="${escapeHtml(channel.name)}" data-health-url="${escapeHtml(channel.url)}" data-health="${escapeHtml(getChannelHealthState(channel))}">
               <span class="direct-channel-logo ${getChannelLogoClass(channel)}">
                 ${getChannelBrandMark(channel)}
                 ${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="" loading="lazy">` : ''}
@@ -655,7 +658,7 @@ function renderDirectChannels() {
               </span>
               <span class="direct-channel-copy">
                 <b>${escapeHtml(channel.name)}</b>
-                <small><i class="direct-status ${channel.status === 'online' ? 'online' : ''}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span>${channel.maxQuality ? `<span>${escapeHtml(channel.maxQuality)}</span>` : ''}<span>${channel.sources?.length || 1} source${(channel.sources?.length || 1) > 1 ? 's' : ''}</span><em class="direct-health-label">À vérifier</em></small>
+                <small><i class="direct-status ${getChannelHealthState(channel)}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span>${channel.maxQuality ? `<span>${escapeHtml(channel.maxQuality)}</span>` : ''}<span>${channel.sources?.length || 1} source${(channel.sources?.length || 1) > 1 ? 's' : ''}</span><em class="direct-health-label">${escapeHtml(getDirectHealthLabel(getChannelHealthState(channel)))}</em></small>
               </span>
               <i class="fa-solid fa-play"></i>
             </button>
@@ -740,6 +743,11 @@ function paintDirectHealth(card, health) {
   const labels = { available: 'Fonctionnelle', slow: 'Lente', unavailable: 'Indisponible' };
   const state = health?.state || 'unavailable';
   card.dataset.health = state;
+  const dot = card.querySelector('.direct-status');
+  if (dot) {
+    dot.classList.remove('available', 'slow', 'unavailable', 'checking', 'unchecked');
+    dot.classList.add(state);
+  }
   const label = card.querySelector('.direct-health-label');
   if (label) {
     label.textContent = labels[state] || 'À vérifier';
@@ -1112,6 +1120,19 @@ function getKnownDirectSourceState(source) {
   return directSourceStates.get(source?.url)?.state || directHealthCache.get(source?.url)?.state || source?.status || 'unchecked';
 }
 
+function getChannelHealthState(channel) {
+  const states = (channel?.sources || []).map(getKnownDirectSourceState);
+  if (states.some((state) => state === 'available')) return 'available';
+  if (states.some((state) => state === 'slow')) return 'slow';
+  if (states.length && states.every((state) => state === 'unavailable')) return 'unavailable';
+  if (states.some((state) => state === 'checking')) return 'checking';
+  return 'unchecked';
+}
+
+function getDirectHealthLabel(state) {
+  return ({ available: 'Fonctionnelle', slow: 'Lente', unavailable: 'Indisponible', checking: 'Contrôle…', unchecked: 'À vérifier' })[state] || 'À vérifier';
+}
+
 function focusDirectPlayer() {
   const stage = document.querySelector('.direct-tv-stage');
   stage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1220,7 +1241,32 @@ function updateDirectSourceState(url, state, error = '') {
       source.error = error;
     });
   });
+  persistDirectHealthCache();
   scheduleDirectStatusRefresh();
+}
+
+function restoreDirectHealthCache() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DIRECT_HEALTH_KEY) || '[]');
+    const now = Date.now();
+    (Array.isArray(saved) ? saved : []).forEach((entry) => {
+      const checkedAt = Date.parse(entry?.checkedAt || '');
+      if (!entry?.url || !Number.isFinite(checkedAt) || now - checkedAt > DIRECT_HEALTH_TTL) return;
+      if (!['available', 'slow', 'unavailable'].includes(entry.state)) return;
+      directHealthCache.set(entry.url, { state: entry.state, error: entry.error || '', checkedAt: entry.checkedAt });
+      directSourceStates.set(entry.url, { state: entry.state, error: entry.error || '', checkedAt: entry.checkedAt });
+    });
+  } catch {}
+}
+
+function persistDirectHealthCache() {
+  try {
+    const entries = [...directSourceStates.entries()]
+      .filter(([, value]) => ['available', 'slow', 'unavailable'].includes(value.state))
+      .slice(-500)
+      .map(([url, value]) => ({ url, ...value }));
+    localStorage.setItem(DIRECT_HEALTH_KEY, JSON.stringify(entries));
+  } catch {}
 }
 
 function scheduleDirectStatusRefresh() {
