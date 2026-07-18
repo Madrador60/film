@@ -9,7 +9,10 @@ async function main() {
         axios,
         cacheFile: OUTPUT_FILE,
         fallbackFile: path.join(__dirname, '..', 'data', 'missing-iptv-fallback.json'),
-        supplementFile: path.join(__dirname, '..', 'data', 'iptv-org-fra-supplement.m3u'),
+        supplementFiles: [
+            path.join(__dirname, '..', 'data', 'iptv-org-fra-supplement.m3u'),
+            path.join(__dirname, '..', 'data', 'iptv-org-extra-supplement.m3u')
+        ],
         maxAge: 8 * 60 * 60 * 1000,
         timeout: 30000
     });

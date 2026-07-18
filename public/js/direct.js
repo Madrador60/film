@@ -2,13 +2,14 @@ const DIRECT_KEY = 'madrador:direct:recent';
 const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-livelive-v4';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
+const DIRECT_SOURCE_PREF_KEY = 'madrador:direct:source-preferences';
 const DIRECT_BATCH_SIZE = 500;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'hesgoaler.com', 'event.vedge.infomaniak.com'];
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
 let activeDirectCategory = 'Toutes';
-let activeDirectView = 'all';
+let activeDirectView = 'france';
 let currentDirectChannel = null;
 let visibleDirectChannels = [];
 let directRenderLimit = DIRECT_BATCH_SIZE;
@@ -34,6 +35,10 @@ window.addEventListener('DOMContentLoaded', () => {
     directRenderLimit = DIRECT_BATCH_SIZE;
     renderDirectChannels();
   });
+  ['directLanguageFilter', 'directQualityFilter', 'directAvailabilityFilter'].forEach((id) => $(id)?.addEventListener('change', () => {
+    directRenderLimit = DIRECT_BATCH_SIZE;
+    renderDirectChannels();
+  }));
   $('directPlaylistSearch')?.addEventListener('input', renderDirectPlaylist);
   $('directPlaylistClear')?.addEventListener('click', clearDirectPlaylist);
   $('directSourceToggle')?.addEventListener('click', toggleDirectTools);
@@ -576,17 +581,26 @@ function renderDirectChannels() {
   const viewChannels = normalized
     .filter((channel) => activeDirectView !== 'france' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('france'))
     .filter((channel) => activeDirectView !== 'francophone' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone'))
+    .filter((channel) => activeDirectView !== 'international' || channel.catalog === 'iptv-org' && channel.scopes?.includes('international'))
     .filter((channel) => activeDirectView !== 'functional' || (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state)))
     .filter((channel) => activeDirectView !== 'favorites' || favoriteKeys.has(getChannelKey(channel)))
     .filter((channel) => activeDirectView !== 'recent' || recentOrder.has(getChannelKey(channel)));
   renderDirectCategoryTabs(viewChannels);
+  renderDirectMetadataFilters(viewChannels);
+  const language = $('directLanguageFilter')?.value || '';
+  const quality = $('directQualityFilter')?.value || '';
+  const availability = $('directAvailabilityFilter')?.value || '';
   let filtered = viewChannels
     .filter((channel) => activeDirectCategory === 'Toutes' || channel.category === activeDirectCategory)
-    .filter((channel) => !query || `${channel.name} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query));
+    .filter((channel) => !query || `${channel.name} ${(channel.altNames || []).join(' ')} ${channel.code} ${channel.country} ${channel.category}`.toLowerCase().includes(query))
+    .filter((channel) => !language || (channel.languages || []).includes(language) || (channel.sources || []).some((source) => (source.languages || []).includes(language)))
+    .filter((channel) => !quality || (channel.sources || []).some((source) => String(source.quality || '').toLowerCase() === quality))
+    .filter((channel) => !availability || channelMatchesAvailability(channel, availability));
   if (activeDirectView === 'recent') {
     filtered = filtered.sort((a, b) => recentOrder.get(getChannelKey(a)) - recentOrder.get(getChannelKey(b)));
   }
   visibleDirectChannels = filtered;
+  if ($('directResultCount')) $('directResultCount').textContent = `${filtered.length} résultat${filtered.length > 1 ? 's' : ''}`;
   renderDirectViewTabs(normalized, favoriteKeys, recentOrder);
   const totalFiltered = filtered.length;
   const displayedChannels = filtered.slice(0, directRenderLimit);
@@ -715,6 +729,7 @@ function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
     all: channels.length,
     france: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('france')).length,
     francophone: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone')).length,
+    international: channels.filter((channel) => channel.catalog === 'iptv-org' && channel.scopes?.includes('international')).length,
     functional: channels.filter((channel) => (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state))).length,
     favorites: channels.filter((channel) => favoriteKeys.has(getChannelKey(channel))).length,
     recent: channels.filter((channel) => recentOrder.has(getChannelKey(channel))).length
@@ -722,9 +737,32 @@ function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
   $('directViewTabs')?.querySelectorAll('[data-direct-view]').forEach((button) => {
     const view = button.dataset.directView;
     button.classList.toggle('active', view === activeDirectView);
-    const labels = { all: 'Toutes', france: 'France', francophone: 'Francophones', functional: 'Fonctionnelles', favorites: 'Favoris', recent: 'Récentes' };
+    const labels = { all: 'Toutes', france: 'France', francophone: 'Francophones', international: 'International', functional: 'Fonctionnelles', favorites: 'Favoris', recent: 'Récentes' };
     button.querySelector('span').textContent = `${labels[view]} · ${counts[view]}`;
   });
+}
+
+function renderDirectMetadataFilters(channels) {
+  const fill = (id, values, labels = {}) => {
+    const select = $(id);
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">Toutes</option>' + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labels[value] || value.toUpperCase())}</option>`).join('');
+    if (values.includes(current)) select.value = current;
+  };
+  const languages = [...new Set(channels.flatMap((channel) => channel.languages || []).filter(Boolean))].sort();
+  const qualities = [...new Set(channels.flatMap((channel) => (channel.sources || []).map((source) => String(source.quality || '').toLowerCase())).filter(Boolean))].sort();
+  fill('directLanguageFilter', languages, { fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien' });
+  fill('directQualityFilter', qualities);
+}
+
+function channelMatchesAvailability(channel, availability) {
+  const sources = channel.sources || [];
+  if (availability === 'available') return sources.some((source) => ['available', 'slow'].includes(directHealthCache.get(source.url)?.state || source.status));
+  if (availability === 'geo') return sources.some((source) => source.geoBlocked);
+  if (availability === 'intermittent') return sources.some((source) => source.intermittent);
+  if (availability === 'unchecked') return sources.some((source) => !directHealthCache.has(source.url) && ['unchecked', 'idle'].includes(source.status || 'idle'));
+  return true;
 }
 
 function bindDirectLogoFallbacks(scope) {
@@ -801,12 +839,18 @@ function normalizeChannelCategory(value) {
 function mergeGroupedChannels(...catalogs) {
   const merged = new Map();
   catalogs.flat().forEach((channel) => {
-    const key = getChannelMergeKey(channel?.name);
+    const nameKey = getChannelMergeKey(channel?.name);
+    const apiKey = channel?.catalog === 'iptv-org' && channel.channelId ? `iptv:${String(channel.channelId).toLowerCase()}` : '';
+    const key = apiKey && !merged.has(nameKey) ? apiKey : nameKey;
     if (!key) return;
     if (!merged.has(key)) {
       merged.set(key, { ...channel, sources: [] });
     }
     const target = merged.get(key);
+    target.scopes = [...new Set([...(target.scopes || []), ...(channel.scopes || [])])];
+    target.languages = [...new Set([...(target.languages || []), ...(channel.languages || [])])];
+    target.altNames = [...new Set([...(target.altNames || []), ...(channel.altNames || [])])];
+    target.maxQuality ||= channel.maxQuality || '';
     if ((!target.logo && channel.logo) || (!target.image && channel.image)) {
       target.logo = channel.logo || target.logo;
       target.image = channel.image || target.image;
@@ -964,8 +1008,9 @@ async function playChannel(channel) {
   if (!channel?.url) return;
   if (Array.isArray(channel.sources) && channel.sources.length) {
     attemptedDirectSources.clear();
-    selectedDirectSourceIndex = 0;
-    playChannelSource(channel, 0);
+    const preferredUrl = getDirectSourcePreferences()[getChannelKey(channel)];
+    selectedDirectSourceIndex = Math.max(0, channel.sources.findIndex((source) => source.url === preferredUrl));
+    playChannelSource(channel, selectedDirectSourceIndex);
     return;
   }
   setCurrentChannel(channel);
@@ -1064,6 +1109,9 @@ function getDirectSourceLifecycle(channel, source, index) {
     timeout: 14000,
     onReady(elapsed) {
       updateDirectSourceState(source.url, elapsed > 5000 ? 'slow' : 'available');
+      const preferences = getDirectSourcePreferences();
+      preferences[getChannelKey(channel)] = source.url;
+      localStorage.setItem(DIRECT_SOURCE_PREF_KEY, JSON.stringify(preferences));
       setHint(`Lecture : ${channel.name} · ${source.name} · tentative ${index + 1}/${channel.sources.length} · ${elapsed > 5000 ? 'source lente' : 'source prête'}`);
       renderChannelSources({ ...channel, url: source.url });
     },
@@ -1071,6 +1119,10 @@ function getDirectSourceLifecycle(channel, source, index) {
       handleDirectSourceFailure(channel, source, index, message);
     }
   };
+}
+
+function getDirectSourcePreferences() {
+  try { return JSON.parse(localStorage.getItem(DIRECT_SOURCE_PREF_KEY) || '{}') || {}; } catch { return {}; }
 }
 
 function handleDirectSourceFailure(channel, source, index, message) {

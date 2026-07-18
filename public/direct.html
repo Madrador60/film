@@ -149,13 +149,20 @@
           <input id="directChannelSearch" type="search" placeholder="Rechercher une chaîne, un pays ou une catégorie..." autocomplete="off" />
         </div>
         <div class="direct-view-tabs" id="directViewTabs" aria-label="Vues des chaînes">
-          <button class="active" type="button" data-direct-view="all"><i class="fa-solid fa-border-all"></i><span>Toutes</span></button>
-          <button type="button" data-direct-view="france"><i class="fa-solid fa-location-dot"></i><span>France</span></button>
+          <button type="button" data-direct-view="all"><i class="fa-solid fa-border-all"></i><span>Toutes</span></button>
+          <button class="active" type="button" data-direct-view="france"><i class="fa-solid fa-location-dot"></i><span>France</span></button>
           <button type="button" data-direct-view="francophone"><i class="fa-solid fa-language"></i><span>Francophones</span></button>
+          <button type="button" data-direct-view="international"><i class="fa-solid fa-earth-europe"></i><span>International</span></button>
           <button type="button" data-direct-view="functional"><i class="fa-solid fa-signal"></i><span>Fonctionnelles</span></button>
           <button type="button" data-direct-view="favorites"><i class="fa-solid fa-heart"></i><span>Favoris</span></button>
           <button type="button" data-direct-view="recent"><i class="fa-solid fa-clock-rotate-left"></i><span>Récentes</span></button>
         </div>
+      </div>
+      <div class="direct-metadata-filters" aria-label="Filtres avancés">
+        <label><span>Langue</span><select id="directLanguageFilter" aria-label="Filtrer par langue"><option value="">Toutes</option></select></label>
+        <label><span>Qualité</span><select id="directQualityFilter" aria-label="Filtrer par qualité"><option value="">Toutes</option></select></label>
+        <label><span>Disponibilité</span><select id="directAvailabilityFilter" aria-label="Filtrer par disponibilité"><option value="">Toutes</option><option value="available">Disponible</option><option value="geo">Géobloqué</option><option value="intermittent">Non permanent</option><option value="unchecked">À vérifier</option></select></label>
+        <output id="directResultCount" aria-live="polite"></output>
       </div>
       <div class="direct-category-tabs" id="directCategoryTabs" aria-label="Catégories des chaînes"></div>
       <div class="direct-channel-list" id="directChannelList">
@@ -183,6 +190,6 @@
   <script src="./js/ui-system.js?v=20260712-polish3"></script>
   <script src="./js/pwa.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-  <script src="./js/direct.js?v=20260718-iptv-api1"></script>
+  <script src="./js/direct.js?v=20260718-iptv-api2"></script>
 </body>
 </html>

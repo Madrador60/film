@@ -144,7 +144,10 @@ const iptvOrgService = createIptvOrgApiService({
     timeout: 30000,
     cacheFile: path.join(PERSISTENT_DATA_CACHE_DIR, 'iptv-org-api.json'),
     fallbackFile: path.join(__dirname, 'data', 'iptv-org-api-fallback.json'),
-    supplementFile: path.join(__dirname, 'data', 'iptv-org-fra-supplement.m3u')
+    supplementFiles: [
+        path.join(__dirname, 'data', 'iptv-org-fra-supplement.m3u'),
+        path.join(__dirname, 'data', 'iptv-org-extra-supplement.m3u')
+    ]
 });
 const DIRECT_EPG_DIRECTORY_URL = 'https://epg.pw/areas/fr.html?lang=en';
 const DIRECT_EPG_CACHE_DURATION = 30 * 60 * 1000;
@@ -281,7 +284,7 @@ async function checkDirectHealth(value) {
             });
             if (!isHls) response.data?.destroy?.();
             const latency = Date.now() - startedAt;
-            const validHls = !isHls || (/^\s*#EXTM3U/m.test(String(response.data)) && /#EXT-X-(?:STREAM-INF|MEDIA-SEQUENCE)|#EXTINF/i.test(String(response.data)));
+            const validHls = !isHls || await validateHlsManifestAndSegment(url, String(response.data));
             const available = response.status < 400 && validHls;
             return {
                 ok: available,
@@ -302,6 +305,34 @@ async function checkDirectHealth(value) {
     });
     iptvOrgService.markSourceStatus(url, result);
     return result;
+}
+
+async function validateHlsManifestAndSegment(manifestUrl, manifestText) {
+    if (!/^\s*#EXTM3U/m.test(manifestText)) return false;
+    let mediaUrl = manifestUrl;
+    let mediaText = manifestText;
+    if (/#EXT-X-STREAM-INF/i.test(mediaText)) {
+        const lines = mediaText.split(/\r?\n/).map((line) => line.trim());
+        const variant = lines.find((line, index) => index > 0 && !line.startsWith('#') && /#EXT-X-STREAM-INF/i.test(lines.slice(0, index).at(-1) || '')) ||
+            lines.find((line) => line && !line.startsWith('#'));
+        if (!variant) return false;
+        mediaUrl = new URL(variant, manifestUrl).href;
+        const mediaResponse = await axios.get(mediaUrl, { ...axiosConfig, timeout: DIRECT_HEALTH_TIMEOUT, responseType: 'text', maxContentLength: 512 * 1024 });
+        mediaText = String(mediaResponse.data);
+    }
+    if (!/#EXTINF|#EXT-X-MEDIA-SEQUENCE/i.test(mediaText)) return false;
+    const segment = mediaText.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !line.startsWith('#'));
+    if (!segment) return false;
+    const segmentUrl = new URL(segment, mediaUrl).href;
+    const segmentResponse = await axios.get(segmentUrl, {
+        ...axiosConfig,
+        timeout: DIRECT_HEALTH_TIMEOUT,
+        responseType: 'stream',
+        headers: { ...axiosConfig.headers, Range: 'bytes=0-1023' },
+        validateStatus: (status) => status >= 200 && status < 500
+    });
+    segmentResponse.data?.destroy?.();
+    return segmentResponse.status < 400;
 }
 
 function extractDirectUrlFromText(value) {

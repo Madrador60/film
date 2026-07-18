@@ -5189,6 +5189,38 @@ a {
   background: rgba(59,130,246,.16);
 }
 
+.direct-metadata-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.direct-metadata-filters label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.direct-metadata-filters select {
+  min-width: 138px;
+  min-height: 42px;
+  padding: 0 34px 0 12px;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(3,7,18,.72);
+}
+
+.direct-metadata-filters output {
+  margin-left: auto;
+  padding-bottom: 11px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .direct-explore .direct-category-tabs {
   margin: 0 -4px 16px;
   padding: 4px;
@@ -5367,6 +5399,21 @@ html[data-device="tv"] .direct-channel-tile:focus-within {
   .direct-view-tabs button {
     flex: 1 0 auto;
     justify-content: center;
+  }
+
+  .direct-metadata-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .direct-metadata-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .direct-metadata-filters output {
+    margin: 0;
+    padding: 8px 0 0;
   }
 
   .direct-explore .direct-channel-grid {

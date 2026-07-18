@@ -73,7 +73,7 @@ function normalizeLabel(value) {
     return label;
 }
 
-function normalizeSource(input, provider) {
+function normalizeSource(input, provider, metadata = {}) {
     const protocol = sourceProtocol(input.url);
     const secure = protocol === 'HTTPS';
     const label = normalizeLabel(input.label);
@@ -94,7 +94,10 @@ function normalizeSource(input, provider) {
         provenance: 'IPTV-org',
         catalog: 'iptv-org',
         status: offline ? 'unavailable' : secure ? 'unchecked' : 'incompatible_https',
-        checkedAt: null
+        checkedAt: null,
+        feedId: metadata.feedId || null,
+        languages: metadata.languages || [],
+        isMain: Boolean(metadata.isMain)
     };
 }
 
@@ -132,6 +135,13 @@ function buildCatalog(api, playlists = []) {
     const countryNames = new Map(api.countries.map((item) => [item.code, item.name]));
     const today = new Date().toISOString().slice(0, 10);
     const entities = new Map();
+    const playlistChannelIds = new Set();
+    for (const parsed of playlists) {
+        for (const item of parsed.channels || []) {
+            const tvg = parseTvgId(item.tvgId);
+            if (tvg.channel) playlistChannelIds.add(tvg.channel.toLowerCase());
+        }
+    }
     const stats = {
         apiResources: RESOURCES.length,
         rawApiStreams: api.streams.length,
@@ -165,7 +175,7 @@ function buildCatalog(api, playlists = []) {
         const exact = feeds.find((feed) => String(feed.id).toLowerCase() === String(requestedFeed || '').toLowerCase());
         const main = feeds.find((feed) => feed.is_main) || feeds[0] || null;
         const selected = exact || main;
-        const groupedId = selected && !isQualityFeed(selected) ? selected.id : 'main';
+        const groupedId = 'main';
         return { selected, groupedId, feeds };
     }
 
@@ -173,18 +183,15 @@ function buildCatalog(api, playlists = []) {
         const { selected, groupedId, feeds } = resolveFeed(channel, requestedFeed);
         const key = feedKey(channel.id, groupedId);
         if (!entities.has(key)) {
-            const languages = selected?.languages?.length
-                ? selected.languages
-                : feeds.filter((feed) => feed.is_main).flatMap((feed) => feed.languages || []);
+            const languages = feeds.flatMap((feed) => feed.languages || []);
             const uniqueLanguages = [...new Set(languages)];
-            const feedName = selected && groupedId !== 'main' && !/^(?:sd|hd|fhd|uhd|4k)$/i.test(selected.name || '') ? selected.name : '';
             const guide = (guidesByChannel.get(channel.id.toLowerCase()) || [])
                 .sort((a, b) => Number(String(b.feed || '').toLowerCase() === String(selected?.id || '').toLowerCase()) - Number(String(a.feed || '').toLowerCase() === String(selected?.id || '').toLowerCase()))[0] || null;
             entities.set(key, {
                 id: `iptv-org-${channel.id}${groupedId === 'main' ? '' : `@${groupedId}`}`,
                 channelId: channel.id,
                 feedId: selected?.id || null,
-                name: feedName ? `${channel.name} — ${feedName}` : channel.name,
+                name: channel.name,
                 altNames: [...new Set([...(channel.alt_names || []), ...(selected?.alt_names || [])])],
                 country: channel.country,
                 countryName: countryNames.get(channel.country) || channel.country,
@@ -197,7 +204,7 @@ function buildCatalog(api, playlists = []) {
                 website: channel.website || '',
                 isNsfw: false,
                 guide: guide ? { site: guide.site, siteId: guide.site_id, name: guide.site_name, lang: guide.lang, sources: guide.sources || [] } : null,
-                scopes: [...new Set([channel.country === 'FR' ? 'france' : '', uniqueLanguages.includes('fra') ? 'francophone' : ''].filter(Boolean))],
+                scopes: [channel.country === 'FR' ? 'france' : uniqueLanguages.includes('fra') ? 'francophone' : 'international'],
                 source: 'iptv-org-api',
                 sources: []
             });
@@ -217,9 +224,12 @@ function buildCatalog(api, playlists = []) {
     for (const stream of api.streams) {
         const channel = activeChannel(stream.channel);
         if (!channel) { stats.excludedUnmatched += 1; continue; }
+        const feed = resolveFeed(channel, stream.feed).selected;
+        const isRelevantInternational = playlistChannelIds.has(channel.id.toLowerCase());
+        const isFranceOrFrancophone = channel.country === 'FR' || (feedsByChannel.get(channel.id.toLowerCase()) || []).some((candidate) => (candidate.languages || []).includes('fra'));
+        if (!isFranceOrFrancophone && !isRelevantInternational) continue;
         const entity = ensureEntity(channel, stream.feed);
-        if (!entity.scopes.length) continue;
-        addSource(entity, normalizeSource(stream, 'IPTV-org API'));
+        addSource(entity, normalizeSource(stream, 'IPTV-org API', { feedId: feed?.id || stream.feed, languages: feed?.languages || [], isMain: feed?.is_main }));
     }
 
     for (const parsed of playlists) {
@@ -232,9 +242,11 @@ function buildCatalog(api, playlists = []) {
                 channel = [...channelsById.values()].find((candidate) => normalizeChannelName(candidate.name) === wanted) || null;
             }
             if (!channel) continue;
+            const feed = resolveFeed(channel, tvg.feed).selected;
             const entity = ensureEntity(channel, tvg.feed);
-            if (!entity.scopes.length) continue;
-            for (const rawSource of item.sources || []) addSource(entity, normalizeSource(rawSource, 'IPTV-org M3U'));
+            if (!entity.logo && item.logo) entity.logo = item.logo;
+            if (entity.category === 'Autres' && item.category) entity.category = item.category;
+            for (const rawSource of item.sources || []) addSource(entity, normalizeSource(rawSource, 'IPTV-org M3U', { feedId: feed?.id || tvg.feed, languages: feed?.languages || [item.language].filter(Boolean), isMain: feed?.is_main }));
         }
     }
 
@@ -258,6 +270,7 @@ function buildCatalog(api, playlists = []) {
         total: channels.length,
         france: channels.filter((channel) => channel.scopes.includes('france')).length,
         francophone: channels.filter((channel) => channel.scopes.includes('francophone')).length,
+        international: channels.filter((channel) => channel.scopes.includes('international')).length,
         sources: allSources.length,
         https: allSources.filter((source) => source.secure).length,
         httpRejected: allSources.filter((source) => !source.secure).length,
@@ -275,7 +288,7 @@ function createIptvOrgApiService(options = {}) {
     const axios = options.axios;
     const cacheFile = options.cacheFile;
     const fallbackFile = options.fallbackFile;
-    const supplementFile = options.supplementFile;
+    const supplementFiles = [...new Set([...(options.supplementFiles || []), options.supplementFile].filter(Boolean))];
     const maxAge = Number(options.maxAge) || 8 * 60 * 60 * 1000;
     const timeout = Number(options.timeout) || 30000;
     let snapshot = null;
@@ -328,7 +341,9 @@ function createIptvOrgApiService(options = {}) {
                 ]);
                 const api = Object.fromEntries(RESOURCES.map((name, index) => [name, results[index]]));
                 const playlists = [parseM3u(results[RESOURCES.length])];
-                if (supplementFile && fs.existsSync(supplementFile)) playlists.push(parseM3u(fs.readFileSync(supplementFile, 'utf8')));
+                for (const supplementFile of supplementFiles) {
+                    if (fs.existsSync(supplementFile)) playlists.push(parseM3u(fs.readFileSync(supplementFile, 'utf8')));
+                }
                 const built = buildCatalog(api, playlists);
                 const now = new Date().toISOString();
                 snapshot = {

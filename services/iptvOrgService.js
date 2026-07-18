@@ -112,7 +112,7 @@ function parseM3u(content) {
             };
             headers = {
                 referrer: attributes['http-referrer'] || '',
-                userAgent: attributes['http-user-agent'] || ''
+                userAgent: attributes['http-user-agent'] || attributes['user-agent'] || ''
             };
             continue;
         }
