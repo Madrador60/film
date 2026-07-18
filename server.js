@@ -219,7 +219,7 @@ function findEpgChannelMatch(input, channels) {
                 if (!name) continue;
                 const compactCandidate = candidate.replace(/\s+/g, '');
                 const compactName = name.replace(/\s+/g, '');
-                let score = compactName === compactCandidate ? 120 : 0;
+                let score = name === candidate ? 140 : compactName === compactCandidate ? 120 : 0;
                 if (!score && (name.startsWith(`${candidate} `) || candidate.startsWith(`${name} `))) score = 88;
                 const nameParts = name.split(' ').filter(Boolean);
                 const common = wantedParts.filter((part) => nameParts.includes(part)).length;
