@@ -397,8 +397,10 @@ function renderCatalog() {
   $('catalogCount').dataset.state = catalogSnapshotState;
   $('catalogCount').title = getCatalogStateDescription(total);
   $('catalogPage').textContent = total ? `/ ${totalPages}` : '/ 1';
-  $('catalogPageInput').value = String(catalogPage);
-  $('catalogPageInput').max = String(totalPages);
+  if ($('catalogPageInput')) {
+    $('catalogPageInput').value = String(catalogPage);
+    $('catalogPageInput').max = String(totalPages);
+  }
   $('catalogPrev').disabled = catalogAutoLoad ? renderedCount <= ITEMS_PER_PAGE : catalogPage <= 1;
   $('catalogNext').disabled = catalogAutoLoad ? renderedCount >= total : catalogPage >= totalPages;
   $('catalogNext').querySelector('span').textContent = catalogAutoLoad
@@ -749,7 +751,7 @@ function goToCatalogPage(value) {
   const totalPages = Math.max(1, Math.ceil(visibleCatalogItems.length / ITEMS_PER_PAGE));
   const nextPage = Math.min(totalPages, Math.max(1, Number(value) || 1));
   if (nextPage === catalogPage) {
-    $('catalogPageInput').value = String(catalogPage);
+    if ($('catalogPageInput')) $('catalogPageInput').value = String(catalogPage);
     return;
   }
   catalogPage = nextPage;

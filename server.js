@@ -87,7 +87,12 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public'), {
     etag: true,
-    maxAge: IS_PRODUCTION ? '1h' : 0
+    maxAge: IS_PRODUCTION ? '1h' : 0,
+    setHeaders: (res, filePath) => {
+        if (path.extname(filePath).toLowerCase() === '.html') {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
 }));
 
 function requireAdminAction(req, res, next) {
