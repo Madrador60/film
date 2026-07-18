@@ -26,6 +26,10 @@ async function main() {
   let browser;
   try {
     await waitForServer();
+    const blockedEmbedResponse = await fetch(`${BASE_URL}/api/direct/resolve?url=${encodeURIComponent('https://livewatch.top/embed/test')}`);
+    const blockedEmbed = await blockedEmbedResponse.json();
+    assert.strictEqual(blockedEmbed.ok, false, 'LiveWatch doit être refusé avant la création d’une iframe');
+    assert.match(blockedEmbed.error || '', /clics publicitaires/i);
     browser = await chromium.launch({ headless: true, ...(chromePath() ? { executablePath: chromePath() } : {}) });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${BASE_URL}/direct.html`, { waitUntil: 'domcontentloaded' });
@@ -133,13 +137,14 @@ async function main() {
           isAllowedSource('https://hesgoaler.com/stream.php?ch=tf1', { catalog: 'iptv-org' }),
           isAllowedSource('https://livelive24.com/live24.php?ch=tf1', { catalog: 'iptv-org' }),
           isAllowedSource('https://cartelive.club/player/1/24', { catalog: 'iptv-org' }),
-          isAllowedSource('https://www.freeshot.sbs/embed/stream-51.php', { catalog: 'iptv-org' })
+          isAllowedSource('https://www.freeshot.sbs/embed/stream-51.php', { catalog: 'iptv-org' }),
+          isAllowedSource('https://livewatch.top/embed/test', { catalog: 'iptv-org' })
         ]
       };
     });
     assert.deepStrictEqual(sourceLabels.names, ['Source 1', 'Source 2']);
     assert(!/CDNLiveTV|IPTV-org/i.test(sourceLabels.text), 'les fournisseurs ne doivent pas être affichés dans le sélecteur');
-    assert.deepStrictEqual(sourceLabels.blocked, [false, false, false, false]);
+    assert.deepStrictEqual(sourceLabels.blocked, [false, false, false, false, false]);
 
     const noSource = await page.evaluate(() => {
       showDirectError({ name: 'TF1', url: 'https://invalid.test/' }, 'Aucun flux public lisible.');

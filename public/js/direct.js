@@ -7,7 +7,7 @@ const DIRECT_HEALTH_KEY = 'madrador:direct:health-v1';
 const DIRECT_HEALTH_TTL = 6 * 60 * 60 * 1000;
 const DIRECT_BATCH_SIZE = 72;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'event.vedge.infomaniak.com'];
-const BLOCKED_DIRECT_HOSTS = ['hesgoaler.com', 'livelive24.com', 'cartelive.club', 'freeshot.sbs'];
+const BLOCKED_DIRECT_HOSTS = ['hesgoaler.com', 'livelive24.com', 'cartelive.club', 'freeshot.sbs', 'livewatch.top'];
 const DIRECT_LANGUAGE_LABELS = {
   fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien',
   bul: 'Bulgare', ell: 'Grec', fas: 'Persan', gsw: 'Suisse allemand', kur: 'Kurde', pus: 'Pachto',

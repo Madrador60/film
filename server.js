@@ -313,6 +313,21 @@ function normalizeDirectUrl(value) {
     }
 }
 
+const BLOCKED_DIRECT_EMBED_HOSTS = new Set([
+    'hesgoaler.com',
+    'livelive24.com',
+    'cartelive.club',
+    'freeshot.sbs',
+    'livewatch.top'
+]);
+
+function isBlockedDirectEmbed(value) {
+    const normalized = normalizeDirectUrl(value);
+    if (!normalized) return false;
+    const hostname = new URL(normalized).hostname.replace(/^www\./, '').toLowerCase();
+    return [...BLOCKED_DIRECT_EMBED_HOSTS].some((host) => hostname === host || hostname.endsWith(`.${host}`));
+}
+
 function isAllowedDirectHealthUrl(value) {
     const normalized = normalizeDirectUrl(value);
     if (!normalized) return false;
@@ -427,6 +442,16 @@ function buildDirectResponse(input = {}) {
         return {
             ok: false,
             error: 'Aucune URL http/https valide trouvée.',
+            url: '',
+            type: '',
+            filename: input.filename || ''
+        };
+    }
+
+    if (isBlockedDirectEmbed(url)) {
+        return {
+            ok: false,
+            error: 'Ce lecteur tiers exige des clics publicitaires et ne fournit pas de flux public direct intégrable. Utilise une URL HLS .m3u8 publique et autorisée.',
             url: '',
             type: '',
             filename: input.filename || ''
