@@ -133,6 +133,8 @@ async function main() {
       return {
         names: [...document.querySelectorAll('#directSourceList b')].map((node) => node.textContent),
         text: document.querySelector('#directSourceList')?.textContent || '',
+        summary: document.querySelector('#directSourceSummary')?.textContent || '',
+        nextDisabled: document.querySelector('#directNextSource')?.disabled,
         blocked: [
           isAllowedSource('https://hesgoaler.com/stream.php?ch=tf1', { catalog: 'iptv-org' }),
           isAllowedSource('https://livelive24.com/live24.php?ch=tf1', { catalog: 'iptv-org' }),
@@ -143,6 +145,8 @@ async function main() {
       };
     });
     assert.deepStrictEqual(sourceLabels.names, ['Source 1', 'Source 2']);
+    assert.strictEqual(sourceLabels.summary, '2 sources publiques disponibles');
+    assert.strictEqual(sourceLabels.nextDisabled, false);
     assert(!/CDNLiveTV|IPTV-org/i.test(sourceLabels.text), 'les fournisseurs ne doivent pas être affichés dans le sélecteur');
     assert.deepStrictEqual(sourceLabels.blocked, [false, false, false, false, false]);
 

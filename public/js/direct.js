@@ -496,29 +496,31 @@ async function loadDirectChannels(force = false) {
   const button = $('directChannelsReload');
   button?.classList.add('loading');
   if (button) button.disabled = true;
+  if (force) {
+    directHealthQueue.length = 0;
+    directHealthCache.clear();
+    directSourceStates.clear();
+    localStorage.removeItem(DIRECT_HEALTH_KEY);
+    localStorage.removeItem(DIRECT_CHANNELS_KEY);
+  }
   setChannelsState('Préparation des chaînes françaises...');
 
   try {
-    let cdnChannels = [];
-    let publicMadradorChannels = [];
-    let iptvOrgChannels = [];
-    try {
+    const cdnTask = (async () => {
       const response = await fetch('/api/direct/channels', { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok || !data?.ok) throw new Error(data?.error || 'API CDNLiveTV indisponible');
       const frenchApiChannels = getFrenchChannels(Array.isArray(data.channels) ? data.channels : []);
-      cdnChannels = groupChannels(frenchApiChannels.map((channel) => ({
+      return groupChannels(frenchApiChannels.map((channel) => ({
         ...channel,
         category: channel.category || classifyChannel(channel),
         logo: getReliableChannelLogo(channel) || channel.image
       })));
-    } catch (apiError) {
-      console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
-    }
-    try {
+    })();
+    const localTask = (async () => {
       const response = await fetch('./data/madrador-public-channels.json', { cache: force ? 'reload' : 'default' });
       const data = await response.json();
-      publicMadradorChannels = groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
+      return groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
         name: channel.channel_name,
         category: channel.category,
         url: channel.url,
@@ -526,21 +528,27 @@ async function loadDirectChannels(force = false) {
         code: 'fr',
         country: 'FR'
       })));
-    } catch (publicSourceError) {
-      console.warn('[DIRECT] Sources publiques Madrador indisponibles.', publicSourceError);
-    }
-    try {
-      iptvOrgChannels = await loadIptvOrgChannels(force);
-    } catch (iptvOrgError) {
-      console.warn('[DIRECT] IPTV-org indisponible, catalogue Madrador conservé.', iptvOrgError);
-      showToast('IPTV-org indisponible : dernière liste Madrador conservée');
-    }
+    })();
+    const [cdnResult, localResult, iptvResult] = await Promise.allSettled([
+      cdnTask,
+      localTask,
+      loadIptvOrgChannels(force)
+    ]);
+    const cdnChannels = cdnResult.status === 'fulfilled' ? cdnResult.value : [];
+    const publicMadradorChannels = localResult.status === 'fulfilled' ? localResult.value : [];
+    const iptvOrgChannels = iptvResult.status === 'fulfilled' ? iptvResult.value : [];
+    if (cdnResult.status === 'rejected') console.warn('[DIRECT] CDNLiveTV indisponible, autres catalogues conservés.', cdnResult.reason);
+    if (localResult.status === 'rejected') console.warn('[DIRECT] Sources publiques Madrador indisponibles.', localResult.reason);
+    if (iptvResult.status === 'rejected') console.warn('[DIRECT] IPTV-org indisponible, autres catalogues conservés.', iptvResult.reason);
     const madradorChannels = mergeGroupedChannels(cdnChannels, publicMadradorChannels);
     directChannels = mergeGroupedChannels(madradorChannels, iptvOrgChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
     renderDirectChannels();
-    setHint(`${directChannels.length} chaînes chargées${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
+    const sourceCount = directChannels.reduce((total, channel) => total + (channel.sources?.length || 0), 0);
+    const multiSourceCount = directChannels.filter((channel) => (channel.sources?.length || 0) > 1).length;
+    setHint(`${directChannels.length} chaînes · ${sourceCount} sources publiques · ${multiSourceCount} chaînes avec plusieurs sources${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
+    if (force) showToast('Catalogues Direct reconnectés');
     return directChannels;
   } catch (error) {
     console.error(error);
@@ -1181,6 +1189,11 @@ function renderChannelSources(channel) {
   const list = $('directSourceList');
   const sources = channel?.sources || [];
   panel?.classList.toggle('hidden', !sources.length);
+  if ($('directSourceSummary')) {
+    $('directSourceSummary').textContent = `${sources.length} source${sources.length > 1 ? 's' : ''} publique${sources.length > 1 ? 's' : ''} disponible${sources.length > 1 ? 's' : ''}`;
+  }
+  if ($('directNextSource')) $('directNextSource').disabled = sources.length < 2;
+  if ($('directReloadSource')) $('directReloadSource').disabled = sources.length === 0;
   if (!list) return;
   list.innerHTML = sources.map((source, index) => `
     <button class="direct-source-choice ${index === selectedDirectSourceIndex ? 'active' : ''}" type="button" data-source-index="${index}" aria-label="Lire ${escapeHtml(channel.name || 'la chaîne')} avec ${getDirectSourceDisplayName(index)}">
