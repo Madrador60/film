@@ -123,8 +123,11 @@ const FULL_CATALOG_PAGE_LIMITS = {
 const DEFAULT_ALL_PAGE_LIMIT = FULL_CATALOG_PAGE_LIMITS.movie;
 const MAX_ALL_PAGE_LIMIT = Math.max(FULL_CATALOG_PAGE_LIMITS.movie, FULL_CATALOG_PAGE_LIMITS.series);
 const CATALOG_BATCH_SIZE = Math.max(1, Math.min(Number(process.env.CATALOG_BATCH_SIZE) || 2, 4));
-const PERSISTENT_CACHE_DIR = path.join(__dirname, '.cache');
+const PERSISTENT_CACHE_DIR = process.env.CATALOG_CACHE_DIR
+    ? path.resolve(process.env.CATALOG_CACHE_DIR)
+    : path.join(__dirname, '.cache');
 const PERSISTENT_DATA_CACHE_DIR = path.join(PERSISTENT_CACHE_DIR, 'data');
+const BUNDLED_CATALOG_DIR = path.join(__dirname, 'data', 'catalog');
 const PERSISTENT_CATALOG_DURATION = 12 * 60 * 60 * 1000;
 const CATALOG_CACHE_SCHEMA_VERSION = 2;
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
@@ -673,6 +676,34 @@ function getPersistentCatalogPath(kind, limit) {
 
 function getPersistentCatalogCheckpointPath(kind, limit) {
     return path.join(PERSISTENT_CACHE_DIR, `${kind}-catalog-${limit}.checkpoint.json`);
+}
+
+function getBundledCatalogPath(kind, limit) {
+    return path.join(BUNDLED_CATALOG_DIR, `${kind}-catalog-${limit}.json`);
+}
+
+function installBundledCatalogSeeds() {
+    ensurePersistentCacheDir();
+
+    for (const [kind, limit] of Object.entries(FULL_CATALOG_PAGE_LIMITS)) {
+        const target = getPersistentCatalogPath(kind, limit);
+        const bundled = getBundledCatalogPath(kind, limit);
+        if (fs.existsSync(target) || !fs.existsSync(bundled)) continue;
+
+        try {
+            const parsed = JSON.parse(fs.readFileSync(bundled, 'utf8'));
+            if (parsed?.schemaVersion !== CATALOG_CACHE_SCHEMA_VERSION || parsed?.data?.complete !== true) {
+                throw new Error('snapshot incomplet ou incompatible');
+            }
+
+            parsed.savedAt = Date.now();
+            parsed.data.generatedAt = parsed.data.generatedAt || new Date().toISOString();
+            fs.writeFileSync(target, JSON.stringify(parsed), 'utf8');
+            console.log(`[CACHE] Catalogue ${kind} amorce avec ${parsed.data.total || parsed.data.items?.length || 0} titres.`);
+        } catch (error) {
+            console.log(`[CACHE] Amorçage catalogue impossible (${kind}) : ${error.message}`);
+        }
+    }
 }
 
 function readPersistentCatalog(kind, limit, options = {}) {
@@ -2975,6 +3006,7 @@ setInterval(() => {
 
 // Démarrage
 app.listen(PORT, "0.0.0.0", async () => {
+    installBundledCatalogSeeds();
     console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
     const networkUrls = getLocalNetworkUrls(PORT);
     if (networkUrls.length) {
