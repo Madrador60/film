@@ -5,7 +5,7 @@ const { parseM3u, normalizeChannelName } = require('./iptvOrgService');
 const API_BASE = 'https://iptv-org.github.io/api';
 const PLAYLIST_URL = 'https://iptv-org.github.io/iptv/languages/fra.m3u';
 const RESOURCES = ['channels', 'feeds', 'logos', 'streams', 'guides', 'categories', 'languages', 'countries', 'blocklist'];
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function normalizeCategory(values = [], name = '') {
     const value = `${values.join(' ')} ${name}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -175,7 +175,8 @@ function buildCatalog(api, playlists = []) {
         const exact = feeds.find((feed) => String(feed.id).toLowerCase() === String(requestedFeed || '').toLowerCase());
         const main = feeds.find((feed) => feed.is_main) || feeds[0] || null;
         const selected = exact || main;
-        const groupedId = 'main';
+        const splitByLanguage = /^france24\.fr$/i.test(channel.id) && selected;
+        const groupedId = splitByLanguage ? String(selected.id || 'main') : 'main';
         return { selected, groupedId, feeds };
     }
 
@@ -183,28 +184,37 @@ function buildCatalog(api, playlists = []) {
         const { selected, groupedId, feeds } = resolveFeed(channel, requestedFeed);
         const key = feedKey(channel.id, groupedId);
         if (!entities.has(key)) {
-            const languages = feeds.flatMap((feed) => feed.languages || []);
+            const entityFeeds = groupedId === 'main' ? feeds : [selected].filter(Boolean);
+            const languages = entityFeeds.flatMap((feed) => feed.languages || []);
             const uniqueLanguages = [...new Set(languages)];
+            const broadcastAreas = [...new Set(entityFeeds.flatMap((feed) => feed.broadcast_area || []).filter(Boolean))];
+            const isFrenchLanguage = uniqueLanguages.includes('fra');
+            const scope = channel.country === 'FR' && isFrenchLanguage
+                ? 'france'
+                : channel.country !== 'FR' && isFrenchLanguage
+                    ? 'francophone'
+                    : 'international';
             const guide = (guidesByChannel.get(channel.id.toLowerCase()) || [])
                 .sort((a, b) => Number(String(b.feed || '').toLowerCase() === String(selected?.id || '').toLowerCase()) - Number(String(a.feed || '').toLowerCase() === String(selected?.id || '').toLowerCase()))[0] || null;
             entities.set(key, {
                 id: `iptv-org-${channel.id}${groupedId === 'main' ? '' : `@${groupedId}`}`,
                 channelId: channel.id,
                 feedId: selected?.id || null,
-                name: channel.name,
+                name: groupedId === 'main' ? channel.name : `${channel.name} · ${uniqueLanguages.map((code) => languageNames.get(code) || code).join(', ')}`,
                 altNames: [...new Set([...(channel.alt_names || []), ...(selected?.alt_names || [])])],
                 country: channel.country,
                 countryName: countryNames.get(channel.country) || channel.country,
                 language: uniqueLanguages[0] || '',
                 languages: uniqueLanguages,
                 languageNames: uniqueLanguages.map((code) => languageNames.get(code) || code),
+                broadcastAreas,
                 categories: (channel.categories || []).map((id) => categoryNames.get(id) || id),
                 category: normalizeCategory(channel.categories || [], channel.name),
                 logo: chooseLogo(logosByChannel.get(channel.id.toLowerCase()) || [], '', selected?.id),
                 website: channel.website || '',
                 isNsfw: false,
                 guide: guide ? { site: guide.site, siteId: guide.site_id, name: guide.site_name, lang: guide.lang, sources: guide.sources || [] } : null,
-                scopes: [channel.country === 'FR' ? 'france' : uniqueLanguages.includes('fra') ? 'francophone' : 'international'],
+                scopes: [scope],
                 source: 'iptv-org-api',
                 sources: []
             });

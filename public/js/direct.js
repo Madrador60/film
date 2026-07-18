@@ -5,6 +5,12 @@ const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_SOURCE_PREF_KEY = 'madrador:direct:source-preferences';
 const DIRECT_BATCH_SIZE = 500;
 const ALLOWED_HOSTS = ['cdnlivetv.tv', 'hesgoaler.com', 'event.vedge.infomaniak.com'];
+const DIRECT_LANGUAGE_LABELS = {
+  fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien',
+  bul: 'Bulgare', ell: 'Grec', fas: 'Persan', gsw: 'Suisse allemand', kur: 'Kurde', pus: 'Pachto',
+  prd: 'Dari', por: 'Portugais', rus: 'Russe', tur: 'Turc', nld: 'Néerlandais', ron: 'Roumain',
+  pol: 'Polonais', ukr: 'Ukrainien', ber: 'Berbère', wol: 'Wolof'
+};
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
@@ -24,6 +30,7 @@ let directPlaybackToken = 0;
 const attemptedDirectSources = new Set();
 const directSourceStates = new Map();
 let iptvOrgLastSyncLabel = '';
+let directStatusRefreshTimer = 0;
 
 window.addEventListener('DOMContentLoaded', () => {
   $('mobileMenu')?.addEventListener('click', () => $('sidebar')?.classList.toggle('open'));
@@ -225,15 +232,16 @@ function playUrl(url, direct = {}, lifecycle = {}) {
   const ready = () => {
     if (settled || playbackToken !== directPlaybackToken) return;
     settled = true;
+    window.clearTimeout(readinessTimer);
     lifecycle.onReady?.(Date.now() - startedAt);
   };
   const fail = (message) => {
     if (settled || playbackToken !== directPlaybackToken) return;
     settled = true;
+    window.clearTimeout(readinessTimer);
     lifecycle.onFailure?.(message);
   };
   const readinessTimer = window.setTimeout(() => fail('Le lecteur ne répond pas dans le délai prévu.'), Number(lifecycle.timeout) || 14000);
-  const clearReadinessTimer = () => window.clearTimeout(readinessTimer);
   const type = direct.type || getDirectType(url);
 
   if (type === 'hls' || type === 'video') {
@@ -247,15 +255,27 @@ function playUrl(url, direct = {}, lifecycle = {}) {
 
     if (type === 'hls' && window.Hls?.isSupported()) {
       activeHls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      let manifestParsed = false;
+      let fragmentLoaded = false;
+      let baselineTime = 0;
+      let mediaRecoveryAttempted = false;
+      const confirmProgress = () => {
+        if (!manifestParsed || !fragmentLoaded) return;
+        if (Number(video.currentTime) > baselineTime + 0.2) ready();
+      };
+      video.addEventListener('timeupdate', confirmProgress);
       activeHls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (!data?.fatal) return;
         if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
-          clearReadinessTimer();
           fail('Flux HLS indisponible.');
         } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
-          activeHls.recoverMediaError();
+          if (!mediaRecoveryAttempted) {
+            mediaRecoveryAttempted = true;
+            activeHls.recoverMediaError();
+          } else {
+            fail('Le flux HLS utilise un format vidéo non pris en charge.');
+          }
         } else {
-          clearReadinessTimer();
           destroyActiveHls();
           fail('Le lecteur HLS a rencontré une erreur fatale.');
         }
@@ -263,14 +283,26 @@ function playUrl(url, direct = {}, lifecycle = {}) {
       activeHls.loadSource(url);
       activeHls.attachMedia(video);
       activeHls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-        clearReadinessTimer();
-        ready();
+        manifestParsed = true;
+        baselineTime = Number(video.currentTime) || 0;
         video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
+      });
+      activeHls.on(window.Hls.Events.FRAG_LOADED, () => {
+        fragmentLoaded = true;
+        baselineTime = Number(video.currentTime) || 0;
       });
     } else {
       video.src = url;
-      video.addEventListener('canplay', () => { clearReadinessTimer(); ready(); }, { once: true });
-      video.addEventListener('error', () => { clearReadinessTimer(); fail('Flux vidéo indisponible.'); }, { once: true });
+      let mediaLoaded = false;
+      let baselineTime = 0;
+      video.addEventListener('loadeddata', () => {
+        mediaLoaded = true;
+        baselineTime = Number(video.currentTime) || 0;
+      }, { once: true });
+      video.addEventListener('timeupdate', () => {
+        if (mediaLoaded && Number(video.currentTime) > baselineTime + 0.2) ready();
+      });
+      video.addEventListener('error', () => fail('Flux vidéo indisponible.'), { once: true });
       video.play().catch(() => setHint('Flux prêt. Appuie sur Lecture pour démarrer.'));
     }
   } else {
@@ -282,8 +314,10 @@ function playUrl(url, direct = {}, lifecycle = {}) {
     frame.allowFullscreen = true;
     frame.referrerPolicy = 'no-referrer';
     frame.sandbox = 'allow-scripts allow-same-origin allow-forms allow-presentation';
-    frame.addEventListener('load', () => { clearReadinessTimer(); ready(); }, { once: true });
-    frame.addEventListener('error', () => { clearReadinessTimer(); fail('Lecteur intégré indisponible.'); }, { once: true });
+    frame.addEventListener('load', () => {
+      setHint('Page du lecteur chargée, vérification de la lecture en cours...');
+    }, { once: true });
+    frame.addEventListener('error', () => fail('Lecteur intégré indisponible.'), { once: true });
     screen.appendChild(frame);
   }
 
@@ -579,9 +613,7 @@ function renderDirectChannels() {
   const favoriteKeys = getDirectFavorites();
   const recentOrder = new Map(getRecent().map((item, index) => [getChannelKey(item), index]));
   const viewChannels = normalized
-    .filter((channel) => activeDirectView !== 'france' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('france'))
-    .filter((channel) => activeDirectView !== 'francophone' || channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone'))
-    .filter((channel) => activeDirectView !== 'international' || channel.catalog === 'iptv-org' && channel.scopes?.includes('international'))
+    .filter((channel) => !['france', 'francophone', 'international'].includes(activeDirectView) || getDirectChannelScope(channel) === activeDirectView)
     .filter((channel) => activeDirectView !== 'functional' || (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state)))
     .filter((channel) => activeDirectView !== 'favorites' || favoriteKeys.has(getChannelKey(channel)))
     .filter((channel) => activeDirectView !== 'recent' || recentOrder.has(getChannelKey(channel)));
@@ -700,10 +732,12 @@ async function runDirectHealthQueue() {
   try {
     const response = await fetch(`/api/direct/health?url=${encodeURIComponent(url)}`, { cache: 'no-store' });
     const health = await response.json();
-    directHealthCache.set(url, health);
+    updateDirectSourceState(url, health.state || 'unavailable', health.error || '');
     paintDirectHealth(card, health);
   } catch {
-    paintDirectHealth(card, { state: 'unavailable', checkedAt: new Date().toISOString() });
+    const health = { state: 'unavailable', checkedAt: new Date().toISOString() };
+    updateDirectSourceState(url, health.state, 'Vérification impossible');
+    paintDirectHealth(card, health);
   } finally {
     window.setTimeout(() => {
       directHealthRunning = false;
@@ -727,9 +761,9 @@ function paintDirectHealth(card, health) {
 function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
   const counts = {
     all: channels.length,
-    france: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('france')).length,
-    francophone: channels.filter((channel) => channel.catalog !== 'iptv-org' || channel.scopes?.includes('francophone')).length,
-    international: channels.filter((channel) => channel.catalog === 'iptv-org' && channel.scopes?.includes('international')).length,
+    france: channels.filter((channel) => getDirectChannelScope(channel) === 'france').length,
+    francophone: channels.filter((channel) => getDirectChannelScope(channel) === 'francophone').length,
+    international: channels.filter((channel) => getDirectChannelScope(channel) === 'international').length,
     functional: channels.filter((channel) => (channel.sources || []).some((source) => ['available', 'slow'].includes(source.status) || ['available', 'slow'].includes(directHealthCache.get(source.url)?.state))).length,
     favorites: channels.filter((channel) => favoriteKeys.has(getChannelKey(channel))).length,
     recent: channels.filter((channel) => recentOrder.has(getChannelKey(channel))).length
@@ -742,6 +776,19 @@ function renderDirectViewTabs(channels, favoriteKeys, recentOrder) {
   });
 }
 
+function getDirectChannelScope(channel) {
+  if (Array.isArray(channel?.scopes) && channel.scopes.length) {
+    if (channel.scopes.includes('france')) return 'france';
+    if (channel.scopes.includes('francophone')) return 'francophone';
+    return 'international';
+  }
+  const country = String(channel?.country || channel?.code || '').trim().toUpperCase();
+  const languages = channel?.languages || [];
+  if (country === 'FR' || country === 'FRANCE') return 'france';
+  if (languages.includes('fra')) return 'francophone';
+  return 'international';
+}
+
 function renderDirectMetadataFilters(channels) {
   const fill = (id, values, labels = {}) => {
     const select = $(id);
@@ -752,13 +799,14 @@ function renderDirectMetadataFilters(channels) {
   };
   const languages = [...new Set(channels.flatMap((channel) => channel.languages || []).filter(Boolean))].sort();
   const qualities = [...new Set(channels.flatMap((channel) => (channel.sources || []).map((source) => String(source.quality || '').toLowerCase())).filter(Boolean))].sort();
-  fill('directLanguageFilter', languages, { fra: 'Français', eng: 'Anglais', ara: 'Arabe', deu: 'Allemand', spa: 'Espagnol', ita: 'Italien' });
+  fill('directLanguageFilter', languages, DIRECT_LANGUAGE_LABELS);
   fill('directQualityFilter', qualities);
 }
 
 function channelMatchesAvailability(channel, availability) {
   const sources = channel.sources || [];
   if (availability === 'available') return sources.some((source) => ['available', 'slow'].includes(directHealthCache.get(source.url)?.state || source.status));
+  if (availability === 'unavailable') return sources.length > 0 && sources.every((source) => (directHealthCache.get(source.url)?.state || source.status) === 'unavailable');
   if (availability === 'geo') return sources.some((source) => source.geoBlocked);
   if (availability === 'intermittent') return sources.some((source) => source.intermittent);
   if (availability === 'unchecked') return sources.some((source) => !directHealthCache.has(source.url) && ['unchecked', 'idle'].includes(source.status || 'idle'));
@@ -840,7 +888,8 @@ function mergeGroupedChannels(...catalogs) {
   const merged = new Map();
   catalogs.flat().forEach((channel) => {
     const nameKey = getChannelMergeKey(channel?.name);
-    const apiKey = channel?.catalog === 'iptv-org' && channel.channelId ? `iptv:${String(channel.channelId).toLowerCase()}` : '';
+    const feedSuffix = channel?.feedId && channel.feedId !== 'main' ? `@${String(channel.feedId).toLowerCase()}` : '';
+    const apiKey = channel?.catalog === 'iptv-org' && channel.channelId ? `iptv:${String(channel.channelId).toLowerCase()}${feedSuffix}` : '';
     const key = apiKey && !merged.has(nameKey) ? apiKey : nameKey;
     if (!key) return;
     if (!merged.has(key)) {
@@ -879,7 +928,7 @@ function getChannelMergeKey(name) {
 function getSourcePriority(source) {
   const provider = String(source?.provider || '').toLowerCase();
   if (provider.includes('cdnlivetv')) return 0;
-  if (provider.includes('hesgoaler')) return 6;
+  if (provider.includes('hesgoaler')) return 90;
   if (provider.includes('iptv-org')) return 20;
   return 10;
 }
@@ -1009,7 +1058,15 @@ async function playChannel(channel) {
   if (Array.isArray(channel.sources) && channel.sources.length) {
     attemptedDirectSources.clear();
     const preferredUrl = getDirectSourcePreferences()[getChannelKey(channel)];
-    selectedDirectSourceIndex = Math.max(0, channel.sources.findIndex((source) => source.url === preferredUrl));
+    const preferredIndex = channel.sources.findIndex((source) => source.url === preferredUrl && getKnownDirectSourceState(source) !== 'unavailable');
+    const availableIndex = channel.sources.findIndex((source) => getKnownDirectSourceState(source) !== 'unavailable');
+    selectedDirectSourceIndex = preferredIndex >= 0 ? preferredIndex : availableIndex;
+    if (selectedDirectSourceIndex < 0) {
+      setCurrentChannel(channel);
+      showDirectError(channel, 'Aucun flux public autorisé et lisible n’est disponible pour cette chaîne.');
+      renderChannelSources(channel);
+      return;
+    }
     playChannelSource(channel, selectedDirectSourceIndex);
     return;
   }
@@ -1039,6 +1096,10 @@ async function playChannel(channel) {
   saveRecent(channel.url, { ...channel, title: channel.name || channel.title });
   renderRecent();
   refreshDiscoveryAfterHistory();
+}
+
+function getKnownDirectSourceState(source) {
+  return directSourceStates.get(source?.url)?.state || directHealthCache.get(source?.url)?.state || source?.status || 'unchecked';
 }
 
 function focusDirectPlayer() {
@@ -1138,7 +1199,29 @@ function handleDirectSourceFailure(channel, source, index, message) {
 }
 
 function updateDirectSourceState(url, state, error = '') {
-  directSourceStates.set(url, { state, error, checkedAt: new Date().toISOString() });
+  const checkedAt = new Date().toISOString();
+  directSourceStates.set(url, { state, error, checkedAt });
+  directHealthCache.set(url, { state, error, checkedAt });
+  directChannels.forEach((channel) => {
+    (channel.sources || []).forEach((source) => {
+      if (source.url !== url) return;
+      source.status = state;
+      source.checkedAt = checkedAt;
+      source.error = error;
+    });
+  });
+  scheduleDirectStatusRefresh();
+}
+
+function scheduleDirectStatusRefresh() {
+  window.clearTimeout(directStatusRefreshTimer);
+  directStatusRefreshTimer = window.setTimeout(() => {
+    const normalized = directChannels.map((channel) => ({ ...channel, category: channel.category || classifyChannel(channel) }));
+    renderDirectViewTabs(normalized, getDirectFavorites(), new Map(getRecent().map((item, index) => [getChannelKey(item), index])));
+    if (currentDirectChannel) renderChannelSources(currentDirectChannel);
+    const availability = $('directAvailabilityFilter')?.value || '';
+    if (activeDirectView === 'functional' || ['available', 'unavailable'].includes(availability)) renderDirectChannels();
+  }, 80);
 }
 
 function getDirectSourceStateLabel(source) {
@@ -1325,17 +1408,27 @@ function showDirectLoading(name) {
 }
 
 function showDirectError(channel, message) {
+  const official = getOfficialDirectLink(channel);
   $('directScreen').innerHTML = `
     <div class="direct-placeholder direct-error-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
-      <h2>Flux indisponible</h2>
+      <h2>Aucune source directe disponible</h2>
       <p>${escapeHtml(message || 'Cette chaîne ne répond pas pour le moment.')}</p>
-      <a class="btn glass" href="${escapeHtml(channel.url)}" target="_blank" rel="noopener noreferrer" data-allow-popup="true">
-        <i class="fa-solid fa-up-right-from-square"></i><span>Ouvrir le lecteur externe</span>
-      </a>
+      ${official ? `<a class="btn glass" href="${escapeHtml(official.url)}" target="_blank" rel="noopener noreferrer" data-allow-popup="true"><i class="fa-solid fa-up-right-from-square"></i><span>${escapeHtml(official.label)}</span></a>` : ''}
     </div>`;
   setHint(`Échec : ${channel.name || channel.title || 'chaîne'}`);
   showToast('Flux momentanément indisponible');
+}
+
+function getOfficialDirectLink(channel) {
+  const name = String(channel?.name || channel?.title || '').toLowerCase();
+  if (/\btf1\b/.test(name)) return { url: 'https://www.tf1.fr/tf1/direct', label: 'Regarder sur TF1+' };
+  if (/bfm\s*tv/.test(name)) return { url: 'https://www.bfmtv.com/en-direct/', label: 'Regarder sur BFM TV' };
+  if (/france\s*2/.test(name)) return { url: 'https://www.france.tv/france-2/direct.html', label: 'Regarder sur france.tv' };
+  if (/franceinfo/.test(name)) return { url: 'https://www.franceinfo.fr/en-direct/tv.html', label: 'Regarder sur franceinfo' };
+  if (/\barte\b/.test(name)) return { url: 'https://www.arte.tv/fr/direct/', label: 'Regarder sur ARTE' };
+  if (/france\s*24/.test(name)) return { url: 'https://www.france24.com/fr/direct', label: 'Regarder sur France 24' };
+  return null;
 }
 
 function isCdnLivePlayerUrl(value) {

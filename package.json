@@ -11,7 +11,8 @@
     "audit:all": "npm run audit:ui && npm run audit:flows",
     "benchmark": "node scripts/benchmark-performance.js",
     "sync:iptv-org": "node scripts/sync-iptv-org.js",
-    "test:iptv-org": "node scripts/test-iptv-org.js"
+    "test:iptv-org": "node scripts/test-iptv-org.js",
+    "test:direct": "node scripts/test-direct-playback.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
