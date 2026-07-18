@@ -173,7 +173,7 @@ const DIRECT_EPG_ALIASES = {
     'france 4': ['France 4', 'France4'],
     'france 5': ['France 5', 'France5'],
     'france 24': ['France 24'],
-    franceinfo: ['Franceinfo', 'France Info'],
+    franceinfo: ['Franceinfo', 'franceinfo:'],
     lci: ['LCI'],
     m6: ['M6'],
     tf1: ['TF1'],
