@@ -1,9 +1,9 @@
 const DIRECT_KEY = 'madrador:direct:recent';
-const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-v3';
+const DIRECT_CHANNELS_KEY = 'madrador:direct:channels:madrador-no-livelive-v4';
 const DIRECT_PLAYLIST_KEY = 'madrador:direct:playlist';
 const DIRECT_FAVORITES_KEY = 'madrador:direct:favorites';
 const DIRECT_BATCH_SIZE = 500;
-const ALLOWED_HOSTS = ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com', 'event.vedge.infomaniak.com'];
+const ALLOWED_HOSTS = ['cdnlivetv.tv', 'hesgoaler.com', 'event.vedge.infomaniak.com'];
 const $ = (id) => document.getElementById(id);
 let directChannels = [];
 let directPlaylist = [];
@@ -456,7 +456,6 @@ async function loadDirectChannels(force = false) {
 
   try {
     let cdnChannels = [];
-    let liveLiveChannels = [];
     let hesgoalerChannels = [];
     let publicMadradorChannels = [];
     let iptvOrgChannels = [];
@@ -472,20 +471,6 @@ async function loadDirectChannels(force = false) {
       })));
     } catch (apiError) {
       console.warn('[DIRECT] CDNLiveTV indisponible, catalogue local conservé.', apiError);
-    }
-    try {
-      const response = await fetch('./data/livelive24-chaines-france.json', { cache: force ? 'reload' : 'default' });
-      const data = await response.json();
-      liveLiveChannels = groupChannels((Array.isArray(data) ? data : []).map((channel) => ({
-        name: channel.channel_name,
-        category: channel.category,
-        url: channel.url,
-        logo: channel.image,
-        code: 'fr',
-        country: 'FR'
-      })));
-    } catch (liveError) {
-      console.warn('[DIRECT] LiveLive24 indisponible, CDNLiveTV conservé.', liveError);
     }
     try {
       const response = await fetch('./data/hesgoaler-chaines-france.json', { cache: force ? 'reload' : 'default' });
@@ -521,7 +506,7 @@ async function loadDirectChannels(force = false) {
       console.warn('[DIRECT] IPTV-org indisponible, catalogue Madrador conservé.', iptvOrgError);
       showToast('IPTV-org indisponible : dernière liste Madrador conservée');
     }
-    const madradorChannels = mergeGroupedChannels(cdnChannels, liveLiveChannels, hesgoalerChannels, publicMadradorChannels);
+    const madradorChannels = mergeGroupedChannels(cdnChannels, hesgoalerChannels, publicMadradorChannels);
     directChannels = mergeGroupedChannels(madradorChannels, iptvOrgChannels);
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes francophones`;
@@ -764,7 +749,6 @@ function detectProvider(url) {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, '');
     if (hostname === 'cdnlivetv.tv' || hostname.endsWith('.cdnlivetv.tv')) return 'CDNLiveTV';
-    if (hostname === 'livelive24.com' || hostname.endsWith('.livelive24.com')) return 'LiveLive24';
     if (hostname === 'hesgoaler.com' || hostname.endsWith('.hesgoaler.com')) return 'Hesgoaler';
     if (hostname === 'event.vedge.infomaniak.com') return 'Infomaniak';
     return hostname;
@@ -850,7 +834,6 @@ function getChannelMergeKey(name) {
 function getSourcePriority(source) {
   const provider = String(source?.provider || '').toLowerCase();
   if (provider.includes('cdnlivetv')) return 0;
-  if (provider.includes('livelive24')) return 5;
   if (provider.includes('hesgoaler')) return 6;
   if (provider.includes('iptv-org')) return 20;
   return 10;
