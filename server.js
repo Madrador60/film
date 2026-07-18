@@ -262,7 +262,7 @@ function isAllowedDirectHealthUrl(value) {
     const normalized = normalizeDirectUrl(value);
     if (!normalized) return false;
     const hostname = new URL(normalized).hostname.toLowerCase();
-    return ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com'].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ||
+    return ['cdnlivetv.tv', 'livelive24.com', 'hesgoaler.com', 'event.vedge.infomaniak.com'].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ||
         iptvOrgService.hasSourceUrl(normalized);
 }
 
