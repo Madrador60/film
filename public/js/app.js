@@ -681,7 +681,8 @@ function renderHomeRows() {
     .filter((row) => row.items.length);
   const rowDefs = currentTab === 'home' ? availableRows.slice(0, 4) : availableRows;
 
-  lastItems = dedupeMediaItems(currentTab === 'movies' ? movies : currentTab === 'series' ? series : [...movies, ...series]);
+  lastItems = dedupeMediaItems(currentTab === 'movies' ? movies : currentTab === 'series' ? series : [...movies, ...series])
+    .slice(0, ITEMS_PER_PAGE);
   renderRows(rowDefs);
 }
 

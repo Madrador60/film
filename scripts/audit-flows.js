@@ -130,6 +130,9 @@ async function run() {
     }
 
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => typeof lastItems !== 'undefined' && lastItems.length > 0, null, { timeout: 15000 });
+    const homeBatch = await page.evaluate(() => ({ size: ITEMS_PER_PAGE, visible: lastItems.length }));
+    if (homeBatch.size !== 24 || homeBatch.visible > 24) throw new Error(`L’accueil annonce encore ${homeBatch.visible} titres pour un lot de ${homeBatch.size}.`);
     const trailerSafety = await page.evaluate(() => ({
       valid: normalizeQuickTrailer('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
       local: normalizeQuickTrailer('/player.html?id=15127072'),
