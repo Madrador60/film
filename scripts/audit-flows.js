@@ -51,8 +51,15 @@ async function expectCatalogSnapshot() {
 
 async function expectTvGuide() {
   const response = await fetch(`${BASE_URL}/api/direct/epg?channel=France%202&channelId=France2.fr&aliases=France2`);
-  if (!response.ok) throw new Error(`/api/direct/epg: HTTP ${response.status}`);
   const data = await response.json();
+  if (response.status === 502) {
+    if (data.ok !== false || !Array.isArray(data.items)) {
+      throw new Error('/api/direct/epg: repli fournisseur invalide');
+    }
+    console.warn('Guide TV externe temporairement indisponible : repli local valide.');
+    return;
+  }
+  if (!response.ok) throw new Error(`/api/direct/epg: HTTP ${response.status}`);
   if (data.ok !== true || data.timezone !== 'Europe/Paris' || data.matched?.confidence < 60 || !data.items?.length) {
     throw new Error('/api/direct/epg: correspondance ou programme invalide');
   }

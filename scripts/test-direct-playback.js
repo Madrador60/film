@@ -150,6 +150,22 @@ async function main() {
     assert(!/CDNLiveTV|IPTV-org/i.test(sourceLabels.text), 'les fournisseurs ne doivent pas être affichés dans le sélecteur');
     assert.deepStrictEqual(sourceLabels.blocked, [false, false, false, false, false]);
 
+    const zapOverlay = await page.evaluate(() => {
+      directChannels = [
+        { id: 'one', name: 'Chaîne Une', category: 'Généralistes', country: 'FR', sources: [{ url: 'https://example.test/one.m3u8', type: 'hls', catalog: 'iptv-org' }] },
+        { id: 'two', name: 'Chaîne Deux', category: 'Information', country: 'FR', sources: [{ url: 'https://example.test/two.m3u8', type: 'hls', catalog: 'iptv-org' }] }
+      ];
+      visibleDirectChannels = [...directChannels];
+      showDirectZapOverlay(directChannels[1], { program: 'Journal du soir', persistent: true });
+      return {
+        hidden: document.querySelector('#directZapOverlay')?.hidden,
+        number: document.querySelector('#directZapNumber')?.textContent,
+        title: document.querySelector('#directZapTitle')?.textContent,
+        program: document.querySelector('#directZapProgram')?.textContent
+      };
+    });
+    assert.deepStrictEqual(zapOverlay, { hidden: false, number: 'CHAÎNE 2', title: 'Chaîne Deux', program: 'Journal du soir' });
+
     const noSource = await page.evaluate(() => {
       showDirectError({ name: 'TF1', url: 'https://invalid.test/' }, 'Aucun flux public lisible.');
       return {

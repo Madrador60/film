@@ -34,6 +34,10 @@ const attemptedDirectSources = new Set();
 const directSourceStates = new Map();
 let iptvOrgLastSyncLabel = '';
 let directStatusRefreshTimer = 0;
+let directZapTimer = 0;
+let directNumberTimer = 0;
+let directNumberBuffer = '';
+const directProgramCache = new Map();
 
 window.addEventListener('DOMContentLoaded', () => {
   restoreDirectHealthCache();
@@ -100,6 +104,7 @@ function setDirectToolsOpen(open) {
   const tools = $('directTools');
   if (!tools) return;
   tools.hidden = !open;
+  document.body.classList.toggle('direct-tools-open', open);
   $('directSourceToggle')?.setAttribute('aria-expanded', String(open));
   if (open) tools.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -115,6 +120,12 @@ function handleDirectViewClick(event) {
 
 function handleDirectKeyboard(event) {
   if (event.target.matches('input,textarea,select')) return;
+  const digit = event.code?.match(/^(?:Digit|Numpad)(\d)$/)?.[1];
+  if (digit !== undefined) {
+    event.preventDefault();
+    queueDirectChannelNumber(digit);
+    return;
+  }
   const previousKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'ChannelDown', 'MediaTrackPrevious'];
   const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', 'ChannelUp', 'MediaTrackNext'];
   if (previousKeys.includes(event.key)) {
@@ -126,6 +137,23 @@ function handleDirectKeyboard(event) {
     playRelativeChannel(1);
   }
   if (event.key.toLowerCase() === 'f') enterDirectFullscreen();
+  if (['Escape', 'BrowserBack', 'GoBack'].includes(event.key)) {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else if (document.body.classList.contains('direct-tools-open')) setDirectToolsOpen(false);
+  }
+}
+
+function queueDirectChannelNumber(digit) {
+  directNumberBuffer = `${directNumberBuffer}${digit}`.slice(-3);
+  window.clearTimeout(directNumberTimer);
+  showDirectZapOverlay(null, { number: directNumberBuffer, title: `Chaîne ${directNumberBuffer}`, program: 'Validation…', persistent: true });
+  directNumberTimer = window.setTimeout(() => {
+    const pool = visibleDirectChannels.length ? visibleDirectChannels : directChannels;
+    const index = Number(directNumberBuffer) - 1;
+    directNumberBuffer = '';
+    if (index >= 0 && pool[index]) playChannel(pool[index]);
+    else showToast('Numéro de chaîne indisponible');
+  }, 850);
 }
 
 function enableHorizontalRail(element) {
@@ -545,6 +573,7 @@ async function loadDirectChannels(force = false) {
     localStorage.setItem(DIRECT_CHANNELS_KEY, JSON.stringify(madradorChannels.slice(0, 800)));
     if ($('directChannelTotal')) $('directChannelTotal').textContent = `${directChannels.length} chaînes disponibles`;
     renderDirectChannels();
+    offerLastDirectChannel();
     const sourceCount = directChannels.reduce((total, channel) => total + (channel.sources?.length || 0), 0);
     const multiSourceCount = directChannels.filter((channel) => (channel.sources?.length || 0) > 1).length;
     setHint(`${directChannels.length} chaînes · ${sourceCount} sources publiques · ${multiSourceCount} chaînes avec plusieurs sources${iptvOrgLastSyncLabel ? ` · IPTV-org ${iptvOrgLastSyncLabel}` : ''}`);
@@ -632,6 +661,9 @@ function renderDirectChannels() {
     .filter((channel) => !availability || channelMatchesAvailability(channel, availability));
   if (activeDirectView === 'recent') {
     filtered = filtered.sort((a, b) => recentOrder.get(getChannelKey(a)) - recentOrder.get(getChannelKey(b)));
+  } else if (activeDirectView === 'favorites') {
+    const favoriteOrder = new Map(getDirectFavoriteOrder().map((key, index) => [key, index]));
+    filtered = filtered.sort((a, b) => (favoriteOrder.get(getChannelKey(a)) ?? 9999) - (favoriteOrder.get(getChannelKey(b)) ?? 9999));
   }
   visibleDirectChannels = filtered;
   if ($('directResultCount')) $('directResultCount').textContent = `${filtered.length} résultat${filtered.length > 1 ? 's' : ''}`;
@@ -668,6 +700,7 @@ function renderDirectChannels() {
               </span>
               <span class="direct-channel-copy">
                 <b>${escapeHtml(channel.name)}</b>
+                ${directProgramCache.get(getChannelKey(channel)) ? `<span class="direct-channel-program">${escapeHtml(directProgramCache.get(getChannelKey(channel)))}</span>` : ''}
                 <small><i class="direct-status ${getChannelHealthState(channel)}"></i><span>${escapeHtml(channel.country || channel.code || 'TV')}</span>${channel.maxQuality ? `<span>${escapeHtml(channel.maxQuality)}</span>` : ''}<span>${channel.sources?.length || 1} source${(channel.sources?.length || 1) > 1 ? 's' : ''}</span><em class="direct-health-label">${escapeHtml(getDirectHealthLabel(getChannelHealthState(channel)))}</em></small>
               </span>
               <i class="fa-solid fa-play"></i>
@@ -1354,6 +1387,7 @@ function setCurrentChannel(channel) {
     tile.classList.toggle('is-playing', button?.dataset.channelId === currentDirectChannel.id || button?.dataset.url === currentDirectChannel.url);
   });
   loadChannelEpg(currentDirectChannel);
+  showDirectZapOverlay(currentDirectChannel);
 }
 
 async function loadChannelEpg(channel, force = false) {
@@ -1391,6 +1425,17 @@ async function loadChannelEpg(channel, force = false) {
     const current = data.current;
     if (current && $('directNowProgram')) {
       $('directNowProgram').textContent = `En ce moment · ${current.title}`;
+      directProgramCache.set(getChannelKey(channel), current.title);
+      if (getChannelKey(currentDirectChannel) === getChannelKey(channel)) showDirectZapOverlay(channel, { program: current.title });
+      const activeTile = [...document.querySelectorAll('.direct-channel[data-channel-id]')]
+        .find((button) => button.dataset.channelId === String(channel.id || ''));
+      const copy = activeTile?.querySelector('.direct-channel-copy');
+      if (copy && !copy.querySelector('.direct-channel-program')) {
+        const programme = document.createElement('span');
+        programme.className = 'direct-channel-program';
+        programme.textContent = current.title;
+        copy.querySelector('small')?.before(programme);
+      }
     }
     rail.innerHTML = data.items.slice(0, 8).map((item) => {
       const start = new Date(item.start);
@@ -1465,6 +1510,15 @@ function getDirectFavorites() {
   }
 }
 
+function getDirectFavoriteOrder() {
+  try {
+    const values = JSON.parse(localStorage.getItem(DIRECT_FAVORITES_KEY) || '[]');
+    return Array.isArray(values) ? values : [];
+  } catch {
+    return [];
+  }
+}
+
 function getChannelKey(channel) {
   return String(channel?.id || channel?.url || '').trim();
 }
@@ -1502,6 +1556,50 @@ function showDirectLoading(name) {
       <p>Récupération du flux sécurisé...</p>
     </div>`;
   setHint(`Connexion : ${name}`);
+}
+
+function offerLastDirectChannel() {
+  if (currentDirectChannel || !$('directScreen') || $('directScreen').querySelector('video,iframe')) return;
+  const recent = getRecent()[0];
+  if (!recent) return;
+  const recentName = createSlug(recent.name || recent.title || '');
+  const channel = directChannels.find((item) => item.id === recent.id)
+    || directChannels.find((item) => getChannelKey(item) === getChannelKey(recent))
+    || directChannels.find((item) => createSlug(item.name) === recentName);
+  if (!channel) return;
+  $('directScreen').innerHTML = `
+    <div class="direct-placeholder direct-resume-state">
+      <span class="direct-resume-logo">${getChannelBrandMark(channel)}</span>
+      <small>DERNIÈRE CHAÎNE</small>
+      <h2>${escapeHtml(channel.name)}</h2>
+      <p>Reprends le direct avec la dernière source publique disponible.</p>
+      <button class="btn primary" id="directResumeLast" type="button"><i class="fa-solid fa-play"></i><span>Reprendre le direct</span></button>
+    </div>`;
+  $('directResumeLast')?.addEventListener('click', () => playChannel(channel));
+}
+
+function showDirectZapOverlay(channel, options = {}) {
+  const overlay = $('directZapOverlay');
+  if (!overlay) return;
+  const pool = visibleDirectChannels.length ? visibleDirectChannels : directChannels;
+  const index = channel ? pool.findIndex((item) => getChannelKey(item) === getChannelKey(channel)) : -1;
+  if ($('directZapNumber')) $('directZapNumber').textContent = options.number || (index >= 0 ? `CHAÎNE ${index + 1}` : 'EN DIRECT');
+  if ($('directZapTitle')) $('directZapTitle').textContent = options.title || channel?.name || 'Madrador TV';
+  if ($('directZapProgram')) $('directZapProgram').textContent = options.program || directProgramCache.get(getChannelKey(channel)) || channel?.category || 'Connexion au direct';
+  const logo = $('directZapLogo');
+  if (logo) {
+    logo.className = `direct-zap-logo ${getChannelLogoClass(channel)}`.trim();
+    logo.innerHTML = channel ? `${getChannelBrandMark(channel)}${channel.image ? `<img src="${escapeHtml(channel.image)}" alt="">` : ''}` : '<span>TV</span>';
+    bindDirectLogoFallbacks(logo);
+  }
+  overlay.hidden = false;
+  overlay.classList.remove('is-visible');
+  requestAnimationFrame(() => overlay.classList.add('is-visible'));
+  window.clearTimeout(directZapTimer);
+  if (!options.persistent) directZapTimer = window.setTimeout(() => {
+    overlay.classList.remove('is-visible');
+    window.setTimeout(() => { overlay.hidden = true; }, 220);
+  }, 3200);
 }
 
 function showDirectError(channel, message) {

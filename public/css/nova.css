@@ -894,8 +894,83 @@ body.nova-app::before {
 }
 
 .nova-app .direct-tv-stage {
+  position: relative;
   margin-inline: calc(clamp(20px, 4vw, 72px) * -1);
 }
+
+.nova-app .direct-zap-overlay {
+  position: absolute;
+  z-index: 12;
+  top: clamp(16px, 3vw, 34px);
+  left: clamp(16px, 4vw, 54px);
+  min-width: min(420px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px 13px 13px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  color: #f8fafc;
+  background: rgba(5,7,13,.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,.42);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+}
+
+.nova-app .direct-zap-overlay[hidden] { display: none !important; }
+.nova-app .direct-zap-overlay.is-visible { opacity: 1; transform: translateY(0); }
+
+.nova-app .direct-zap-logo {
+  position: relative;
+  width: 72px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.nova-app .direct-zap-logo > img {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  object-fit: contain;
+}
+
+.nova-app .direct-zap-overlay > div:last-child { min-width: 0; display: grid; gap: 2px; }
+.nova-app .direct-zap-overlay small { color: var(--nova-mint); font-size: 11px; font-weight: 850; }
+.nova-app .direct-zap-overlay b { overflow: hidden; font-size: clamp(18px, 2vw, 26px); text-overflow: ellipsis; white-space: nowrap; }
+.nova-app .direct-zap-overlay span { overflow: hidden; color: var(--nova-muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+
+.nova-app .direct-channel-program {
+  overflow: hidden;
+  color: #dbe7f5;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-app .direct-resume-state .direct-resume-logo {
+  width: 110px;
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.nova-app .direct-resume-state > small { color: var(--nova-mint); font-weight: 850; }
 
 .nova-app .direct-nowbar {
   border: 0 !important;
@@ -1663,6 +1738,23 @@ html[data-device="4k"] body.nova-app .sidebar {
   body.nova-app.direct-body .direct-screen .direct-video {
     object-fit: contain !important;
   }
+
+  body.nova-app.direct-body .direct-tv-stage > .direct-zap-overlay {
+    right: auto !important;
+    margin-left: calc((100% - var(--direct-stage-width)) / 2 + clamp(16px, 3vw, 34px)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .nova-app .direct-zap-overlay {
+    top: 10px;
+    left: 10px;
+    min-width: 0;
+    width: calc(100% - 20px);
+    grid-template-columns: 58px minmax(0, 1fr);
+    padding: 10px;
+  }
+  .nova-app .direct-zap-logo { width: 58px; height: 44px; }
 }
 
 @media (min-width: 2560px) and (min-height: 1200px) {
