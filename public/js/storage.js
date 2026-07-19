@@ -1,3 +1,8 @@
+window.MadradorConfig = Object.freeze({
+  ...(window.MadradorConfig || {}),
+  ITEMS_PER_PAGE: 24
+});
+
 const MadradorStorage = (() => {
   const KEYS = {
     favorites: 'madrador:favorites',

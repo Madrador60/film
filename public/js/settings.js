@@ -206,7 +206,7 @@ async function hydratePreviewArtwork() {
 function exportLocalData() {
   const data = {};
   Object.keys(localStorage)
-    .filter((key) => key.startsWith('madrador:') || key.startsWith('madrador_'))
+    .filter(isPortableStorageKey)
     .forEach((key) => {
       data[key] = localStorage.getItem(key);
     });
@@ -227,8 +227,10 @@ async function importLocalData(event) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
+    if (!data || Array.isArray(data) || typeof data !== 'object') throw new Error('Format invalide');
+    if (!window.confirm('Importer ces préférences ? Les favoris, l’historique et les réglages locaux correspondants seront remplacés.')) return;
     Object.entries(data).forEach(([key, value]) => {
-      if ((key.startsWith('madrador:') || key.startsWith('madrador_')) && typeof value === 'string') {
+      if (isPortableStorageKey(key) && typeof value === 'string') {
         localStorage.setItem(key, value);
       }
     });
@@ -241,6 +243,11 @@ async function importLocalData(event) {
   } finally {
     event.target.value = '';
   }
+}
+
+function isPortableStorageKey(key) {
+  if (!String(key).startsWith('madrador:') && !String(key).startsWith('madrador_')) return false;
+  return !String(key).startsWith('madrador:cache:') && !String(key).startsWith('madrador:catalog');
 }
 
 function showToast(message) {

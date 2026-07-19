@@ -1366,30 +1366,26 @@ function normalizeTrailerUrl(url) {
 
   try {
     const parsed = new URL(cleanUrl, location.origin);
-    if (parsed.hostname.includes('youtube.com')) {
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    if (hostname === 'youtube.com' || hostname === 'youtube-nocookie.com') {
       const videoId = parsed.searchParams.get('v');
       if (videoId) return getYoutubeTrailerUrls(videoId);
-      const embedMatch = parsed.pathname.match(/\/embed\/([A-Za-z0-9_-]{11})/);
+      const embedMatch = parsed.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{11})(?:\/|$)/);
       if (embedMatch) return getYoutubeTrailerUrls(embedMatch[1]);
     }
-    if (parsed.hostname.includes('youtu.be')) {
-      const videoId = parsed.pathname.replace('/', '');
+    if (hostname === 'youtu.be') {
+      const videoId = parsed.pathname.split('/').filter(Boolean)[0] || '';
       if (videoId) return getYoutubeTrailerUrls(videoId);
     }
-    if (parsed.origin === location.origin) {
-      const localId = parsed.pathname.replace(/^\/+/, '');
-      if (/^[A-Za-z0-9_-]{11}$/.test(localId)) {
-        return getYoutubeTrailerUrls(localId);
-      }
-    }
   } catch (err) {
-    return { embed: cleanUrl, watch: cleanUrl };
+    return { embed: '', watch: '' };
   }
 
-  return { embed: cleanUrl, watch: cleanUrl };
+  return { embed: '', watch: '' };
 }
 
 function getYoutubeTrailerUrls(videoId) {
+  if (!/^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''))) return { embed: '', watch: '' };
   return {
     embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}&widget_referrer=${encodeURIComponent(location.href)}`,
     watch: `https://www.youtube.com/watch?v=${videoId}`

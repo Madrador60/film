@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="./assets/madrador-icon-256.png" />
   <link rel="apple-touch-icon" href="./assets/madrador-icon-256.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="./css/madrador.css?v=20260718-unified3" />
+  <link rel="stylesheet" href="./css/madrador.css?v=20260719-stability1" />
 </head>
 <body class="home-body search-body nova-app">
   <button class="mobile-menu" id="mobileMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
@@ -51,6 +51,7 @@
       <div class="advanced-searchbox">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input id="advancedQuery" type="text" placeholder="Film, série, acteur, genre..." autocomplete="off" />
+        <button class="icon-btn advanced-clear" id="advancedClear" type="button" aria-label="Effacer la recherche" title="Effacer"><i class="fa-solid fa-xmark"></i></button>
         <button class="btn primary" id="advancedSubmit" type="button"><i class="fa-solid fa-arrow-right"></i><span>Rechercher</span></button>
       </div>
       <div class="advanced-chips" id="quickTerms"></div>
@@ -108,7 +109,7 @@
     </section>
 
     <section class="catalog-toolbar">
-      <div class="page-pill" id="resultCount">0 résultat</div>
+      <div class="page-pill" id="resultCount">Prêt à rechercher</div>
       <button class="btn glass" id="saveSearch" type="button"><i class="fa-solid fa-bookmark"></i><span>Mémoriser</span></button>
       <button class="btn glass danger-btn" id="clearSearchHistory" type="button"><i class="fa-solid fa-trash"></i><span>Vider recherches</span></button>
     </section>
@@ -117,17 +118,17 @@
       <article>
         <i class="fa-solid fa-layer-group"></i>
         <span>Total</span>
-        <strong id="searchTotal">0</strong>
+        <strong id="searchTotal">—</strong>
       </article>
       <article>
         <i class="fa-solid fa-film"></i>
         <span>Films</span>
-        <strong id="searchMovies">0</strong>
+        <strong id="searchMovies">—</strong>
       </article>
       <article>
         <i class="fa-solid fa-tv"></i>
         <span>Séries</span>
-        <strong id="searchSeries">0</strong>
+        <strong id="searchSeries">—</strong>
       </article>
       <article>
         <i class="fa-solid fa-database"></i>
@@ -158,13 +159,13 @@
 
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="./js/storage.js?v=20260718-storage3"></script>
+  <script src="./js/storage.js?v=20260719-stability1"></script>
   <script src="./js/device-profile.js"></script>
   <script src="./js/image-quality.js?v=20260713-stability1"></script>
   <script src="./js/antiads.js?v=20260712-guard2"></script>
   <script src="./js/mobile-nav.js"></script>
   <script src="./js/ui-system.js?v=20260718-storage2"></script>
   <script src="./js/pwa.js"></script>
-  <script src="./js/search.js?v=20260714-stability1"></script>
+  <script src="./js/search.js?v=20260719-stability1"></script>
 </body>
 </html>

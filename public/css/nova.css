@@ -12,6 +12,22 @@
   --nova-nav-height: 76px;
 }
 
+.nova-app .advanced-searchbox .advanced-clear {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .07);
+  color: var(--nova-muted);
+}
+
+.nova-app .advanced-searchbox .advanced-clear:hover,
+.nova-app .advanced-searchbox .advanced-clear:focus-visible {
+  color: var(--nova-text);
+  background: rgba(102, 117, 255, .2);
+}
+
 /* Final interaction polish: stable carousel controls and richer detail/filter surfaces. */
 .nova-app .row-track-wrap {
   position: relative;

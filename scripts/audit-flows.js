@@ -130,6 +130,13 @@ async function run() {
     }
 
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'domcontentloaded' });
+    const trailerSafety = await page.evaluate(() => ({
+      valid: normalizeQuickTrailer('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+      local: normalizeQuickTrailer('/player.html?id=15127072'),
+      foreign: normalizeQuickTrailer('https://example.com/trailer')
+    }));
+    if (!trailerSafety.valid.embed.includes('/embed/dQw4w9WgXcQ')) throw new Error('Une URL YouTube valide n’est plus reconnue.');
+    if (trailerSafety.local.embed || trailerSafety.foreign.embed) throw new Error('Une URL non YouTube peut encore entrer dans la bande-annonce.');
     await page.click('#settingsBtn');
     await page.waitForURL(/settings\.html/);
 
@@ -143,6 +150,9 @@ async function run() {
     await page.waitForFunction(() => !document.getElementById('searchLoading')?.classList.contains('hidden'), null, { timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(900);
     if ((await page.inputValue('#advancedQuery')) !== 'The Last Of Us') throw new Error('La saisie de recherche a été altérée.');
+    await page.click('#advancedClear');
+    if (await page.inputValue('#advancedQuery')) throw new Error('Le bouton Effacer ne vide pas la recherche avancée.');
+    if (new URL(page.url()).searchParams.has('q')) throw new Error('Le bouton Effacer conserve le paramètre q dans l’URL.');
 
     await page.goto(`${BASE_URL}/catalog.html?type=movies`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.media-card-open', { timeout: 15000 });
@@ -153,6 +163,17 @@ async function run() {
     if (semantics.nested || !semantics.openName) throw new Error('Structure interactive des cartes invalide.');
 
     const catalogBatch = await page.evaluate(() => ITEMS_PER_PAGE);
+    if (catalogBatch !== 24) throw new Error(`Le catalogue utilise ${catalogBatch} éléments au lieu de 24.`);
+    const strictGenreIds = await page.evaluate(() => {
+      document.getElementById('catalogGenre').value = 'Horreur';
+      return applyFilters([
+        { id: 'horror', title: 'Film sombre', type: 'movies', genres: ['Horreur'] },
+        { id: 'action', title: 'Film populaire', type: 'movies', genres: ['Action'] },
+        { id: 'unknown', title: 'Comédie romantique', type: 'movies', genres: [] }
+      ]).map((item) => item.id);
+    });
+    if (strictGenreIds.join(',') !== 'horror') throw new Error(`Le filtre Horreur renvoie des titres hors genre : ${strictGenreIds.join(', ')}`);
+    await page.selectOption('#catalogGenre', '');
     await page.evaluate((batch) => {
       const seed = visibleCatalogItems[0];
       catalogItems = Array.from({ length: batch * 3 }, (_value, index) => ({
@@ -231,7 +252,7 @@ async function run() {
     const sourceState = await page.locator('#sourceStatus').innerText();
     if (!sourceState.includes('lecture à confirmer')) throw new Error('Une iframe chargée est encore annoncée comme prête sans preuve de lecture.');
 
-    console.log('Audit fonctionnel réussi : API, navigation, catalogue 24/48/24, types, bibliothèque et mode cinéma vérifiés.');
+    console.log('Audit fonctionnel réussi : API, navigation, catalogue 24, filtres stricts, recherche, bandes-annonces, bibliothèque et mode cinéma vérifiés.');
   } finally {
     await browser?.close();
     server.kill('SIGTERM');

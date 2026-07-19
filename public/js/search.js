@@ -1,5 +1,5 @@
 const params = new URLSearchParams(location.search);
-const ITEMS_PER_PAGE = 48;
+const ITEMS_PER_PAGE = window.MadradorConfig?.ITEMS_PER_PAGE || 24;
 
 let results = [];
 let toastTimer = null;
@@ -26,6 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function bindSearch() {
   $('mobileMenu').addEventListener('click', () => $('sidebar').classList.toggle('open'));
   $('advancedSubmit').addEventListener('click', runSearch);
+  $('advancedClear').addEventListener('click', clearSearchExperience);
   $('searchRetry')?.addEventListener('click', () => {
     hideSearchApiStatus();
     runSearch();
@@ -49,6 +50,7 @@ function bindSearch() {
     });
   });
   $('searchReset').addEventListener('click', () => {
+    clearSearchExperience(false);
     $('searchType').value = 'all';
     $('searchLang').value = '';
     $('searchQuality').value = '';
@@ -56,7 +58,7 @@ function bindSearch() {
     $('searchSort').value = 'relevance';
     $('searchLocal').value = '';
     syncTypeTabs();
-    renderResults();
+    renderDiscovery();
   });
   $('saveSearch').addEventListener('click', () => {
     const q = $('advancedQuery').value.trim();
@@ -70,6 +72,22 @@ function bindSearch() {
     renderQuickTerms();
     showToast('Historique de recherche vidé');
   });
+}
+
+function clearSearchExperience(focusInput = true) {
+  window.clearTimeout(instantTimer);
+  activeSearchController?.abort();
+  activeSearchController = null;
+  $('advancedQuery').value = '';
+  results = [];
+  lastSearchTerm = '';
+  hideSearchApiStatus();
+  setLoading(false);
+  const url = new URL(location.href);
+  url.searchParams.delete('q');
+  history.replaceState(null, '', url);
+  renderDiscovery();
+  if (focusInput) $('advancedQuery').focus();
 }
 
 async function runSearch() {
@@ -125,7 +143,7 @@ async function runSearch() {
 
 async function warmSearchCatalog() {
   try {
-    const data = await cachedFetchJson('/api/catalog/bootstrap?limit=80', 'search:catalog:bootstrap:80', 1000 * 60 * 10);
+    const data = await cachedFetchJson('/api/catalog/bootstrap?limit=4', 'search:catalog:bootstrap:4', 1000 * 60 * 10);
     const movies = normalizeItems(data.movies?.items || [], 'movies');
     const series = normalizeItems(data.series?.items || [], 'series');
     localCatalog = groupSeries(dedupeMediaItems([...movies, ...series]));
@@ -246,7 +264,7 @@ function renderEmpty(title, message) {
       <p>${escapeHtml(message)}</p>
       <a class="btn primary" href="./catalog.html?type=all"><i class="fa-solid fa-layer-group"></i><span>Voir le catalogue</span></a>
     </section>`;
-  $('resultCount').textContent = '0 résultat';
+  $('resultCount').textContent = title === 'Lance une recherche' ? 'Prêt à rechercher' : '0 résultat';
   lastFilteredItems = [];
 }
 
@@ -381,7 +399,12 @@ async function cachedFetchJson(url, cacheKey, ttl, signal) {
     localStorage.removeItem(key);
   }
   const data = await fetchJson(url, signal);
-  localStorage.setItem(key, JSON.stringify({ time: Date.now(), data }));
+  try {
+    const serialized = JSON.stringify({ time: Date.now(), data });
+    if (serialized.length <= 1_500_000) localStorage.setItem(key, serialized);
+  } catch (error) {
+    localStorage.removeItem(key);
+  }
   return data;
 }
 
@@ -405,11 +428,18 @@ function normalizeItems(items, fallbackType) {
       quality: item.quality || 'HD',
       version: item.version || 'VF',
       year: item.year || '',
+      genres: normalizeGenres(item.genres || item.genre || item.categories),
+      description: item.description || item.synopsis || '',
       type,
       seasonNumber: season.seasonNumber,
       seriesTitle: type === 'series' ? (season.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
+}
+
+function normalizeGenres(value) {
+  if (Array.isArray(value)) return value.map((entry) => String(entry || '').trim()).filter(Boolean);
+  return String(value || '').split(/[,|/]/).map((entry) => entry.trim()).filter(Boolean);
 }
 
 function inferType(item, fallbackType, season) {

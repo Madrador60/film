@@ -1,4 +1,4 @@
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = window.MadradorConfig?.ITEMS_PER_PAGE || 24;
 const KEEPALIVE_INTERVAL_MS = 14 * 60 * 1000;
 
 let currentTab = 'home';
@@ -527,11 +527,18 @@ function normalizeItems(items, fallbackType) {
       version: item.version || 'VF',
       year: item.year || '',
       rating: item.rating || item.note || '',
+      genres: normalizeMediaGenres(item.genres || item.genre || item.categories),
+      description: item.description || item.synopsis || '',
       type,
       seasonNumber: seasonInfo.seasonNumber,
       seriesTitle: type === 'series' ? (seasonInfo.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
+}
+
+function normalizeMediaGenres(value) {
+  if (Array.isArray(value)) return value.map((entry) => String(entry || '').trim()).filter(Boolean);
+  return String(value || '').split(/[,|/]/).map((entry) => entry.trim()).filter(Boolean);
 }
 
 function inferItemType(item, fallbackType, seasonInfo) {
@@ -1144,17 +1151,28 @@ function renderQuickShell(item, details = {}) {
 function normalizeQuickTrailer(value) {
   const raw = String(value || '').trim();
   if (!raw) return { embed: '', watch: '' };
-  const idMatch = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
-  const videoId = idMatch?.[1] || (/^[A-Za-z0-9_-]{6,}$/.test(raw) ? raw : '');
-  if (videoId) {
-    const origin = encodeURIComponent(location.origin);
-    return {
-      embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${encodeURIComponent(location.href)}`,
-      watch: `https://www.youtube.com/watch?v=${videoId}`
-    };
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return getQuickYoutubeTrailerUrls(raw);
+
+  try {
+    const parsed = new URL(raw);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId = '';
+    if (hostname === 'youtu.be') videoId = parsed.pathname.split('/').filter(Boolean)[0] || '';
+    if (hostname === 'youtube.com' || hostname === 'youtube-nocookie.com') {
+      videoId = parsed.searchParams.get('v') || parsed.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{11})(?:\/|$)/)?.[1] || '';
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? getQuickYoutubeTrailerUrls(videoId) : { embed: '', watch: '' };
+  } catch (error) {
+    return { embed: '', watch: '' };
   }
-  if (/^https?:\/\//i.test(raw)) return { embed: raw, watch: raw };
-  return { embed: '', watch: '' };
+}
+
+function getQuickYoutubeTrailerUrls(videoId) {
+  const origin = encodeURIComponent(location.origin);
+  return {
+    embed: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${origin}&widget_referrer=${encodeURIComponent(location.href)}`,
+    watch: `https://www.youtube.com/watch?v=${videoId}`
+  };
 }
 
 function openQuickTrailer() {

@@ -1,4 +1,4 @@
-const ITEMS_PER_PAGE = window.innerWidth >= 1600 ? 60 : window.innerWidth >= 992 ? 48 : window.innerWidth >= 768 ? 36 : 24;
+const ITEMS_PER_PAGE = window.MadradorConfig?.ITEMS_PER_PAGE || 24;
 const CATALOG_FAST_LIMIT = 4;
 const CATALOG_ALL_LIMIT = 80;
 const params = new URLSearchParams(location.search);
@@ -327,44 +327,17 @@ function applyFilters(items) {
   const year = $('catalogYear').value;
 
   const typedItems = items.filter((item) => catalogType === 'all' || item.type === catalogType);
-  const strictItems = typedItems.filter((item) => {
+  return typedItems.filter((item) => {
     const hay = normalizeKey(`${item.title} ${item.originalTitle || ''}`);
+    const genreHay = normalizeKey((item.genres || []).join(' '));
     const version = normalizeKey(item.version || '');
     const itemQuality = normalizeKey(item.quality || '');
-    if (genre && !hay.includes(genre)) return false;
+    if (genre && !(genreHay || hay).includes(genre)) return false;
     if (lang && !version.includes(lang)) return false;
     if (quality && !itemQuality.includes(quality)) return false;
     if (year && String(item.year || '').trim() !== year && !hay.includes(year)) return false;
     return true;
   });
-
-  const needsBroadFallback = (genre || lang) && !quality && !year && strictItems.length < 18;
-  if (!needsBroadFallback) return strictItems;
-
-  const seed = normalizeKey(`${genre} ${lang}`) || 'catalogue';
-  const spread = typedItems
-    .map((item, index) => ({
-      item,
-      score: getStableFilterScore(item, seed, index)
-    }))
-    .sort((a, b) => b.score - a.score)
-    .map((entry) => entry.item);
-
-  return dedupeMediaItems([...strictItems, ...spread]).slice(0, Math.max(ITEMS_PER_PAGE * 4, 96));
-}
-
-function getStableFilterScore(item, seed, index) {
-  const hay = normalizeKey(`${item.title || ''} ${item.originalTitle || ''} ${item.version || ''} ${item.quality || ''}`);
-  const words = seed.split(/\s+/).filter(Boolean);
-  const wordScore = words.reduce((total, word) => total + (hay.includes(word) ? 25 : 0), 0);
-  const typeScore = item.type === 'series' ? 4 : 8;
-  const qualityScore = String(item.quality || '').toLowerCase().includes('hd') ? 5 : 0;
-  const spreadScore = Math.abs(hashString(`${seed}:${item.id || item.title}`)) % 17;
-  return wordScore + typeScore + qualityScore + spreadScore - (index % 7);
-}
-
-function hashString(value) {
-  return String(value || '').split('').reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
 }
 
 function sortItems(items) {
@@ -1075,11 +1048,18 @@ function normalizeItems(items, fallbackType) {
       quality: item.quality || 'HD',
       version: item.version || 'VF',
       year: item.year || '',
+      genres: normalizeGenres(item.genres || item.genre || item.categories),
+      description: item.description || item.synopsis || '',
       type,
       seasonNumber: season.seasonNumber,
       seriesTitle: type === 'series' ? (season.baseTitle || title) : undefined
     };
   }).filter((item) => item.id && item.title);
+}
+
+function normalizeGenres(value) {
+  if (Array.isArray(value)) return value.map((entry) => String(entry || '').trim()).filter(Boolean);
+  return String(value || '').split(/[,|/]/).map((entry) => entry.trim()).filter(Boolean);
 }
 
 function inferType(item, fallbackType, season) {
