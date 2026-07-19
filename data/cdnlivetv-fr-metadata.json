@@ -9,7 +9,7 @@
   {
     "channel_name": "CANAL+ FR",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/canal-plus-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "General"
   },
@@ -51,70 +51,77 @@
   {
     "channel_name": "beIN MAX 4 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-4-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%204&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN MAX 5 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-5-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%205&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN MAX 6 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-6-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%206&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN MAX 7 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-7-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%207&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN MAX 8 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-8-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%208&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN MAX 9 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-9-max-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%209&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "beIN MAX 10 FRANCE",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/bein-sports-max-10.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%20MAX%2010&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN SPORTS 1 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-1-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%201&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN SPORTS 1 FRANCE HD",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-1-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%201&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN SPORTS 2 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-2-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%202&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "beIN SPORTS 3 FRANCE",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/international/beinsports/old/stacked/bein-sports-3-int.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=beIN%20SPORTS%203&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
@@ -156,7 +163,7 @@
   {
     "channel_name": "CANAL+ 360",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/canal-plus-sport-360-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Sport360&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
@@ -170,7 +177,7 @@
   {
     "channel_name": "CANAL+ FOOT",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/canal-plus-foot-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Foot&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
@@ -182,9 +189,16 @@
     "category": "Sports"
   },
   {
+    "channel_name": "CANAL+ PREMIER LEAGUE",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-premier-league.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Premier%20League&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
     "channel_name": "CANAL+ SPORT FR",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/canal-plus-sport-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Sport&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
@@ -219,14 +233,147 @@
   {
     "channel_name": "RMC SPORT 1 FR",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/rmc-sport-1-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=RMC%20Sport%201&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   },
   {
     "channel_name": "RMC SPORT 2 FR",
     "image": "https://raw.githubusercontent.com/tv-logo/tv-logos/refs/heads/main/countries/france/rmc-sport-2-fr.png",
-    "url": "",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=RMC%20Sport%202&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 1",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-1.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%201&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 2",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-2.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%202&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 3",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-3.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%203&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 4",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-4.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%204&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 5",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-5.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%205&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 6",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-6.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%206&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 7",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-7.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%207&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 8",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-8.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%208&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 9",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-9.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%209&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 10",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-10.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2010&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 11",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-11.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2011&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 12",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-12.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2012&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 13",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-13.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2013&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 14",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-14.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2014&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 15",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-15.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2015&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 16",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-16.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2016&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 17",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-17.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2017&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 18",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-18.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2018&code=fr&user=cdnlivetv&plan=free",
+    "country": "France",
+    "category": "Sports"
+  },
+  {
+    "channel_name": "CANAL LIVE 19",
+    "image": "https://cdnlivetv.tv/api/v1/channels/images6318/france/canal-live-19.webp",
+    "url": "https://cdnlivetv.tv/api/v1/channels/player/?name=Canal%20Live%2019&code=fr&user=cdnlivetv&plan=free",
     "country": "France",
     "category": "Sports"
   }
